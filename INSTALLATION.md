@@ -6,6 +6,7 @@ Status: Planning draft. Setup commands will be added in Phase 2 after architectu
 
 The mobile app will be built with bare React Native Community CLI. Developers will need:
 
+- Minimum OS Target: Android 10 (API 29), iOS 16.0.
 - Xcode: 16.2 minimum
 - CocoaPods: 1.16.2
 - JDK: 17.0.12

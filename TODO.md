@@ -31,15 +31,15 @@
 - [x] Remove redundant native build ignore entries.
 - [x] Add local-only command reference ignored by git.
 - [x] Clarify backend test location strategy.
-- [ ] Receive answers to required Phase 2 decision list.
-- [ ] Receive architecture approval.
+- [x] Receive final answer for required Phase 2 decision list: digital gift cards in MVP or later.
+- [x] Receive architecture approval.
 
-## Blocked Until Approval
+## Phase 2: Project Setup
 
-- [ ] Initialize project setup.
-- [ ] Create frontend app.
-- [ ] Create backend API.
-- [ ] Add database models.
-- [ ] Implement authentication.
-- [ ] Implement navigation.
-- [ ] Implement screens and APIs.
+- [x] Initialize pnpm monorepo with Turborepo.
+- [ ] Initialize bare React Native mobile app.
+- [ ] Initialize Node.js/Express backend API.
+- [ ] Create shared package for contracts.
+- [ ] Configure TypeScript, ESLint, and Prettier across workspaces.
+- [ ] Add Docker Compose for local API and MongoDB development.
+- [ ] Update `INSTALLATION.md` with setup commands.

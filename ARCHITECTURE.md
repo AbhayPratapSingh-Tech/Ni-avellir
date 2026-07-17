@@ -1,6 +1,6 @@
 # Nidavellir Architecture Plan
 
-Status: Phase 1 revised draft. Implementation must not begin until this architecture is approved and all required decisions in section 16 are answered.
+Status: Phase 1 approved. Phase 2 project setup may now begin.
 
 ## 1. Project Summary
 
@@ -705,18 +705,40 @@ Error states:
 - Push notifications: APNs certificates, FCM config, and token lifecycle can become operationally complex.
 - Environment separation: misconfigured bundle IDs or application IDs can accidentally point test apps at production APIs.
 
-## 16. Required Decisions Before Phase 2
+## 16. Finalized Decisions for Phase 2
 
-Phase 2 cannot begin until the user explicitly answers each decision below.
+The following decisions have been finalized and approved, unblocking Phase 2.
 
-1. Target region/market and primary currency.
-2. Guest checkout allowed, or registration required before checkout.
-3. First payment provider to implement, and whether Cash on Delivery is in MVP.
-4. Real email provider for verification and reset emails.
-5. Admin plan: API-only for now, or web dashboard planned in this repository later.
-6. Digital gift cards: MVP product type or later product type.
-7. Minimum supported Android and iOS versions.
-8. App display name: `Nidavellir` ASCII or `Niðavellir` with eth for user-facing branding, App Store/Play Store listing, and display name. Special characters must not appear in the actual bundle identifier or Android package name regardless of display-name choice.
+1.  **Target Market & Currency:**
+    - **Market:** Primarily India, with global support planned.
+    - **Currency:** INR and USD.
+
+2.  **Guest Checkout:**
+    - Not allowed for checkout completion. Users can browse and manage their cart as a guest, but login/registration is required to proceed to checkout.
+
+3.  **Payment Provider & COD:**
+    - **First Provider:** Razorpay.
+    - **Cash on Delivery (COD):** Yes, included in the MVP.
+    - **Architecture:** The payment system will use a provider interface to abstract concrete implementations (Razorpay, COD), ensuring the system is pluggable as designed.
+
+4.  **Email Provider:**
+    - **Provider:** Resend.
+    - **Architecture:** An email service will use a provider interface to abstract the Resend SDK, allowing for other providers in the future.
+
+5.  **Admin Plan:**
+    - Backend admin APIs will be included from the start.
+    - A web-based admin dashboard will be developed later within this repository.
+
+6.  **Digital Gift Cards:**
+    - Not included in the MVP. This will be a future product type.
+
+7.  **Minimum OS Versions:**
+    - **Android:** Android 10 (API level 29).
+    - **iOS:** iOS 16.0.
+
+8.  **App Display Name:**
+    - The user-facing display name will be `Niðavellir`.
+    - The underlying Android package name and iOS bundle identifier will use only ASCII characters (`com.nidavellir.app`).
 
 ## 17. Testing Strategy
 
@@ -821,8 +843,8 @@ Phase 14: Deployment readiness
 
 ## 20. Approval Gate
 
-Implementation is blocked until:
+**Phase 1 Approved.**
 
-1. All required decisions in section 16 are answered.
-2. The revised architecture is explicitly approved.
-3. The user explicitly authorizes Phase 2 project setup.
+All required decisions in section 16 have been answered, and the architecture has been explicitly approved.
+
+Phase 2 (Project Setup) is now authorized to begin.

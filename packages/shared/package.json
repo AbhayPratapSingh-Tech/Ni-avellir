@@ -1,0 +1,36 @@
+{
+  "name": "@nidavellir/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts/index.d.ts",
+      "default": "./dist/contracts/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/types/index.js"
+    },
+    "./validation": {
+      "types": "./dist/validation/index.d.ts",
+      "default": "./dist/validation/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "lint": "eslint src --ext .ts",
+    "test": "echo \"No shared tests yet\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  }
+}

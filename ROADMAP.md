@@ -15,6 +15,14 @@ Status: Planning draft.
 - Configure Turborepo.
 - Pin and document native prerequisites.
 
+## Product Types
+
+- Physical Product: MVP.
+- Digital Gift Card: v2.
+- Digital Game Code: future.
+- Membership/Subscription: future.
+- Bundle Products: future.
+
 ## Store And Compliance Readiness
 
 Required before real App Store or Google Play submission:

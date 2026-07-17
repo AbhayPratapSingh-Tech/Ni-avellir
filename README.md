@@ -2,11 +2,13 @@
 
 Premium gaming merchandise marketplace.
 
-Status: Phase 1 architecture planning. No implementation code should be added until the revised architecture is approved and required decisions are answered.
+Status: Phase 1 architecture approved. Phase 2 (Project Setup) is in progress.
 
 ## Native Tooling Prerequisites
 
 This project will use bare React Native Community CLI, not Expo.
+
+Minimum OS Target: Android 10 (API 29), iOS 16.0.
 
 Proposed Phase 2 pins:
 
