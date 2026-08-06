@@ -8,6 +8,7 @@ node_modules/
 .env
 .env.*
 !.env.*.example
+onlyme.md
 
 # Local-only project notes
 LOCAL_COMMANDS.md

@@ -1,25 +1,46 @@
-# Nidavellir
+# Niðavellir
 
-Premium gaming merchandise marketplace.
+Premium gaming merchandise marketplace — a full-stack mobile commerce app.
 
-Status: Phase 1 architecture approved. Phase 2 (Project Setup) is in progress.
+**Status: Demo-ready.** The mobile app and backend are implemented, wired, and typecheck cleanly.
 
-## Native Tooling Prerequisites
+## What's Included
 
-This project will use bare React Native Community CLI, not Expo.
+- **Mobile app** (bare React Native CLI, no Expo): Home, Products, Product Detail, Cart, Checkout, Order Confirmation, Orders, Wishlist, and Profile screens.
+- **Backend API** (Node.js + Express + MongoDB): products, cart quotes, orders, payment provider abstraction (Razorpay + COD), email provider abstraction (Resend), health, seed script.
+- **Shared package** (`@nidavellir/shared`): contracts, types, constants, and Zod validation shared across mobile and API.
+- **Innovative features**: animated hero carousel (Reanimated), flash-sale countdown, Rune XP loyalty widget, mock/live data switching.
 
-Minimum OS Target: Android 10 (API 29), iOS 16.0.
+## Quick Start
 
-Proposed Phase 2 pins:
+```bash
+# 1. From repo root, install dependencies
+pnpm install
 
-- Xcode: 16.2 minimum
-- CocoaPods: 1.16.2
-- JDK: 17.0.12
-- Android SDK Platform: 35
-- Android SDK Build Tools: 35.0.0
-- Android Gradle Plugin: 8.7.3
-- Gradle: 8.10.2
-- Node.js: 22.11.0 LTS
-- Package manager: pnpm 9.15.4
+# 2. Run the mobile app (zero-setup demo mode)
+pnpm --filter mobile start
+pnpm --filter mobile android   # or: pnpm --filter mobile ios
 
-These pins must be rechecked against the final React Native version selected in Phase 2 after the minimum supported Android/iOS versions are answered.
+# 3. (Optional) Run the backend + seed demo data
+pnpm --filter api dev
+pnpm --filter api seed
+```
+
+> Set `dataSource: 'mock'` in `apps/mobile/src/config/appConfig.ts` for a fully offline demo. Flip it to `'api'` to use the live backend.
+
+## Documentation
+
+- `DEVELOPER_GUIDE.md` — feature→file map and run instructions.
+- `ARCHITECTURE.md` — full architecture plan.
+- `INSTALLATION.md` — native tooling prerequisites.
+- `TODO.md` / `PROJECT_PROGRESS.md` — project status and roadmap.
+
+## Tech Stack
+
+- **Mobile:** React Native, React Navigation, Redux Toolkit, TanStack Query, Reanimated, Gesture Handler, FlashList.
+- **Backend:** Node.js, Express, TypeScript, MongoDB (Mongoose), Zod, JWT, Helmet.
+- **Tooling:** pnpm workspaces, Turborepo, strict TypeScript, ESLint, Prettier.
+
+## Native Tooling
+
+Bare React Native Community CLI (not Expo). Targets Android 10 (API 29) and iOS 16.0+. See `INSTALLATION.md` for the full prerequisite list (Xcode 16.2, JDK 17, Android SDK 35, etc.).

@@ -1,12 +1,20 @@
 {
   "name": "nidavellir",
   "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "build": "turbo build",
-    "dev": "turbo dev",
-    "lint": "turbo lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "typecheck": "turbo typecheck"
+    "build": "npm run build --workspaces",
+    "dev:api": "npm run dev --workspace apps/api",
+    "start:api": "npm run start --workspace apps/api",
+    "react-native": "npm run --workspace apps/mobile",
+    "android": "npm run android --workspace apps/mobile",
+    "ios": "npm run ios --workspace apps/mobile",
+    "test": "npm run typecheck --workspaces",
+    "typecheck": "npm run typecheck --workspaces"
   },
   "devDependencies": {
     "eslint": "^8.57.0",
@@ -14,5 +22,5 @@
     "turbo": "^1.13.3",
     "typescript": "^5.5.2"
   },
-  "packageManager": "pnpm@9.15.4"
+  "packageManager": "npm@11.6.2"
 }
