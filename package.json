@@ -2,6 +2,9 @@
   "name": "nidavellir",
   "private": true,
   "version": "0.1.0",
+  "engines": {
+    "node": ">=20.20.2"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -21,6 +24,10 @@
     "prettier": "^3.3.2",
     "turbo": "^1.13.3",
     "typescript": "^5.5.2"
+  },
+  "overrides": {
+    "react": "18.3.1",
+    "react-native": "0.77.3"
   },
   "packageManager": "npm@11.6.2"
 }
