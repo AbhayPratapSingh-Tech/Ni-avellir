@@ -1,12 +1,15 @@
-import { StatusBar } from 'react-native';
+import { Platform, StatusBar } from 'react-native';
 import { AppProviders } from './providers/AppProviders';
 import { RootNavigator } from './navigation/RootNavigator';
-import { colors } from '../theme/tokens';
 
 export function App() {
   return (
     <AppProviders>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent={Platform.OS === 'android'}
+      />
       <RootNavigator />
     </AppProviders>
   );

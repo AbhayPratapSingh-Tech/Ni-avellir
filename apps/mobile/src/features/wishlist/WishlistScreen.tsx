@@ -1,44 +1,59 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { removeItem } from './wishlistSlice';
 import { addItem } from '../cart/cartSlice';
 import { ProductCard } from '../../components/commerce/ProductCard';
+import { Screen } from '../../components/ui/Screen';
+import { useToast } from '../../components/ui/Toast';
+import type { RootStackParamList } from '../../app/navigation/types';
 
 export function WishlistScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const dispatch = useAppDispatch();
+  const toast = useToast();
   const items = useAppSelector((state) => state.wishlist.items);
 
   if (items.length === 0) {
     return (
-      <View style={styles.empty}>
+      <Screen style={styles.empty}>
         <Text style={styles.emptyEmoji}>💎</Text>
         <Text style={styles.emptyTitle}>No saved gear yet</Text>
         <Text style={styles.emptySub}>Tap the heart on any product to save it here.</Text>
-      </View>
+      </Screen>
     );
   }
 
   return (
-    <View style={styles.screen}>
+    <Screen style={styles.screen}>
       <Text style={styles.title}>Wishlist ({items.length})</Text>
       <View style={styles.grid}>
         {items.map((product) => (
           <View key={product.id} style={styles.item}>
             <ProductCard
               product={product}
+              onPress={(p) => navigation.navigate('ProductDetail', { product: p })}
               onAddToCart={(p) => {
                 dispatch(addItem({ product: p, quantity: 1 }));
                 dispatch(removeItem(p.id));
+                toast.show('Struck the cart ⚡');
               }}
             />
-            <Pressable style={styles.remove} onPress={() => dispatch(removeItem(product.id))}>
+            <Pressable
+              style={styles.remove}
+              onPress={() => {
+                dispatch(removeItem(product.id));
+                toast.show('Removed from wishlist');
+              }}
+            >
               <Text style={styles.removeText}>✕ Remove</Text>
             </Pressable>
           </View>
         ))}
       </View>
-    </View>
+    </Screen>
   );
 }
 
@@ -76,7 +91,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   removeText: {
-    color: '#FF6B6B',
+    color: colors.danger,
     fontSize: 12,
     fontWeight: '600',
   },

@@ -1,6 +1,6 @@
 # Nidavellir Architecture Plan
 
-Status: Phase 1 approved. Phase 2 project setup may now begin.
+Status: Phase 1 approved. Implementation through Phase 9 (catalog / PDP / Account polish) is complete for the college demo. This document is the original architecture plan; live status lives in `PROJECT_PROGRESS.md`.
 
 ## 1. Project Summary
 
@@ -623,6 +623,7 @@ Checkout flow:
 
 Profile flow:
 
+- Profile -> Edit Profile (name, email, phone, avatar)
 - Profile -> Orders -> Order Details
 - Profile -> Addresses
 - Profile -> Notifications
@@ -642,7 +643,8 @@ Home:
 
 - Animated hero campaign carousel.
 - Category rail with icon/image cards.
-- Featured collections.
+- Featured collections / deals / bestsellers.
+- You may also like shelf (tag-driven collection).
 - Flash sale countdown.
 - Product sections with FlashList.
 - Pull-to-refresh.

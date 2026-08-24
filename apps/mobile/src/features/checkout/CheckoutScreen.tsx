@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,11 +9,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { clearCart } from '../cart/cartSlice';
+import { addOrder } from '../orders/ordersSlice';
 import { productRepository } from '../../services/data/productRepository';
 import type { RootStackParamList } from '../../app/navigation/types';
 
@@ -26,14 +29,64 @@ const PAYMENT_METHODS = [
 const STEPS = ['Address', 'Payment', 'Review'] as const;
 type Step = (typeof STEPS)[number];
 
+type AddressErrors = Partial<{
+  fullName: string;
+  phone: string;
+  line1: string;
+  city: string;
+  stateName: string;
+  postalCode: string;
+}>;
+
+function digitsOnly(value: string) {
+  return value.replace(/\D/g, '');
+}
+
+function validateAddress(fields: {
+  fullName: string;
+  phone: string;
+  line1: string;
+  city: string;
+  stateName: string;
+  postalCode: string;
+}): AddressErrors {
+  const errors: AddressErrors = {};
+  const name = fields.fullName.trim();
+  const phone = digitsOnly(fields.phone);
+  const line1 = fields.line1.trim();
+  const city = fields.city.trim();
+  const stateName = fields.stateName.trim();
+  const postal = digitsOnly(fields.postalCode);
+
+  if (!name) errors.fullName = 'Full name is required';
+  else if (name.length < 2) errors.fullName = 'Enter at least 2 characters';
+
+  if (!phone) errors.phone = 'Phone number is required';
+  else if (phone.length !== 10) errors.phone = 'Enter a valid 10-digit mobile number';
+
+  if (!line1) errors.line1 = 'Address is required';
+
+  if (!city) errors.city = 'City is required';
+  else if (!/^[a-zA-Z\s.'-]+$/.test(city)) errors.city = 'City should contain letters only';
+
+  if (!stateName) errors.stateName = 'State is required';
+  else if (!/^[a-zA-Z\s.'-]+$/.test(stateName)) errors.stateName = 'State should contain letters only';
+
+  if (!postal) errors.postalCode = 'Postal code is required';
+  else if (!/^\d{6}$/.test(postal)) errors.postalCode = 'Enter a valid 6-digit PIN code';
+
+  return errors;
+}
+
 export function CheckoutScreen() {
   const navigation = useNavigation<Navigation>();
+  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const cart = useAppSelector((state) => state.cart);
   const [step, setStep] = useState<Step>('Address');
   const [submitting, setSubmitting] = useState(false);
+  const [triedAddress, setTriedAddress] = useState(false);
 
-  // Address fields.
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [line1, setLine1] = useState('');
@@ -42,11 +95,35 @@ export function CheckoutScreen() {
   const [postalCode, setPostalCode] = useState('');
   const [payment, setPayment] = useState<string>('cash_on_delivery');
 
-  const addressComplete =
-    fullName && phone && line1 && city && stateName && postalCode;
+  const addressErrors = useMemo(
+    () =>
+      validateAddress({
+        fullName,
+        phone,
+        line1,
+        city,
+        stateName,
+        postalCode,
+      }),
+    [fullName, phone, line1, city, stateName, postalCode],
+  );
+  const addressValid = Object.keys(addressErrors).length === 0;
+  const stepIndex = STEPS.indexOf(step);
+  // 3-button Android nav is ~48dp; insets.bottom can be 0 with translucent bars.
+  const footerPadBottom = Math.max(insets.bottom, Platform.OS === 'android' ? 56 : 16);
+
+  const goNextFromAddress = () => {
+    setTriedAddress(true);
+    if (!addressValid) return;
+    setStep('Payment');
+  };
 
   const placeOrder = async () => {
-    if (!addressComplete) return;
+    if (!addressValid) {
+      setStep('Address');
+      setTriedAddress(true);
+      return;
+    }
     setSubmitting(true);
     try {
       const itemInputs = cart.items.map((item) => ({
@@ -55,20 +132,38 @@ export function CheckoutScreen() {
       }));
       const email = 'demo@nidavellir.app';
       const order = await productRepository.createOrder({
-        customer: { name: fullName, email, phone },
+        customer: { name: fullName.trim(), email, phone: digitsOnly(phone) },
         items: itemInputs,
         shippingAddress: {
-          fullName,
-          phone,
-          line1,
-          city,
-          state: stateName,
-          postalCode,
+          fullName: fullName.trim(),
+          phone: digitsOnly(phone),
+          line1: line1.trim(),
+          city: city.trim(),
+          state: stateName.trim(),
+          postalCode: digitsOnly(postalCode),
         },
         paymentMethod: payment,
       });
+      dispatch(
+        addOrder({
+          id: order.id,
+          orderNumber: order.orderNumber ?? order.id,
+          status: order.status ?? 'confirmed',
+          total: order.total ?? cart.total,
+          currency: order.currency ?? 'INR',
+          estimatedDelivery: order.estimatedDelivery ?? '3–5 business days',
+          itemCount: order.items?.length
+            ? order.items.reduce(
+                (sum: number, line: { quantity?: number }) => sum + (line.quantity ?? 0),
+                0,
+              )
+            : cart.itemCount,
+          createdAt: order.createdAt ?? new Date().toISOString(),
+          paymentMethod: payment,
+        }),
+      );
       dispatch(clearCart());
-      navigation.replace('OrderConfirmation', { orderId: order.id ?? order.orderNumber });
+      navigation.replace('OrderConfirmation', { orderId: order.orderNumber ?? order.id });
     } catch (error) {
       Alert.alert('Order failed', (error as Error).message ?? 'Something went wrong');
     } finally {
@@ -76,47 +171,93 @@ export function CheckoutScreen() {
     }
   };
 
+  const showError = (key: keyof AddressErrors) =>
+    triedAddress && addressErrors[key] ? addressErrors[key] : undefined;
+
   return (
     <View style={styles.screen}>
       <View style={styles.steps}>
-        {STEPS.map((s) => (
-          <View key={s} style={styles.stepWrap}>
-            <View style={[styles.stepDot, step === s && styles.stepDotActive]}>
-              <Text style={[styles.stepDotText, step === s && styles.stepDotTextActive]}>
-                {STEPS.indexOf(s) + 1}
-              </Text>
+        {STEPS.map((label, index) => {
+          const reached = index <= stepIndex;
+          const showLine = index < STEPS.length - 1;
+          const lineFilled = index < stepIndex;
+
+          return (
+            <View key={label} style={[styles.stepSegment, !showLine && styles.stepSegmentEnd]}>
+              <View style={styles.stepNode}>
+                <View style={[styles.stepChip, reached ? styles.stepChipOn : styles.stepChipOff]}>
+                  <Text
+                    style={[styles.stepChipText, reached ? styles.stepChipTextOn : styles.stepChipTextOff]}
+                  >
+                    {index + 1}
+                  </Text>
+                </View>
+                <Text style={[styles.stepLabel, reached && styles.stepLabelOn]}>{label}</Text>
+              </View>
+              {showLine ? <View style={[styles.stepLine, lineFilled && styles.stepLineOn]} /> : null}
             </View>
-            <Text style={[styles.stepLabel, step === s && styles.stepLabelActive]}>{s}</Text>
-          </View>
-        ))}
+          );
+        })}
       </View>
 
-      <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
+        keyboardShouldPersistTaps="handled"
+      >
         {step === 'Address' ? (
           <View>
-            {[
-              ['Full name', fullName, setFullName, 'keyboard'],
-              ['Phone', phone, setPhone, 'phone-pad'],
-              ['Address line 1', line1, setLine1, 'default'],
-              ['City', city, setCity, 'default'],
-              ['State', stateName, setStateName, 'default'],
-              ['Postal code', postalCode, setPostalCode, 'number-pad'],
-            ].map(([label, value, setter, keyboard]) => (
-              <TextInput
-                key={label as string}
-                style={styles.input}
-                placeholder={label as string}
-                placeholderTextColor={colors.textMuted}
-                value={value as string}
-                onChangeText={setter as (t: string) => void}
-                keyboardType={keyboard as 'default'}
-              />
-            ))}
+            <Text style={styles.sectionTitle}>Shipping address</Text>
+
+            <Field
+              label="Full name"
+              value={fullName}
+              onChangeText={setFullName}
+              error={showError('fullName')}
+              autoCapitalize="words"
+            />
+            <Field
+              label="Phone"
+              value={phone}
+              onChangeText={(value) => setPhone(digitsOnly(value).slice(0, 10))}
+              error={showError('phone')}
+              keyboardType="phone-pad"
+              maxLength={10}
+            />
+            <Field
+              label="Address line 1"
+              value={line1}
+              onChangeText={setLine1}
+              error={showError('line1')}
+            />
+            <Field
+              label="City"
+              value={city}
+              onChangeText={setCity}
+              error={showError('city')}
+              autoCapitalize="words"
+            />
+            <Field
+              label="State"
+              value={stateName}
+              onChangeText={setStateName}
+              error={showError('stateName')}
+              autoCapitalize="words"
+            />
+            <Field
+              label="Postal code"
+              value={postalCode}
+              onChangeText={(value) => setPostalCode(digitsOnly(value).slice(0, 6))}
+              error={showError('postalCode')}
+              keyboardType="number-pad"
+              maxLength={6}
+            />
           </View>
         ) : null}
 
         {step === 'Payment' ? (
           <View>
+            <Text style={styles.sectionTitle}>Payment method</Text>
             {PAYMENT_METHODS.map((m) => (
               <Pressable
                 key={m.id}
@@ -137,15 +278,14 @@ export function CheckoutScreen() {
 
         {step === 'Review' ? (
           <View>
+            <Text style={styles.sectionTitle}>Order review</Text>
             <Text style={styles.reviewTitle}>Items ({cart.itemCount})</Text>
             {cart.items.map((item) => (
               <View key={item.product.id} style={styles.reviewLine}>
                 <Text style={styles.reviewName} numberOfLines={1}>
                   {item.quantity} × {item.product.name}
                 </Text>
-                <Text style={styles.reviewPrice}>
-                  ₹{item.lineTotal.toLocaleString('en-IN')}
-                </Text>
+                <Text style={styles.reviewPrice}>₹{item.lineTotal.toLocaleString('en-IN')}</Text>
               </View>
             ))}
             <View style={styles.divider} />
@@ -180,12 +320,12 @@ export function CheckoutScreen() {
         ) : null}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: footerPadBottom + 10 }]}>
         {step !== 'Address' ? (
           <Pressable
             style={[styles.backBtn, submitting && styles.btnDisabled]}
             disabled={submitting}
-onPress={() => setStep(STEPS[STEPS.indexOf(step) - 1] as Step)}
+            onPress={() => setStep(STEPS[stepIndex - 1]!)}
           >
             <Text style={styles.backBtnText}>Back</Text>
           </Pressable>
@@ -203,14 +343,54 @@ onPress={() => setStep(STEPS[STEPS.indexOf(step) - 1] as Step)}
           </Pressable>
         ) : (
           <Pressable
-            style={[styles.primaryBtn, !addressComplete && step === 'Address' && styles.btnDisabled]}
-            disabled={(step === 'Address' && !addressComplete) || submitting}
-onPress={() => setStep(STEPS[STEPS.indexOf(step) + 1] as Step)}
+            style={[styles.primaryBtn, submitting && styles.btnDisabled]}
+            disabled={submitting}
+            onPress={() => {
+              if (step === 'Address') {
+                goNextFromAddress();
+                return;
+              }
+              setStep(STEPS[stepIndex + 1]!);
+            }}
           >
             <Text style={styles.primaryBtnText}>Continue</Text>
           </Pressable>
         )}
       </View>
+    </View>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChangeText,
+  error,
+  keyboardType = 'default',
+  maxLength,
+  autoCapitalize = 'sentences',
+}: {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  error?: string;
+  keyboardType?: 'default' | 'phone-pad' | 'number-pad';
+  maxLength?: number;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+}) {
+  return (
+    <View style={styles.field}>
+      <TextInput
+        style={[styles.input, error ? styles.inputError : null]}
+        placeholder={label}
+        placeholderTextColor={colors.textMuted}
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType={keyboardType}
+        maxLength={maxLength}
+        autoCapitalize={autoCapitalize}
+      />
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 }
@@ -235,7 +415,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bodyContent: {
-    padding: spacing.md,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
   },
   btnDisabled: {
     opacity: 0.4,
@@ -245,10 +427,23 @@ const styles = StyleSheet.create({
     height: 1,
     marginVertical: spacing.md,
   },
+  errorText: {
+    color: colors.danger,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
+    marginTop: -4,
+  },
+  field: {
+    marginBottom: 2,
+  },
   footer: {
     backgroundColor: colors.surface,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
     flexDirection: 'row',
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
   },
   input: {
     backgroundColor: colors.surface,
@@ -261,6 +456,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 12,
   },
+  inputError: {
+    borderColor: colors.danger,
+  },
   payCard: {
     alignItems: 'center',
     backgroundColor: colors.surface,
@@ -272,7 +470,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   payCardActive: {
-    borderColor: colors.accent,
+    borderColor: colors.text,
   },
   payDesc: {
     color: colors.textMuted,
@@ -287,13 +485,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   primaryBtn: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.text,
     borderRadius: 12,
     flex: 1,
     paddingVertical: 14,
   },
   primaryBtnText: {
-    color: '#07130D',
+    color: colors.onAccent,
     fontSize: typography.body,
     fontWeight: '800',
     textAlign: 'center',
@@ -308,10 +506,10 @@ const styles = StyleSheet.create({
     width: 20,
   },
   radioActive: {
-    borderColor: colors.accent,
+    borderColor: colors.text,
   },
   radioInner: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.text,
     borderRadius: 5,
     height: 10,
     width: 10,
@@ -347,7 +545,7 @@ const styles = StyleSheet.create({
   },
   reviewTitle: {
     color: colors.text,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     marginBottom: spacing.sm,
   },
@@ -357,7 +555,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   reviewTotalValue: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 18,
     fontWeight: '800',
   },
@@ -365,44 +563,76 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     flex: 1,
   },
-  stepDot: {
+  sectionTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: spacing.md,
+  },
+  stepChip: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 15,
-    borderWidth: 1,
-    height: 30,
+    borderRadius: 16,
+    borderWidth: 2,
+    height: 32,
     justifyContent: 'center',
-    width: 30,
+    width: 32,
   },
-  stepDotActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+  stepChipOff: {
+    backgroundColor: '#FFFFFF',
+    borderColor: colors.text,
   },
-  stepDotText: {
-    color: colors.textMuted,
+  stepChipOn: {
+    backgroundColor: colors.text,
+    borderColor: colors.text,
+  },
+  stepChipText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
-  stepDotTextActive: {
-    color: '#07130D',
+  stepChipTextOff: {
+    color: colors.text,
+  },
+  stepChipTextOn: {
+    color: '#FFFFFF',
   },
   stepLabel: {
     color: colors.textMuted,
     fontSize: 11,
-    marginTop: 4,
+    fontWeight: '600',
+    marginTop: 6,
   },
-  stepLabelActive: {
-    color: colors.accent,
-    fontWeight: '700',
+  stepLabelOn: {
+    color: colors.text,
+    fontWeight: '800',
+  },
+  stepLine: {
+    backgroundColor: colors.border,
+    flex: 1,
+    height: 2,
+    marginHorizontal: 4,
+    marginTop: 15,
+  },
+  stepLineOn: {
+    backgroundColor: colors.text,
+  },
+  stepNode: {
+    alignItems: 'center',
+  },
+  stepSegment: {
+    alignItems: 'flex-start',
+    flex: 1,
+    flexDirection: 'row',
+  },
+  stepSegmentEnd: {
+    flex: 0,
   },
   steps: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-  },
-  stepWrap: {
-    alignItems: 'center',
   },
 });

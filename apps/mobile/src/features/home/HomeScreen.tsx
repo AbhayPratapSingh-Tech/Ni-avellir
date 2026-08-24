@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import Animated, {
@@ -18,12 +19,16 @@ import Animated, {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Product } from '@nidavellir/shared';
-import { colors, spacing, typography } from '../../theme/tokens';
+import { colors, spacing } from '../../theme/tokens';
 import { ProductCard } from '../../components/commerce/ProductCard';
-import { useCountdown } from '../../hooks/useCountdown';
+import { SquareProductCard } from '../../components/commerce/SquareProductCard';
+import { CategoryCircleSlider } from '../../components/commerce/CategoryCircleSlider';
+import { VideoBanner } from '../../components/commerce/VideoBanner';
+import { BrandMark } from '../../components/ui/BrandMark';
+import { Screen } from '../../components/ui/Screen';
+import { useDailySale } from '../../lib/saleWindow';
 import { productRepository } from '../../services/data/productRepository';
-import { useAppDispatch } from '../../app/store';
-import { addItem } from '../cart/cartSlice';
+import type { ShopCategory } from '../../lib/shopCategories';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -52,6 +57,20 @@ const heroSlides = [
   },
 ];
 
+const HERO_BANNER = {
+  title: 'Forge week drop',
+  subtitle: 'Shop the live catalog',
+  image:
+    'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1400&q=80',
+};
+
+const CLOSING_BANNER = {
+  title: 'Built for match day',
+  subtitle: 'Stage-ready gear, numbered runs, clean desks.',
+  image:
+    'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1400&q=80',
+};
+
 function GlowRing() {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0.5);
@@ -76,19 +95,22 @@ function GlowRing() {
 }
 
 function HeroCarousel() {
-  const listRef = useRef<FlatList<typeof heroSlides[number]>>(null);
+  const listRef = useRef<FlatList<(typeof heroSlides)[number]>>(null);
   const [index, setIndex] = useState(0);
+  const slideWidth = 328;
+  const gap = 12;
+  const stride = slideWidth + gap;
 
   useEffect(() => {
     const timer = setInterval(() => {
       setIndex((prev) => {
         const next = (prev + 1) % heroSlides.length;
-        listRef.current?.scrollToIndex({ index: next, animated: true });
+        listRef.current?.scrollToOffset({ offset: next * stride, animated: true });
         return next;
       });
     }, 4200);
     return () => clearInterval(timer);
-  }, []);
+  }, [stride]);
 
   return (
     <View>
@@ -97,13 +119,14 @@ function HeroCarousel() {
         data={heroSlides}
         keyExtractor={(item) => item.id}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={(e) =>
-          setIndex(Math.round(e.nativeEvent.contentOffset.x / 340))
-        }
+        snapToInterval={stride}
+        decelerationRate="fast"
+        contentContainerStyle={{ paddingRight: gap }}
+        getItemLayout={(_, i) => ({ length: stride, offset: stride * i, index: i })}
+        onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / stride))}
         renderItem={({ item }) => (
-          <View style={styles.heroSlide}>
+          <View style={[styles.heroSlide, { width: slideWidth, marginRight: gap }]}>
             <Image source={{ uri: item.image }} style={styles.heroImage} resizeMode="cover" />
             <View style={styles.heroOverlay}>
               <GlowRing />
@@ -114,8 +137,8 @@ function HeroCarousel() {
         )}
       />
       <View style={styles.dots}>
-        {heroSlides.map((s, i) => (
-          <View key={s.id} style={[styles.dot, i === index && styles.dotActive]} />
+        {heroSlides.map((slide, i) => (
+          <View key={slide.id} style={[styles.dot, i === index && styles.dotActive]} />
         ))}
       </View>
     </View>
@@ -123,110 +146,203 @@ function HeroCarousel() {
 }
 
 function FlashSaleBar() {
-  const target = Date.now() + 3600 * 1000 * 7 + 1000 * 52;
-  const { hours, minutes, seconds } = useCountdown(target);
+  const { active, countdown } = useDailySale();
+
   return (
     <View style={styles.flashSale}>
-      <Text style={styles.flashTitle}>⚡ Flash Drop ends in</Text>
-      <View style={styles.timerRow}>
-        {[hours, minutes, seconds].map((v, i) => (
-          <View key={i} style={styles.timerCell}>
-            <Text style={styles.timerValue}>{v}</Text>
-          </View>
-        ))}
+      <View>
+        <Text style={styles.flashKicker}>{active ? 'LIVE DROP' : 'DAILY DROP'}</Text>
+        <Text style={styles.flashTitle}>{active ? 'Ends in' : 'Sale soon'}</Text>
       </View>
+      {active ? (
+        <View style={styles.timerRow}>
+          {[
+            { v: countdown.hours, l: 'H' },
+            { v: countdown.minutes, l: 'M' },
+            { v: countdown.seconds, l: 'S' },
+          ].map((cell) => (
+            <View key={cell.l} style={styles.timerCell}>
+              <Text style={styles.timerValue}>{cell.v}</Text>
+              <Text style={styles.timerLabel}>{cell.l}</Text>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <Text style={styles.saleSoonHint}>Opens 9:00 · 7 hrs</Text>
+      )}
     </View>
   );
 }
 
 export function HomeScreen() {
   const navigation = useNavigation<Navigation>();
-  const dispatch = useAppDispatch();
-  const [featured, setFeatured] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const { width } = useWindowDimensions();
+  const [deals, setDeals] = useState<Product[]>([]);
+  const [bestSellers, setBestSellers] = useState<Product[]>([]);
+  const [alsoLike, setAlsoLike] = useState<Product[]>([]);
 
   useEffect(() => {
-    productRepository.getFeatured().then(setFeatured);
-    productRepository.getCategories().then(setCategories);
+    productRepository.getDeals().then(setDeals);
+    productRepository.getBestSellers().then(setBestSellers);
+    productRepository.getAlsoLike(6).then(setAlsoLike);
   }, []);
 
-  const handleAdd = useCallback(
+  const openPlp = useCallback(() => {
+    navigation.navigate('Products', { title: 'All products' });
+  }, [navigation]);
+
+  const openProduct = useCallback(
     (product: Product) => {
-      dispatch(addItem({ product, quantity: 1 }));
+      navigation.navigate('ProductDetail', { product });
     },
-    [dispatch],
+    [navigation],
+  );
+
+  const openCategory = useCallback(
+    (item: ShopCategory) => {
+      navigation.navigate('Products', {
+        title: item.name,
+        category: item.category,
+        q: item.q,
+        collection: item.collection,
+      });
+    },
+    [navigation],
   );
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.screenContent}>
-      <View style={styles.header}>
-        <Text style={styles.kicker}>Niðavellir</Text>
-        <Text style={styles.headerTitle}>Forge & Wear</Text>
-      </View>
+    <Screen>
+      <ScrollView style={styles.screen} contentContainerStyle={styles.screenContent}>
+        <View style={styles.logoWrap}>
+          <BrandMark size={64} />
+        </View>
 
-      <HeroCarousel />
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Flash Drop</Text>
-        <FlashSaleBar />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Categories</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {categories.map((cat) => (
-            <Pressable
-              key={cat}
-              style={styles.categoryChip}
-onPress={() => navigation.navigate('Products')}
-            >
-              <Text style={styles.categoryChipText}>{cat.replace('-', ' ')}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Featured Forge</Text>
-<Pressable onPress={() => navigation.navigate('Products')}>
-            <Text style={styles.seeAll}>See all</Text>
+        <View style={styles.padded}>
+          <Pressable style={styles.searchBar} onPress={() => navigation.navigate('Search', {})}>
+            <Text style={styles.searchIcon}>⌕</Text>
+            <Text style={styles.searchPlaceholder}>Search kits, desks, drops...</Text>
           </Pressable>
+          <HeroCarousel />
         </View>
-        <View style={styles.grid}>
-          {featured.map((product) => (
-            <View key={product.id} style={styles.gridItem}>
-              <ProductCard
-                product={product}
-                onPress={(p) => navigation.navigate('ProductDetail', { product: p })}
-                onAddToCart={handleAdd}
-              />
+
+        <Pressable onPress={openPlp} style={styles.fullBanner}>
+          <Image source={{ uri: HERO_BANNER.image }} style={[styles.fullBannerImage, { width }]} />
+          <View style={styles.fullBannerOverlay} pointerEvents="none">
+            <Text style={styles.bannerKicker}>Shop all</Text>
+            <Text style={styles.bannerTitle}>{HERO_BANNER.title}</Text>
+            <Text style={styles.bannerSub}>{HERO_BANNER.subtitle}</Text>
+          </View>
+        </Pressable>
+
+        <View style={styles.padded}>
+          <View style={styles.section}>
+            <FlashSaleBar />
+          </View>
+          <View style={styles.section}>
+            <VideoBanner />
+          </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Categories</Text>
+            <CategoryCircleSlider onPress={openCategory} />
+          </View>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Deals for you</Text>
+              <Pressable
+                onPress={() => navigation.navigate('Products', { collection: 'deals', title: 'Deals for you' })}
+              >
+                <Text style={styles.seeAll}>See all</Text>
+              </Pressable>
             </View>
-          ))}
+            <View style={styles.grid}>
+              {deals.map((product) => (
+                <View key={product.id} style={styles.gridItem}>
+                  <ProductCard product={product} onPress={openProduct} />
+                </View>
+              ))}
+            </View>
+          </View>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Our best sellers</Text>
+              <Pressable
+                onPress={() =>
+                  navigation.navigate('Products', { collection: 'bestsellers', title: 'Top best sellers' })
+                }
+              >
+                <Text style={styles.seeAll}>See all</Text>
+              </Pressable>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bestTrack}>
+              {bestSellers.map((product) => (
+                <View key={product.id} style={styles.bestCard}>
+                  <SquareProductCard product={product} onPress={openProduct} />
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>You may also like</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="See all you may also like"
+                onPress={() =>
+                  navigation.navigate('Products', {
+                    collection: 'also-like',
+                    title: 'You may also like',
+                  })
+                }
+                style={styles.arrowBtn}
+              >
+                <Text style={styles.arrowBtnText}>→</Text>
+              </Pressable>
+            </View>
+            <View style={styles.grid3}>
+              {alsoLike.map((product) => (
+                <View key={product.id} style={styles.gridItem3}>
+                  <ProductCard product={product} compact onPress={openProduct} />
+                </View>
+              ))}
+            </View>
+          </View>
+          <View style={[styles.section, styles.lastBannerWrap]}>
+            <Image source={{ uri: CLOSING_BANNER.image }} style={styles.lastBanner} />
+            <View style={styles.lastBannerOverlay} pointerEvents="none">
+              <Text style={styles.bannerTitle}>{CLOSING_BANNER.title}</Text>
+              <Text style={styles.bannerSub}>{CLOSING_BANNER.subtitle}</Text>
+            </View>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  addBtn: {
-    backgroundColor: colors.accent,
+  bannerKicker: {
+    color: colors.onAccent,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
   },
-  categoryChip: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginRight: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  categoryChipText: {
-    color: colors.text,
+  bannerSub: {
+    color: 'rgba(255,255,255,0.82)',
     fontSize: 13,
-    fontWeight: '600',
-    textTransform: 'capitalize',
+    marginTop: 2,
+  },
+  bannerTitle: {
+    color: colors.onAccent,
+    fontSize: 22,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  bestCard: {
+    marginRight: 12,
+  },
+  bestTrack: {
+    paddingRight: spacing.md,
   },
   dot: {
     backgroundColor: colors.border,
@@ -245,21 +361,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: spacing.sm,
   },
+  flashKicker: {
+    color: colors.danger,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.6,
+  },
   flashSale: {
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderColor: colors.accent,
-    borderRadius: 14,
+    borderColor: colors.border,
+    borderRadius: 12,
     borderWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: spacing.sm,
     padding: spacing.md,
   },
   flashTitle: {
     color: colors.text,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  fullBanner: {
+    marginTop: spacing.md,
+  },
+  fullBannerImage: {
+    height: 180,
+  },
+  fullBannerOverlay: {
+    backgroundColor: colors.overlay,
+    bottom: 0,
+    justifyContent: 'flex-end',
+    left: 0,
+    padding: spacing.md,
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
   glowRing: {
     borderColor: colors.accent,
@@ -270,64 +408,135 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 220,
   },
+  arrowBtn: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    width: 36,
+  },
+  arrowBtnText: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+    lineHeight: 20,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginHorizontal: -spacing.xs,
+  },
+  grid3: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -4,
   },
   gridItem: {
     width: '50%',
   },
-  header: {
-    paddingVertical: spacing.md,
-  },
-  headerTitle: {
-    color: colors.text,
-    fontSize: typography.title,
-    fontWeight: '800',
+  gridItem3: {
+    marginBottom: 8,
+    paddingHorizontal: 4,
+    width: '33.333%',
   },
   heroImage: {
     height: 220,
     width: '100%',
   },
   heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
-    backgroundColor: 'rgba(9,10,15,0.55)',
+    backgroundColor: colors.overlay,
+    bottom: 0,
     justifyContent: 'center',
-    padding: spacing.lg,
+    left: 0,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
   heroSlide: {
     borderRadius: 18,
     height: 220,
     overflow: 'hidden',
-    width: 340,
   },
   heroSubtitle: {
-    color: colors.textMuted,
+    color: 'rgba(255,255,255,0.78)',
     fontSize: 14,
     marginTop: 4,
     textAlign: 'center',
   },
   heroTitle: {
-    color: colors.text,
+    color: colors.onAccent,
     fontSize: 26,
     fontWeight: '800',
     textAlign: 'center',
   },
-  kicker: {
-    color: colors.accent,
-    fontSize: typography.caption,
-    fontWeight: '800',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
+  lastBanner: {
+    borderRadius: 18,
+    height: 160,
+    width: '100%',
+  },
+  lastBannerOverlay: {
+    backgroundColor: colors.overlay,
+    borderRadius: 18,
+    bottom: 0,
+    justifyContent: 'flex-end',
+    left: 0,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  lastBannerWrap: {
+    borderRadius: 18,
+    marginBottom: spacing.xl,
+    overflow: 'hidden',
+  },
+  logoWrap: {
+    alignItems: 'center',
+    paddingBottom: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  padded: {
+    paddingHorizontal: spacing.md,
+  },
+  saleSoonHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
   },
   screen: {
     backgroundColor: colors.background,
     flex: 1,
   },
   screenContent: {
+    paddingBottom: spacing.xl,
+  },
+  searchBar: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: spacing.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.lg,
+    paddingVertical: 12,
+  },
+  searchIcon: {
+    color: colors.textMuted,
+    fontSize: 18,
+    marginRight: spacing.sm,
+  },
+  searchPlaceholder: {
+    color: colors.textMuted,
+    fontSize: 15,
   },
   section: {
     marginTop: spacing.lg,
@@ -336,31 +545,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: spacing.sm,
   },
   sectionTitle: {
     color: colors.text,
     fontSize: 18,
     fontWeight: '800',
+    marginBottom: spacing.sm,
   },
   seeAll: {
     color: colors.accent,
     fontSize: 13,
     fontWeight: '700',
+    marginBottom: spacing.sm,
   },
   timerCell: {
+    alignItems: 'center',
     backgroundColor: colors.background,
+    borderColor: colors.border,
     borderRadius: 8,
+    borderWidth: 1,
     marginLeft: spacing.xs,
-    paddingHorizontal: 10,
+    minWidth: 44,
+    paddingHorizontal: 8,
     paddingVertical: 6,
+  },
+  timerLabel: {
+    color: colors.textMuted,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginTop: 2,
   },
   timerRow: {
     flexDirection: 'row',
   },
   timerValue: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 18,
-    fontWeight: '800',
     fontVariant: ['tabular-nums'],
+    fontWeight: '800',
   },
 });

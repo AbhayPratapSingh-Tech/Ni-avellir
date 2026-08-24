@@ -101,4 +101,4 @@ Nidavellir is intended to become a real premium gaming merchandise marketplace, 
 
 ## Current Status
 
-Phase 1 architecture draft has been revised for bare React Native CLI and is awaiting user decisions plus explicit approval before Phase 2.
+Phases 1–9 are complete for the college demo (architecture through catalog / PDP / Account polish). Optional next work is session persistence, automated tests, and store deployment. Live tracking: `PROJECT_PROGRESS.md` and `TODO.md`.

@@ -10,6 +10,7 @@ import Animated, {
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, typography } from '../../theme/tokens';
+import { Screen } from '../../components/ui/Screen';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -51,7 +52,7 @@ export function OrderConfirmationScreen() {
   const level = LEVELS[Math.floor(Math.random() * LEVELS.length)];
 
   return (
-    <View style={styles.screen}>
+    <Screen edges={['top', 'bottom']} style={styles.screen}>
       <View style={styles.hero}>
         <Animated.View style={[styles.ring, ringStyle]} />
         <Animated.View style={[styles.check, checkStyle]}>
@@ -92,7 +93,7 @@ export function OrderConfirmationScreen() {
       <Pressable onPress={() => navigation.navigate('Orders')}>
         <Text style={styles.link}>View my orders</Text>
       </Pressable>
-    </View>
+    </Screen>
   );
 }
 
@@ -105,7 +106,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   btnText: {
-    color: '#07130D',
+    color: colors.onAccent,
     fontSize: typography.body,
     fontWeight: '800',
     textAlign: 'center',
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
     width: 100,
   },
   checkMark: {
-    color: '#07130D',
+    color: colors.onAccent,
     fontSize: 48,
     fontWeight: '800',
   },
@@ -185,7 +186,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   xpCard: {
-    backgroundColor: 'rgba(46,242,167,0.1)',
+    backgroundColor: colors.accentSoft,
     borderColor: colors.accent,
     borderRadius: 12,
     borderWidth: 1,

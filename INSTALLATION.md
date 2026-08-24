@@ -161,9 +161,40 @@ Terminal 2 — launch the app:
 
 ```bash
 pnpm --filter mobile android
+# or from repo root:
+npm run android
 ```
 
 Make sure an Android emulator (AVD) is running first, or a physical device is connected with USB debugging on.
+
+`npm run android` waits until the emulator’s **package manager** is up before installing. That avoids:
+
+`InstallException: Can't find service: package`
+
+which happens when Gradle installs while the AVD is still booting. If it still fails, open **Device Manager → Cold Boot Now**, wait for the home screen, then run again.
+
+### Workspace hoist / missing `react-native` under mobile
+
+npm workspaces often hoist `react-native` to the **repo root**. Android Gradle and the Metro launch script expect packages under `apps/mobile/node_modules`.
+
+If you see:
+
+`Included build '.../apps/mobile/node_modules/@react-native/gradle-plugin' does not exist`
+
+or
+
+`.../apps/mobile/node_modules/react-native/cli.js: No such file or directory`
+
+run from repo root:
+
+```bash
+npm install
+node apps/mobile/scripts/ensure-mobile-node-modules.js
+```
+
+`preandroid` / `postinstall` on the mobile workspace already run that script.
+
+Profile photo picking needs a native rebuild after installing `react-native-image-picker` (Android camera/gallery permissions are in the manifest; iOS usage strings are in `Info.plist`).
 
 ---
 

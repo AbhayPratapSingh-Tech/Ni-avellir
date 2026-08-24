@@ -14,13 +14,17 @@ export type Product = {
   franchise: string;
   description: string;
   price: number;
+  compareAtPrice: number;
   currency: CurrencyCode;
   rating: number;
   reviewCount: number;
   stock: number;
   tags: string[];
   imageUrl: string;
+  imageUrls: string[];
   isLimitedDrop: boolean;
+  specifications: Record<string, string>;
+  additionalDetails: string;
 };
 
 export type CartLine = {

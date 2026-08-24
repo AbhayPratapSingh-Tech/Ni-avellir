@@ -4,6 +4,26 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Catalog, PDP, and Account polish
+
+- Expanded shared mock catalog (~28 products, 6 franchises, `you-may-also-like` tag, richer specs).
+- Added Home **You may also like** 3×2 grid and `collection: 'also-like'` PLP.
+- Converted PDP write-review to a bottom-sheet modal; fixed submit button stretch; more space before brand chips.
+- Added Edit profile (name / email / phone) and editable avatar (`react-native-image-picker` + presets).
+- Orders list backed by Redux `ordersSlice` for the session.
+- Removed duplicate screen titles when the stack header already shows the name.
+- Fixed monorepo Android/Metro breakage after hoist: `apps/mobile/scripts/ensure-mobile-node-modules.js` (runs on postinstall / preandroid).
+
+### Auth gate + shop UI polish
+
+- Added 3-slide onboarding, login-first auth, signup, and demo OTP before the shop opens.
+- Restyled Home (Forge), Categories, Search, PDP extras, and Cart (address card, stock chips, wishlist/delete, Hit the Anvil bar).
+- Switched the shop to a light esports theme (mist / ink / cobalt).
+- Daily sale window is local 09:00–16:00 with countdown / “Sale soon”.
+- Documented Phase 8 in `PROJECT_PROGRESS.md`, `TODO.md`, `README.md`, and `DEVELOPER_GUIDE.md`.
+
+### Earlier planning
+
 - Added Phase 1 architecture plan.
 - Added project guidance for future AI assistants.
 - Added initial TODO and progress tracking documents.

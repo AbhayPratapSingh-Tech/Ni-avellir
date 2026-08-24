@@ -4,16 +4,24 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { colors } from '../../theme/tokens';
 import { HomeScreen } from '../../features/home/HomeScreen';
+import { CategoriesScreen } from '../../features/categories/CategoriesScreen';
 import { ProductsScreen } from '../../features/products/ProductsScreen';
+import { SearchScreen } from '../../features/search/SearchScreen';
 import { ProductDetailScreen } from '../../features/products/ProductDetailScreen';
 import { CartScreen } from '../../features/cart/CartScreen';
-import { WishlistScreen } from '../../features/wishlist/WishlistScreen';
 import { ProfileScreen } from '../../features/profile/ProfileScreen';
 import { CheckoutScreen } from '../../features/checkout/CheckoutScreen';
 import { OrderConfirmationScreen } from '../../features/orders/OrderConfirmationScreen';
 import { OrdersScreen } from '../../features/orders/OrdersScreen';
-import type { MainTabParamList, RootStackParamList } from './types';
+import { EditProfileScreen } from '../../features/profile/EditProfileScreen';
+import { OnboardingScreen } from '../../features/auth/OnboardingScreen';
+import { LoginScreen } from '../../features/auth/LoginScreen';
+import { SignupScreen } from '../../features/auth/SignupScreen';
+import { OtpScreen } from '../../features/auth/OtpScreen';
+import { useAppSelector } from '../store';
+import type { AuthStackParamList, MainTabParamList, RootStackParamList } from './types';
 
+const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -31,14 +39,7 @@ const theme = {
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   return (
-    <Text
-      style={{
-        color: focused ? colors.accent : colors.textMuted,
-        fontSize: 18,
-      }}
-    >
-      {label}
-    </Text>
+    <Text style={{ color: focused ? colors.accent : colors.textMuted, fontSize: 18 }}>{label}</Text>
   );
 }
 
@@ -62,30 +63,34 @@ function MainTabs() {
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon label="⌂" focused={focused} /> }}
+        options={{
+          tabBarLabel: 'Forge',
+          tabBarIcon: ({ focused }) => <TabIcon label="⚒" focused={focused} />,
+        }}
       />
       <Tab.Screen
-        name="ProductsTab"
-        component={ProductsScreen}
+        name="Categories"
+        component={CategoriesScreen}
         options={{
-          tabBarLabel: 'Products',
-          tabBarIcon: ({ focused }) => <TabIcon label="◆" focused={focused} />,
+          tabBarLabel: 'Categories',
+          tabBarIcon: ({ focused }) => <TabIcon label="◉" focused={focused} />,
         }}
       />
       <Tab.Screen
         name="Cart"
         component={CartScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon label="🛒" focused={focused} /> }}
+        options={{
+          tabBarLabel: 'Cart',
+          tabBarIcon: ({ focused }) => <TabIcon label="🛒" focused={focused} />,
+        }}
       />
       <Tab.Screen
-        name="Wishlist"
-        component={WishlistScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon label="♥" focused={focused} /> }}
-      />
-      <Tab.Screen
-        name="Profile"
+        name="Account"
         component={ProfileScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon label="⚙" focused={focused} /> }}
+        options={{
+          tabBarLabel: 'Account',
+          tabBarIcon: ({ focused }) => <TabIcon label="⚙" focused={focused} />,
+        }}
       />
     </Tab.Navigator>
   );
@@ -96,27 +101,93 @@ const rootScreenOptions = {
   headerTintColor: colors.text,
   headerTitleStyle: { fontWeight: '800' as const },
   contentStyle: { backgroundColor: colors.background },
+  statusBarStyle: 'dark' as const,
+  statusBarTranslucent: true,
+  statusBarBackgroundColor: 'transparent',
 };
 
+function AuthNavigator({ initialRouteName }: { initialRouteName: keyof AuthStackParamList }) {
+  return (
+    <AuthStack.Navigator
+      initialRouteName={initialRouteName}
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.text,
+        headerTitleStyle: { fontWeight: '800' as const },
+        contentStyle: { backgroundColor: colors.background },
+        headerShown: false,
+        statusBarStyle: 'dark',
+        statusBarTranslucent: true,
+        statusBarBackgroundColor: 'transparent',
+      }}
+    >
+      <AuthStack.Screen
+        name="Onboarding"
+        component={OnboardingScreen}
+        options={{
+          contentStyle: { backgroundColor: '#07080C' },
+          statusBarStyle: 'light',
+          statusBarTranslucent: true,
+          statusBarBackgroundColor: 'transparent',
+        }}
+      />
+      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen
+        name="Signup"
+        component={SignupScreen}
+        options={{ headerShown: true, title: 'Sign up' }}
+      />
+      <AuthStack.Screen
+        name="Otp"
+        component={OtpScreen}
+        options={{ headerShown: true, title: 'Verify OTP' }}
+      />
+    </AuthStack.Navigator>
+  );
+}
+
+function ShopNavigator() {
+  return (
+    <RootStack.Navigator screenOptions={rootScreenOptions}>
+      <RootStack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
+      <RootStack.Screen
+        name="Products"
+        component={ProductsScreen}
+        options={({ route }) => ({ title: route.params?.title ?? 'Products' })}
+      />
+      <RootStack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
+      <RootStack.Screen
+        name="ProductDetail"
+        component={ProductDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <RootStack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
+      <RootStack.Screen
+        name="OrderConfirmation"
+        component={OrderConfirmationScreen}
+        options={{ headerShown: false }}
+      />
+      <RootStack.Screen name="Orders" component={OrdersScreen} options={{ title: 'My Orders' }} />
+      <RootStack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{ title: 'Edit profile' }}
+      />
+    </RootStack.Navigator>
+  );
+}
+
 export function RootNavigator() {
+  const user = useAppSelector((state) => state.auth.user);
+  const startOnLogin = useAppSelector((state) => state.auth.startOnLogin);
+
   return (
     <NavigationContainer theme={theme}>
-      <RootStack.Navigator screenOptions={rootScreenOptions}>
-        <RootStack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
-        <RootStack.Screen name="Products" component={ProductsScreen} options={{ title: 'Products' }} />
-        <RootStack.Screen
-          name="ProductDetail"
-          component={ProductDetailScreen}
-          options={{ title: 'Product' }}
-        />
-        <RootStack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
-        <RootStack.Screen
-          name="OrderConfirmation"
-          component={OrderConfirmationScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen name="Orders" component={OrdersScreen} options={{ title: 'My Orders' }} />
-      </RootStack.Navigator>
+      {user ? (
+        <ShopNavigator />
+      ) : (
+        <AuthNavigator initialRouteName={startOnLogin ? 'Login' : 'Onboarding'} />
+      )}
     </NavigationContainer>
   );
 }

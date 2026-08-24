@@ -1,66 +1,121 @@
+import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Product } from '@nidavellir/shared';
-import { colors, spacing, typography } from '../../theme/tokens';
+import { colors, spacing } from '../../theme/tokens';
+import { getProductImages } from '../../lib/productMedia';
+import { useAppDispatch, useAppSelector } from '../../app/store';
+import { toggleItem } from '../../features/wishlist/wishlistSlice';
+import { addItem } from '../../features/cart/cartSlice';
+import { StarRating } from '../ui/StarRating';
+import { useToast } from '../ui/Toast';
+import { ImagePager } from './ImagePager';
+import { PriceRow } from './PriceRow';
 
 type Props = {
   product: Product;
+  compact?: boolean;
+  large?: boolean;
   onPress?: (product: Product) => void;
+  /** Optional override; default adds to cart + toast. */
   onAddToCart?: (product: Product) => void;
 };
 
-export function ProductCard({ product, onPress, onAddToCart }: Props) {
+export function ProductCard({ product, compact, large, onPress, onAddToCart }: Props) {
+  const [width, setWidth] = useState(0);
+  const images = getProductImages(product);
+  const imageHeight = compact ? 118 : large ? 210 : 150;
+  const dispatch = useAppDispatch();
+  const toast = useToast();
+  const wishlisted = useAppSelector((state) => state.wishlist.items.some((item) => item.id === product.id));
+  const inStock = product.stock > 0;
+
+  const handleWish = () => {
+    dispatch(toggleItem(product));
+    toast.show(wishlisted ? 'Removed from wishlist' : 'Added to wishlist');
+  };
+
+  const handleAdd = () => {
+    if (!inStock) {
+      toast.show('Out of stock');
+      return;
+    }
+    if (onAddToCart) {
+      onAddToCart(product);
+      return;
+    }
+    dispatch(addItem({ product, quantity: 1 }));
+    toast.show('Struck the cart ⚡');
+  };
+
   return (
-    <Pressable
-      style={styles.card}
-      onPress={() => onPress?.(product)}
-      accessibilityLabel={product.name}
-    >
-      <View style={styles.imageWrap}>
-        <Image source={{ uri: product.imageUrl }} style={styles.image} resizeMode="cover" />
+    <View style={[styles.card, compact && styles.cardCompact]}>
+      <View
+        style={styles.imageWrap}
+        onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      >
+        {width > 0 ? (
+          compact ? (
+            <Pressable onPress={() => onPress?.(product)}>
+              <Image
+                source={{ uri: images[0] }}
+                style={{ height: imageHeight, width }}
+                resizeMode="cover"
+              />
+            </Pressable>
+          ) : (
+            <ImagePager
+              images={images}
+              height={imageHeight}
+              width={width}
+              showCount={false}
+              onPressImage={() => onPress?.(product)}
+            />
+          )
+        ) : null}
+        <View style={styles.actions}>
+          <Pressable style={styles.chip} onPress={handleWish} hitSlop={8}>
+            <Text style={[styles.chipText, wishlisted && styles.heartOn]}>{wishlisted ? '♥' : '♡'}</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.chip, !inStock && styles.chipDisabled]}
+            onPress={handleAdd}
+            hitSlop={8}
+            disabled={!inStock}
+          >
+            <Text style={styles.chipText}>🛒</Text>
+          </Pressable>
+        </View>
         {product.isLimitedDrop ? (
-          <View style={styles.badge}>
+          <View style={styles.badge} pointerEvents="none">
             <Text style={styles.badgeText}>Limited</Text>
           </View>
         ) : null}
-        {!product.stock ? (
-          <View style={styles.soldOut}>
+        {!inStock ? (
+          <View style={styles.soldOut} pointerEvents="none">
             <Text style={styles.soldOutText}>Sold out</Text>
           </View>
         ) : null}
       </View>
-      <View style={styles.info}>
-        <Text style={styles.franchise} numberOfLines={1}>
-          {product.franchise}
-        </Text>
+      <Pressable style={styles.info} onPress={() => onPress?.(product)}>
         <Text style={styles.name} numberOfLines={2}>
           {product.name}
         </Text>
-        <View style={styles.row}>
-          <Text style={styles.price}>₹{product.price.toLocaleString('en-IN')}</Text>
-          <Text style={styles.rating}>★ {product.rating}</Text>
+        <View style={styles.ratingRow}>
+          <StarRating rating={product.rating} size={12} />
+          <Text style={styles.ratingCount}>{product.rating.toFixed(1)}</Text>
         </View>
-        {onAddToCart && product.stock > 0 ? (
-          <Pressable style={styles.addBtn} onPress={() => onAddToCart(product)}>
-            <Text style={styles.addBtnText}>Add to cart</Text>
-          </Pressable>
-        ) : null}
-      </View>
-    </Pressable>
+        <PriceRow product={product} />
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  addBtn: {
-    backgroundColor: colors.accent,
-    borderRadius: 8,
-    marginTop: spacing.sm,
-    paddingVertical: 8,
-  },
-  addBtnText: {
-    color: '#07130D',
-    fontSize: typography.caption,
-    fontWeight: '800',
-    textAlign: 'center',
+  actions: {
+    position: 'absolute',
+    right: 8,
+    top: 8,
+    zIndex: 6,
   },
   badge: {
     backgroundColor: colors.accent,
@@ -72,63 +127,75 @@ const styles = StyleSheet.create({
     top: spacing.sm,
   },
   badgeText: {
-    color: '#07130D',
+    color: colors.onAccent,
     fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   card: {
     backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 14,
+    borderWidth: 1,
     flex: 1,
-    margin: spacing.xs,
+    margin: 6,
     overflow: 'hidden',
   },
-  franchise: {
-    color: colors.textMuted,
-    fontSize: 11,
-    textTransform: 'uppercase',
+  cardCompact: {
+    margin: 0,
   },
-  image: {
-    height: 150,
-    width: '100%',
+  chip: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    height: 28,
+    justifyContent: 'center',
+    marginBottom: 6,
+    width: 28,
+  },
+  chipDisabled: {
+    opacity: 0.4,
+  },
+  chipText: {
+    color: colors.text,
+    fontSize: 13,
+  },
+  heartOn: {
+    color: colors.danger,
   },
   imageWrap: {
-    backgroundColor: '#0D0F16',
+    backgroundColor: colors.background,
+    minHeight: 118,
   },
   info: {
-    padding: spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   name: {
     color: colors.text,
-    fontSize: typography.body,
-    fontWeight: '600',
-    marginTop: 2,
-    minHeight: 40,
+    fontSize: 14,
+    fontWeight: '700',
+    minHeight: 36,
   },
-  price: {
-    color: colors.accent,
-    fontSize: typography.body,
-    fontWeight: '800',
-  },
-  rating: {
+  ratingCount: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 11,
+    marginLeft: 4,
   },
-  row: {
+  ratingRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.sm,
+    marginBottom: 6,
+    marginTop: 4,
   },
   soldOut: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
-    backgroundColor: 'rgba(9,10,15,0.7)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
   },
   soldOutText: {
-    color: colors.text,
+    color: colors.onAccent,
     fontSize: 14,
     fontWeight: '800',
   },

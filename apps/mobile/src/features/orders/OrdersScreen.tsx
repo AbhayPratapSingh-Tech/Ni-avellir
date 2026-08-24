@@ -1,75 +1,43 @@
-import { useCallback, useState } from 'react';
-import {
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { colors, spacing, typography } from '../../theme/tokens';
-import { appConfig } from '../../config/appConfig';
-import { apiClient } from '../../services/api/apiClient';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { colors, spacing } from '../../theme/tokens';
+import { Screen } from '../../components/ui/Screen';
+import { useAppSelector } from '../../app/store';
+import { formatInr } from '../../lib/productMedia';
+import type { RootStackParamList } from '../../app/navigation/types';
 
-type OrderSummary = {
-  id: string;
-  orderNumber: string;
-  status: string;
-  total: number;
-  currency: string;
-  estimatedDelivery: string;
-  itemCount: number;
-  createdAt: string;
-};
+type Navigation = NativeStackNavigationProp<RootStackParamList>;
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
 export function OrdersScreen() {
-  const [orders, setOrders] = useState<OrderSummary[] | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async () => {
-    if (appConfig.dataSource === 'api') {
-      try {
-        const { data } = await apiClient.get('/orders');
-        setOrders(data.data.orders);
-        return;
-      } catch {
-        // fall through to mock
-      }
-    }
-    setOrders([]);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await load();
-    setRefreshing(false);
-  };
+  const navigation = useNavigation<Navigation>();
+  const orders = useAppSelector((state) => state.orders.items);
 
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Orders</Text>
+    <Screen edges={[]} style={styles.screen}>
       <FlatList
-        data={orders ?? []}
+        data={orders}
         keyExtractor={(item) => item.id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={orders?.length === 0 ? styles.emptyContent : styles.list}
+        contentContainerStyle={orders.length === 0 ? styles.emptyContent : styles.list}
         ListEmptyComponent={
-          orders === null ? (
-            <Text style={styles.emptySub}>Loading...</Text>
-          ) : (
-            <View style={styles.empty}>
-              <Text style={styles.emptyEmoji}>📦</Text>
-              <Text style={styles.emptyTitle}>No orders yet</Text>
-              <Text style={styles.emptySub}>Your forged purchases will appear here.</Text>
-            </View>
-          )
+          <View style={styles.empty}>
+            <Text style={styles.emptyEmoji}>📦</Text>
+            <Text style={styles.emptyTitle}>No orders yet</Text>
+            <Text style={styles.emptySub}>Place an order and it will show up here.</Text>
+            <Pressable style={styles.cta} onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })}>
+              <Text style={styles.ctaText}>Browse the forge</Text>
+            </Pressable>
+          </View>
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
@@ -80,10 +48,12 @@ export function OrdersScreen() {
               </View>
             </View>
             <View style={styles.cardRow}>
+              <Text style={styles.meta}>Placed on</Text>
+              <Text style={styles.value}>{formatDate(item.createdAt)}</Text>
+            </View>
+            <View style={styles.cardRow}>
               <Text style={styles.meta}>Total</Text>
-              <Text style={styles.value}>
-                ₹{item.total ? item.total.toLocaleString('en-IN') : '—'}
-              </Text>
+              <Text style={styles.value}>{formatInr(item.total)}</Text>
             </View>
             <View style={styles.cardRow}>
               <Text style={styles.meta}>Items</Text>
@@ -96,14 +66,16 @@ export function OrdersScreen() {
           </View>
         )}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 12,
+    borderWidth: 1,
     marginBottom: spacing.sm,
     padding: spacing.md,
   },
@@ -120,6 +92,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.sm,
     paddingBottom: spacing.sm,
+  },
+  cta: {
+    backgroundColor: colors.text,
+    borderRadius: 12,
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: 12,
+  },
+  ctaText: {
+    color: colors.onAccent,
+    fontSize: 14,
+    fontWeight: '800',
   },
   empty: {
     alignItems: 'center',
@@ -138,6 +122,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     marginTop: spacing.sm,
+    textAlign: 'center',
   },
   emptyTitle: {
     color: colors.text,
@@ -162,7 +147,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   statusBadge: {
-    backgroundColor: 'rgba(46,242,167,0.15)',
+    backgroundColor: colors.accentSoft,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -172,12 +157,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'capitalize',
-  },
-  title: {
-    color: colors.text,
-    fontSize: typography.title,
-    fontWeight: '800',
-    marginBottom: spacing.md,
   },
   value: {
     color: colors.text,

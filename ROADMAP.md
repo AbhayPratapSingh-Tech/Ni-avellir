@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: Planning draft.
+Status: College demo implemented (Phases 1–9). Optional testing and store deployment remain. See `PROJECT_PROGRESS.md`.
 
 ## Phase 1: Architecture
 

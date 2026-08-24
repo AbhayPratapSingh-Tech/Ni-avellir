@@ -85,12 +85,16 @@ Nidavellir/
 │   │       ├── config/         # App-wide config + feature flags
 │   │       ├── features/       # Feature-specific screens & logic
 │   │       ├── hooks/          # Shared hooks
+│   │       ├── lib/            # Sale window, categories, product media helpers
 │   │       ├── services/       # API client + data source abstraction
 │   │       └── theme/          # Design tokens
 │   └── api/                    # Node.js + Express + MongoDB backend
 ├── packages/
 │   └── shared/                 # Shared contracts, types, constants, validation
-└── docs/                       # Architecture, roadmap, progress docs
+├── PROJECT_PROGRESS.md         # Live phase status
+├── TODO.md                     # Checklist
+├── DEVELOPER_GUIDE.md          # Feature → file map
+└── ARCHITECTURE.md             # Original architecture plan
 ```
 
 ---
@@ -102,28 +106,45 @@ Nidavellir/
 | Feature | File |
 |---|---|
 | **App entry / root provider wiring** | `app/App.tsx` |
-| **Providers (Redux, Query, Gesture, SafeArea)** | `app/providers/AppProviders.tsx` |
-| **Redux store (cart + wishlist)** | `app/store/index.ts` |
-| **Navigation (stack + tabs)** | `app/navigation/RootNavigator.tsx` |
+| **Providers (Redux, Query, Gesture, SafeArea, Toast)** | `app/providers/AppProviders.tsx` |
+| **Redux store (auth + cart + wishlist + recent)** | `app/store/index.ts` |
+| **Navigation (auth stack, then shop stack + tabs)** | `app/navigation/RootNavigator.tsx` |
 | **Navigation Types** | `app/navigation/types.ts` |
-| **Theme tokens (colors, spacing, typography)** | `theme/tokens.ts` |
+| **Theme tokens (light esports: mist / ink / cobalt)** | `theme/tokens.ts` |
 | **App config + feature flags** | `config/appConfig.ts` |
 | **API client** | `services/api/apiClient.ts` |
 | **Data source abstraction (mock/API)** | `services/data/productRepository.ts` |
-| **Home screen** | `features/home/HomeScreen.tsx` |
-| **Hero carousel + glow animation** | `features/home/HomeScreen.tsx` |
-| **Flash-sale countdown** | `hooks/useCountdown.ts` |
-| **Product card component** | `components/commerce/ProductCard.tsx` |
-| **Product list (search/sort/filter)** | `features/products/ProductsScreen.tsx` |
-| **Product detail** | `features/products/ProductDetailScreen.tsx` |
-| **Cart screen** | `features/cart/CartScreen.tsx` |
+| **Demo reviews** | `services/data/reviews.ts` |
+| **Onboarding (3 full-screen slides)** | `features/auth/OnboardingScreen.tsx` |
+| **Login** | `features/auth/LoginScreen.tsx` |
+| **Sign up** | `features/auth/SignupScreen.tsx` |
+| **OTP** | `features/auth/OtpScreen.tsx` |
+| **Auth session (Redux)** | `features/auth/authSlice.ts` |
+| **Home / Forge** | `features/home/HomeScreen.tsx` |
+| **Hero + categories + deals + bestsellers + You may also like** | `features/home/HomeScreen.tsx` |
+| **Daily sale window (09:00–16:00)** | `lib/saleWindow.ts` + `hooks/useCountdown.ts` |
+| **Shop category list** | `lib/shopCategories.ts` |
+| **Product images / INR / % off helpers** | `lib/productMedia.ts` |
+| **Categories tab** | `features/categories/CategoriesScreen.tsx` |
+| **Search screen** | `features/search/SearchScreen.tsx` |
+| **Product card** | `components/commerce/ProductCard.tsx` |
+| **Square / slider / price / gallery pieces** | `components/commerce/` |
+| **Product list (PLP)** | `features/products/ProductsScreen.tsx` |
+| **Product detail (PDP) + review modal** | `features/products/ProductDetailScreen.tsx` |
+| **Cart (address card, stock chips, Hit the Anvil)** | `features/cart/CartScreen.tsx` |
 | **Cart state (Redux slice)** | `features/cart/cartSlice.ts` |
 | **Checkout flow** | `features/checkout/CheckoutScreen.tsx` |
 | **Order confirmation** | `features/orders/OrderConfirmationScreen.tsx` |
 | **Orders list** | `features/orders/OrdersScreen.tsx` |
+| **Orders state (Redux)** | `features/orders/ordersSlice.ts` |
 | **Wishlist screen** | `features/wishlist/WishlistScreen.tsx` |
 | **Wishlist state (Redux slice)** | `features/wishlist/wishlistSlice.ts` |
-| **Profile + Rune XP gamification** | `features/profile/ProfileScreen.tsx` |
+| **Recently viewed** | `features/recent/recentSlice.ts` |
+| **Account + Rune XP + logout** | `features/profile/ProfileScreen.tsx` |
+| **Edit profile + avatar** | `features/profile/EditProfileScreen.tsx` |
+| **Restore RN symlinks after npm hoist** | `scripts/ensure-mobile-node-modules.js` |
+| **Wait for Android package manager** | `scripts/wait-for-android-device.sh` |
+| **Toasts / safe screen / stars / brand mark** | `components/ui/` |
 
 ### Backend API (`apps/api/src`)
 
@@ -156,7 +177,8 @@ Nidavellir/
 | **Product constants** | `constants/product-types.ts` |
 | **Contracts** | `contracts/` |
 | **Zod validation** | `validation/` |
-| **Demo/mock data** | `mock-data.ts` |
+| **Demo/mock data (~28 products)** | `mock-data.ts` |
+| **Also-like collection tag constant** | `ALSO_LIKE_TAG` in `mock-data.ts` |
 
 ---
 
@@ -204,5 +226,8 @@ npx tsc --noEmit -p apps/api/tsconfig.json
 ## Notes for the College Demo
 
 - Set `dataSource: 'mock'` in `appConfig.ts` for a **zero-setup** demo that works entirely offline with bundled data.
-- The app ships with a dark, premium gaming theme, animated hero carousel, flash-sale countdown, and a Rune XP loyalty widget — great talking points.
-- Full commerce flow is wired: Home → Products → Product Detail → Cart → Checkout → Order Confirmation.
+- Cold start is **Onboarding → Login / Signup → Forge**. Any email + password works on Login; signup OTP accepts any 4 digits. Session is in-memory (reload returns to onboarding).
+- The shop uses a **light esports** theme (mist background, ink type, cobalt accent), not a dark neon look. Onboarding slides stay dark/full-bleed.
+- Tabs after login: **Forge**, **Categories**, **Cart**, **Account**.
+- Talking points: 3-slide onboarding, daily sale 09:00–16:00, PDP gallery / MRP / % off, cart Hit the Anvil bar, Rune XP.
+- Full commerce flow: Onboarding → Login → Home → Products → Product Detail → Cart → Checkout → Order Confirmation → Orders / Edit Profile.
