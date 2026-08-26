@@ -8,6 +8,18 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
+# Temporarily disable New Architecture. Fabric + safe-area/screens currently throws
+# RCTEventEmitter.receiveEvent "Module has not been registered as callable" on iOS
+# even with RCTAppDependencyProvider. Re-enable after libs are stable on this RN.
+ENV['RCT_NEW_ARCH_ENABLED'] = '0'
+
+# NOTE: Do not enable `use_frameworks! :linkage => :static` here unless Firebase
+# iOS is actually wired up. RN Firebase needs static frameworks, but that breaks
+# React Native 0.77 simulator builds (non-modular-include / missing headers).
+# Re-enable Firebase iOS later via: $RNFirebaseAsStaticFramework = true
+# + use_frameworks! :linkage => :static
+# + post_install CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES = YES
+
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
@@ -36,5 +48,12 @@ target 'Nidavellir' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Needed if USE_FRAMEWORKS=static is ever set for Firebase.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |cfg|
+        cfg.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      end
+    end
   end
 end

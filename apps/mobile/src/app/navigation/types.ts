@@ -21,7 +21,7 @@ export type RootStackParamList = {
     category?: string;
     q?: string;
     franchise?: string;
-    collection?: 'bestsellers' | 'deals' | 'also-like';
+    collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking';
     title?: string;
   } | undefined;
   Search: { q?: string } | undefined;
@@ -29,5 +29,9 @@ export type RootStackParamList = {
   Checkout: undefined;
   OrderConfirmation: { orderId: string };
   Orders: undefined;
+  Wishlist: undefined;
   EditProfile: undefined;
+  Faq: undefined;
+  Returns: undefined;
+  Contact: undefined;
 };

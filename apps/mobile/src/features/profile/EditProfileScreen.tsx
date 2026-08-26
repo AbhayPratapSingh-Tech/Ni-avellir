@@ -4,6 +4,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Modal,
+  PermissionsAndroid,
   Platform,
   Pressable,
   ScrollView,
@@ -43,11 +44,32 @@ const PRESET_AVATARS = [
 
 const PICKER_OPTIONS = {
   mediaType: 'photo' as const,
-  quality: 0.85 as const,
+  quality: 0.8 as const,
   maxWidth: 800,
   maxHeight: 800,
   selectionLimit: 1,
 };
+
+async function ensureAndroidCameraPermission(): Promise<boolean> {
+  if (Platform.OS !== 'android') {
+    return true;
+  }
+
+  const already = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.CAMERA);
+  if (already) {
+    return true;
+  }
+
+  const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA, {
+    title: 'Camera permission',
+    message: 'Niðavellir needs camera access so you can take a profile photo.',
+    buttonNeutral: 'Ask me later',
+    buttonNegative: 'Cancel',
+    buttonPositive: 'OK',
+  });
+
+  return result === PermissionsAndroid.RESULTS.GRANTED;
+}
 
 export function EditProfileScreen() {
   const navigation = useNavigation<Navigation>();
@@ -69,7 +91,7 @@ export function EditProfileScreen() {
     navigation.navigate('MainTabs', { screen: 'Account' });
   };
 
-  const applyPickedUri = (uri?: string) => {
+  const applyPickedUri = (uri?: string | null) => {
     if (!uri) {
       return;
     }
@@ -87,6 +109,12 @@ export function EditProfileScreen() {
   };
 
   const openCamera = async () => {
+    const allowed = await ensureAndroidCameraPermission();
+    if (!allowed) {
+      toast.show('Camera permission is required');
+      return;
+    }
+
     const result = await launchCamera(PICKER_OPTIONS);
     if (result.didCancel) return;
     if (result.errorCode) {

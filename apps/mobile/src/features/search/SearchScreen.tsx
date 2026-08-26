@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Product } from '@nidavellir/shared';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { ProductCard } from '../../components/commerce/ProductCard';
+import { CatalogEmptyState } from '../../components/commerce/CatalogEmptyState';
 import { FloatingCartButton } from '../../components/commerce/FloatingCartButton';
 import { Screen } from '../../components/ui/Screen';
 import { productRepository, type SearchSuggestions } from '../../services/data/productRepository';
@@ -27,6 +28,7 @@ export function SearchScreen() {
     queries: [],
     categories: [],
     franchises: [],
+    brands: [],
   });
 
   useEffect(() => {
@@ -51,6 +53,7 @@ export function SearchScreen() {
   );
 
   const emptyQuery = !query.trim();
+  const allOutOfStock = products.length > 0 && products.every((item) => item.stock === 0);
 
   return (
     <Screen edges={['top']} style={styles.screen}>
@@ -81,6 +84,15 @@ export function SearchScreen() {
                 <Text style={styles.chipText}>{item}</Text>
               </Pressable>
             ))}
+            {suggestions.brands.map((item) => (
+              <Pressable
+                key={item}
+                style={[styles.chip, styles.brandChip]}
+                onPress={() => navigation.navigate('Products', { franchise: item, title: item })}
+              >
+                <Text style={styles.chipText}>{item}</Text>
+              </Pressable>
+            ))}
             {suggestions.franchises.map((item) => (
               <Pressable key={item} style={styles.chip} onPress={() => setQuery(item)}>
                 <Text style={styles.chipText}>{item}</Text>
@@ -97,6 +109,10 @@ export function SearchScreen() {
             ))}
           </View>
         </View>
+      ) : products.length === 0 ? (
+        <CatalogEmptyState variant="no-results" />
+      ) : allOutOfStock ? (
+        <CatalogEmptyState variant="out-of-stock" />
       ) : (
         <FlatList
           data={products}
@@ -115,12 +131,6 @@ export function SearchScreen() {
               />
             </View>
           )}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>No matches</Text>
-              <Text style={styles.emptySub}>Try another keyword or a suggested search.</Text>
-            </View>
-          }
         />
       )}
       <FloatingCartButton />
@@ -146,6 +156,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
+  brandChip: {
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
+  },
   chipText: {
     color: colors.text,
     fontSize: 13,
@@ -156,19 +170,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
     marginTop: spacing.md,
-  },
-  empty: {
-    paddingVertical: spacing.xl,
-  },
-  emptySub: {
-    color: colors.textMuted,
-    fontSize: 14,
-    marginTop: 4,
-  },
-  emptyTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '800',
   },
   input: {
     backgroundColor: colors.surface,

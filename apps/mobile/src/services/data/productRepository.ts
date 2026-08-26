@@ -23,7 +23,7 @@ export interface ProductListQuery {
   category?: string;
   franchise?: string;
   search?: string;
-  collection?: 'bestsellers' | 'deals' | 'also-like';
+  collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking';
   sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
   page?: number;
   limit?: number;
@@ -56,6 +56,7 @@ export interface SearchSuggestions {
   queries: string[];
   categories: string[];
   franchises: string[];
+  brands: string[];
 }
 
 function listFromMock(query: ProductListQuery = {}): ProductListResult {
@@ -64,7 +65,10 @@ function listFromMock(query: ProductListQuery = {}): ProductListResult {
     items = items.filter((p) => p.category === query.category);
   }
   if (query.franchise) {
-    items = items.filter((p) => p.franchise === query.franchise);
+    const needle = query.franchise.toLowerCase();
+    items = items.filter(
+      (p) => p.franchise.toLowerCase() === needle || p.brand.toLowerCase() === needle,
+    );
   }
   if (query.search) {
     const q = query.search.toLowerCase();
@@ -72,6 +76,7 @@ function listFromMock(query: ProductListQuery = {}): ProductListResult {
       (p) =>
         p.name.toLowerCase().includes(q) ||
         p.franchise.toLowerCase().includes(q) ||
+        p.brand.toLowerCase().includes(q) ||
         p.description.toLowerCase().includes(q) ||
         p.tags.some((tag) => tag.toLowerCase().includes(q)),
     );
@@ -88,6 +93,9 @@ function listFromMock(query: ProductListQuery = {}): ProductListResult {
       p.tags.some((tag) => tag.toLowerCase() === ALSO_LIKE_TAG),
     );
     items = tagged.length ? tagged : items.sort((a, b) => b.rating - a.rating);
+  }
+  if (query.collection === 'restocking') {
+    items = items.filter((p) => p.stock === 0);
   }
   if (query.sort === 'price_asc') items.sort((a, b) => a.price - b.price);
   if (query.sort === 'price_desc') items.sort((a, b) => b.price - a.price);
@@ -128,6 +136,7 @@ function suggestionsFromMock(): SearchSuggestions {
     queries,
     categories: categoriesFromMock(),
     franchises: [...new Set(demoProducts.map((p) => p.franchise))],
+    brands: [...new Set(demoProducts.map((p) => p.brand))].sort(),
   };
 }
 

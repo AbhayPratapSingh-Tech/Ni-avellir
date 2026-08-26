@@ -16,7 +16,7 @@ sudo gem install cocoapods  # iOS
 git clone <your-repo-url> Nidavellir
 cd Nidavellir
 pnpm install
-cd apps/mobile && pod install && cd ../../
+cd apps/mobile/ios && pod install && cd ../../../
 
 # 3. Set offline demo mode (recommended — no server needed)
 #    In apps/mobile/src/config/appConfig.ts set: dataSource: 'mock'
@@ -34,9 +34,40 @@ The app then opens in the iOS Simulator / Android emulator and works fully offli
 
 ```bash
 pnpm install
+# or
+npm install
 ```
 
-### 2. Run the mobile app (bare React Native)
+### 2. iOS — CocoaPods + run (macOS + Xcode)
+
+Install CocoaPods once (if needed):
+
+```bash
+sudo gem install cocoapods
+pod --version   # expect >= 1.16.x
+```
+
+Install native pods (Podfile is under `apps/mobile/ios`):
+
+```bash
+cd apps/mobile/ios
+pod install
+```
+
+Then run with two terminals from the **repo root**:
+
+```bash
+# Terminal 1 — Metro
+npm run --workspace apps/mobile start
+# or: pnpm --filter mobile start
+
+# Terminal 2 — iOS Simulator
+npm run ios
+# or: npm run --workspace apps/mobile ios
+# or: pnpm --filter mobile ios
+```
+
+### 3. Run the mobile app (Android / general)
 
 The app works in **two data modes** controlled by `apps/mobile/src/config/appConfig.ts`:
 
@@ -53,10 +84,31 @@ Then run on a device/emulator:
 
 ```bash
 pnpm --filter mobile android   # Android
-pnpm --filter mobile ios       # iOS (macOS + Xcode required)
+pnpm --filter mobile ios       # iOS (after pod install above)
 ```
 
-### 3. Run the backend API (optional, for `api` mode)
+### Build Android release APK
+
+From the **repo root** (recommended):
+
+```bash
+npm run gradlew-android
+# or
+npm run android:release
+```
+
+Manual equivalent:
+
+```bash
+cd apps/mobile/android
+./gradlew assembleRelease
+```
+
+Do **not** use `/gradlew` (root path). Use `./gradlew` from `apps/mobile/android`.  
+APK: `apps/mobile/android/app/build/outputs/apk/release/app-release.apk`  
+Details: `INSTALLATION.md` → *Build a release APK (Android)*.
+
+### 4. Run the backend API (optional, for `api` mode)
 
 ```bash
 # From repo root

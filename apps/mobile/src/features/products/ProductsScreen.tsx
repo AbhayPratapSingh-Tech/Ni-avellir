@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Product } from '@nidavellir/shared';
 import { colors, spacing } from '../../theme/tokens';
 import { ProductCard } from '../../components/commerce/ProductCard';
+import { CatalogEmptyState } from '../../components/commerce/CatalogEmptyState';
 import { FloatingCartButton } from '../../components/commerce/FloatingCartButton';
 import { Screen } from '../../components/ui/Screen';
 import { productRepository } from '../../services/data/productRepository';
@@ -31,7 +32,7 @@ export function ProductsScreen() {
   const params = (route.params ?? {}) as {
     category?: string;
     franchise?: string;
-    collection?: 'bestsellers' | 'deals' | 'also-like';
+    collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking';
     title?: string;
     q?: string;
   };
@@ -39,6 +40,7 @@ export function ProductsScreen() {
   const toast = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [sort, setSort] = useState<SortValue>('newest');
+  const [sortOpen, setSortOpen] = useState(false);
   const [category, setCategory] = useState<string | undefined>(params.category);
   const [franchise, setFranchise] = useState<string | undefined>(params.franchise);
   const [search, setSearch] = useState(params.q);
@@ -84,6 +86,15 @@ export function ProductsScreen() {
     [dispatch, toast],
   );
 
+  const allOutOfStock = products.length > 0 && products.every((item) => item.stock === 0);
+  const empty = products.length === 0;
+  const emptyVariant =
+    collection === 'restocking' || allOutOfStock
+      ? products.length === 0
+        ? 'restocking'
+        : 'out-of-stock'
+      : 'no-results';
+
   return (
     <Screen edges={[]} style={styles.screen}>
       <View style={styles.toolbar}>
@@ -94,7 +105,12 @@ export function ProductsScreen() {
       </View>
 
       {!collection && !franchise ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.catScroll}
+          contentContainerStyle={styles.catScrollContent}
+        >
           <Pressable
             style={[styles.catChip, !category && styles.catChipActive]}
             onPress={() => setCategory(undefined)}
@@ -129,46 +145,58 @@ export function ProductsScreen() {
         </View>
       ) : null}
 
-      <View style={styles.metaRow}>
-        <Text style={styles.sortLabel}>Sort by</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {SORTS.map((value) => (
-            <Pressable
-              key={value}
-              style={[styles.sortChip, sort === value && styles.sortChipActive]}
-              onPress={() => setSort(value)}
-            >
-              <Text style={[styles.sortChipText, sort === value && styles.sortChipTextActive]}>
-                {SORT_LABELS[value]}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+      <View style={styles.sortBlock}>
+        <Pressable style={styles.sortToggle} onPress={() => setSortOpen((o) => !o)}>
+          <Text style={styles.sortToggleLabel}>Sort</Text>
+          <Text style={styles.sortToggleValue}>{SORT_LABELS[sort]}</Text>
+          <Text style={styles.sortToggleChevron}>{sortOpen ? '˄' : '˅'}</Text>
+        </Pressable>
+
+        {sortOpen ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.sortDropdown}
+          >
+            {SORTS.map((value) => (
+              <Pressable
+                key={value}
+                style={[styles.sortChip, sort === value && styles.sortChipActive]}
+                onPress={() => {
+                  setSort(value);
+                  setSortOpen(false);
+                }}
+              >
+                <Text style={[styles.sortChipText, sort === value && styles.sortChipTextActive]}>
+                  {SORT_LABELS[value]}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        ) : null}
       </View>
 
-      <FlatList
-        data={products}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        contentContainerStyle={styles.list}
-        columnWrapperStyle={styles.row}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <ProductCard
-              product={item}
-              large
-              onPress={(product) => navigation.navigate('ProductDetail', { product })}
-              onAddToCart={handleAdd}
-            />
-          </View>
-        )}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No products</Text>
-            <Text style={styles.emptySub}>Try another category or sort.</Text>
-          </View>
-        }
-      />
+      {empty || allOutOfStock ? (
+        <CatalogEmptyState variant={emptyVariant} />
+      ) : (
+        <FlatList
+          data={products}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          contentContainerStyle={styles.list}
+          columnWrapperStyle={styles.row}
+          renderItem={({ item }) => (
+            <View style={styles.item}>
+              <ProductCard
+                product={item}
+                large
+                onPress={(product) => navigation.navigate('ProductDetail', { product })}
+                onAddToCart={handleAdd}
+              />
+            </View>
+          )}
+        />
+      )}
       <FloatingCartButton />
     </Screen>
   );
@@ -176,13 +204,15 @@ export function ProductsScreen() {
 
 const styles = StyleSheet.create({
   catChip: {
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: 16,
     borderWidth: 1,
+    justifyContent: 'center',
     marginRight: spacing.sm,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   catChipActive: {
     backgroundColor: colors.accent,
@@ -191,6 +221,8 @@ const styles = StyleSheet.create({
   catChipText: {
     color: colors.textMuted,
     fontSize: 12,
+    includeFontPadding: false,
+    lineHeight: 16,
     textTransform: 'capitalize',
   },
   catChipTextActive: {
@@ -199,7 +231,14 @@ const styles = StyleSheet.create({
   },
   catScroll: {
     flexGrow: 0,
+    flexShrink: 0,
     marginBottom: spacing.sm,
+    minHeight: 40,
+  },
+  catScrollContent: {
+    alignItems: 'center',
+    minHeight: 40,
+    paddingVertical: 4,
   },
   clearFilter: {
     color: colors.accent,
@@ -245,10 +284,42 @@ const styles = StyleSheet.create({
   list: {
     paddingBottom: 96,
   },
-  metaRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+  sortBlock: {
     marginBottom: spacing.sm,
+  },
+  sortToggle: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+  },
+  sortToggleLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  sortToggleValue: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: '800',
+    marginLeft: spacing.sm,
+    flex: 1,
+    textAlign: 'left',
+  },
+  sortToggleChevron: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '800',
+    marginLeft: spacing.sm,
+  },
+  sortDropdown: {
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
   },
   row: {
     gap: spacing.sm,

@@ -24,7 +24,8 @@ import { ProductCard } from '../../components/commerce/ProductCard';
 import { SquareProductCard } from '../../components/commerce/SquareProductCard';
 import { CategoryCircleSlider } from '../../components/commerce/CategoryCircleSlider';
 import { VideoBanner } from '../../components/commerce/VideoBanner';
-import { BrandMark } from '../../components/ui/BrandMark';
+import { ShopHeader } from '../../components/layout/ShopHeader';
+import { ShopDrawer } from '../../components/layout/ShopDrawer';
 import { Screen } from '../../components/ui/Screen';
 import { useDailySale } from '../../lib/saleWindow';
 import { productRepository } from '../../services/data/productRepository';
@@ -180,6 +181,7 @@ export function HomeScreen() {
   const [deals, setDeals] = useState<Product[]>([]);
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [alsoLike, setAlsoLike] = useState<Product[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     productRepository.getDeals().then(setDeals);
@@ -213,9 +215,8 @@ export function HomeScreen() {
   return (
     <Screen>
       <ScrollView style={styles.screen} contentContainerStyle={styles.screenContent}>
-        <View style={styles.logoWrap}>
-          <BrandMark size={64} />
-        </View>
+        <ShopHeader onMenuPress={() => setMenuOpen(true)} />
+        <ShopDrawer visible={menuOpen} onClose={() => setMenuOpen(false)} />
 
         <View style={styles.padded}>
           <Pressable style={styles.searchBar} onPress={() => navigation.navigate('Search', {})}>
@@ -497,11 +498,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     marginBottom: spacing.xl,
     overflow: 'hidden',
-  },
-  logoWrap: {
-    alignItems: 'center',
-    paddingBottom: spacing.md,
-    paddingTop: spacing.sm,
   },
   padded: {
     paddingHorizontal: spacing.md,

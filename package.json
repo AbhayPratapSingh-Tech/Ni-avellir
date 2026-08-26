@@ -15,6 +15,8 @@
     "start:api": "npm run start --workspace apps/api",
     "react-native": "npm run --workspace apps/mobile",
     "android": "npm run android --workspace apps/mobile",
+    "android:release": "npm run android:release --workspace apps/mobile",
+    "gradlew-android": "npm run gradlew-android --workspace apps/mobile",
     "ios": "npm run ios --workspace apps/mobile",
     "test": "npm run typecheck --workspaces",
     "typecheck": "npm run typecheck --workspaces"

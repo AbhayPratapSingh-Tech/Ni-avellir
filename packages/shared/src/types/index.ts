@@ -11,7 +11,10 @@ export type Product = {
   id: string;
   name: string;
   category: ProductCategory;
+  /** Game / IP line (e.g. God of War Ragnarok). */
   franchise: string;
+  /** Licensed or house brand (e.g. PlayStation, Activision). */
+  brand: string;
   description: string;
   price: number;
   compareAtPrice: number;

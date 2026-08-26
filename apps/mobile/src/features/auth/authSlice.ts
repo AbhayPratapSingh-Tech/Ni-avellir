@@ -15,7 +15,7 @@ type AuthState = {
   startOnLogin: boolean;
 };
 
-type ProfileUpdate = Partial<Omit<AuthUser, 'isGuest'>> & {
+type ProfileUpdate = Omit<Partial<Omit<AuthUser, 'isGuest'>>, 'avatarUri'> & {
   /** Pass `null` to clear the photo. */
   avatarUri?: string | null;
 };

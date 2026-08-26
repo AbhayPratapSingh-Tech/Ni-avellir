@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { colors, spacing, typography } from '../../theme/tokens';
+import { colors, spacing } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { removeItem } from './wishlistSlice';
 import { addItem } from '../cart/cartSlice';
@@ -28,7 +28,6 @@ export function WishlistScreen() {
 
   return (
     <Screen style={styles.screen}>
-      <Text style={styles.title}>Wishlist ({items.length})</Text>
       <View style={styles.grid}>
         {items.map((product) => (
           <View key={product.id} style={styles.item}>
@@ -99,11 +98,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     flex: 1,
     padding: spacing.md,
-  },
-  title: {
-    color: colors.text,
-    fontSize: typography.title,
-    fontWeight: '800',
-    marginBottom: spacing.md,
   },
 });
