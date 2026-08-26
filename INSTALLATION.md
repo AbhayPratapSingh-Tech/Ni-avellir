@@ -17,7 +17,7 @@ cd Nidavellir
 pnpm install
 
 # 4. (iOS only) Install native pods
-cd apps/mobile && pod install && cd ../../
+cd apps/mobile/ios && pod install && cd ../../../
 
 # 5. Run the app — pick one:
 pnpm --filter mobile start     # start Metro (keep this terminal open)
@@ -104,12 +104,15 @@ pnpm install
 
 This installs the mobile app, the API, and the shared `@nidavellir/shared` package.
 
-**For iOS only** — install the native pods:
+**For iOS only** — install CocoaPods (once) and native pods:
 
 ```bash
-cd apps/mobile
+sudo gem install cocoapods
+pod --version   # expect >= 1.16.x
+
+cd apps/mobile/ios
 pod install
-cd ../../
+cd ../../../
 ```
 
 ---
@@ -195,6 +198,39 @@ node apps/mobile/scripts/ensure-mobile-node-modules.js
 `preandroid` / `postinstall` on the mobile workspace already run that script.
 
 Profile photo picking needs a native rebuild after installing `react-native-image-picker` (Android camera/gallery permissions are in the manifest; iOS usage strings are in `Info.plist`).
+
+### Build a release APK (Android)
+
+**Preferred (from repo root)** — one command that prepares shared + node_modules, then runs Gradle:
+
+```bash
+npm run gradlew-android
+# aliases:
+npm run android:release
+```
+
+That runs `apps/mobile/scripts/gradlew-android.sh`, which:
+
+1. Builds `@nidavellir/shared`
+2. Ensures mobile `node_modules` symlinks
+3. Runs `./gradlew assembleRelease` inside `apps/mobile/android`
+
+**Manual Gradle** (only if you need to call Gradle yourself):
+
+```bash
+cd apps/mobile/android
+./gradlew assembleRelease
+```
+
+> **Common mistake:** typing `/gradlew` (leading slash = filesystem root) fails with `no such file or directory`. Always use **`./gradlew`** from `apps/mobile/android`. The Gradle task is **`assembleRelease`** (one word), not `assemble release`.
+
+**Output APK:**
+
+```text
+apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+```
+
+For AI / Cursor sessions: saying **`/gradlew-android`** should trigger `npm run gradlew-android` (see `.cursor/rules/gradlew-android.mdc`).
 
 ---
 

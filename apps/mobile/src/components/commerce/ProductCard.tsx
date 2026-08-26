@@ -97,6 +97,9 @@ export function ProductCard({ product, compact, large, onPress, onAddToCart }: P
         ) : null}
       </View>
       <Pressable style={styles.info} onPress={() => onPress?.(product)}>
+        <Text style={styles.brand} numberOfLines={1}>
+          {product.brand}
+        </Text>
         <Text style={styles.name} numberOfLines={2}>
           {product.name}
         </Text>
@@ -130,6 +133,14 @@ const styles = StyleSheet.create({
     color: colors.onAccent,
     fontSize: 10,
     fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  brand: {
+    color: colors.accent,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    marginBottom: 2,
     textTransform: 'uppercase',
   },
   card: {

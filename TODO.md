@@ -73,3 +73,34 @@
 - [ ] Persist auth / orders / avatar across app reloads (MMKV or redux-persist).
 - [ ] Automated tests (Jest + RNTL + Supertest).
 - [ ] Deployment docs / store listing copy.
+
+## Future product features (backlog)
+
+> Ideas queued for after the core app is solid. Placement / copy / XP level names / mystery-box rules will be filled in when each feature is picked up.
+
+### Discovery & personalization
+- [ ] **Smart push notifications** — interest / cart / drop / restock aware pushes (not blast-only).
+- [ ] **Frictionless search (visual)** — upload a photo of an item and find similar products.
+- [ ] **Personalized home feed** — rank shelves by reach, affinity, and past interest.
+- [ ] **Find with character / franchise** — e.g. “find items with Eren Yeager”, “find items with God of War” (UI placement TBD).
+- [ ] **AI Merch Assistant (chat + search)** — in-app chat that understands budget + fandom queries (e.g. “I have ₹3000, huge Demon Slayer fan — what should I buy?”) and returns guided product results / deep-links into search & PDP.
+
+### Merchandising & drops
+- [ ] **Today’s Niðavellir drop banner** — name the limited-edition drop of the day with % off and/or price (“Limited edition · {item} · X% off / at ₹Y”).
+- [ ] **Pre-order products** — PDP + details visible now; ship-in-near-future badge / CTA; checkout rules TBD.
+- [ ] **Bundle products** — curated multi-SKU packs with combined pricing.
+- [ ] **Mystery boxes** — on specific products and/or when cart total exceeds a threshold (rules & copy TBD when building).
+
+### Loyalty & profile
+- [ ] **Loyalty points (XP)** — extend existing Rune XP; profile **level names** TBD later.
+- [ ] Profile level progression UI tied to XP.
+
+### PDP & community
+- [ ] **PDP “How they get along” / customer images** — large buyer photos of the product in use, with short custom moment captions; upload own image(s) from PDP; distinct / polished section animation.
+- [ ] **Make your own Gaming Setup** — dedicated section (add when the main app experience is complete).
+- [ ] **Community blog** — verified users share posts about specific products / brands.
+
+### Notes for implementers
+- Visual search, AI assistant, and smart pushes likely need backend + privacy / moderation plans.
+- Pre-order, bundles, and mystery boxes need inventory + pricing + cart rules before UI.
+- Character / franchise find can reuse existing `franchise` / tag search once the entry UI is decided.

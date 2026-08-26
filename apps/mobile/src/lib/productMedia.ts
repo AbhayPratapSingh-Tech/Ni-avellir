@@ -22,8 +22,10 @@ export function normalizeProduct(product: Product): Product {
     compareAtPrice: product.compareAtPrice ?? Math.round(product.price * 1.32),
     specifications: product.specifications ?? {
       SKU: product.id,
+      Brand: product.brand,
       Franchise: product.franchise,
     },
+    brand: product.brand ?? product.franchise,
     additionalDetails: product.additionalDetails ?? product.description,
   };
 }

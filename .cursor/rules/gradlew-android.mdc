@@ -1,0 +1,46 @@
+---
+description: When the user asks for /gradlew-android (or Android release APK build), run the project release build script.
+alwaysApply: true
+---
+
+# Android release build (`/gradlew-android`)
+
+If the user says **`/gradlew-android`**, **`gradlew-android`**, or asks to build the Android **release APK**, do this (do not invent `/gradlew` paths):
+
+## Correct command (preferred)
+
+From the **repo root**:
+
+```bash
+npm run gradlew-android
+```
+
+Equivalent:
+
+```bash
+npm run gradlew-android --workspace apps/mobile
+# or
+bash apps/mobile/scripts/gradlew-android.sh
+```
+
+## Manual Gradle (only if needed)
+
+```bash
+cd apps/mobile/android
+./gradlew assembleRelease
+```
+
+## Common mistakes to avoid
+
+- `/gradlew` → looks at filesystem root → `zsh: no such file or directory`
+- Use **`./gradlew`** (dot-slash) from `apps/mobile/android`
+- Task is **`assembleRelease`** (one word), not `assemble release`
+- Android project is at **`apps/mobile/android`**, not repo-root `android/`
+
+## Output
+
+APK path:
+
+`apps/mobile/android/app/build/outputs/apk/release/app-release.apk`
+
+The script also rebuilds `@nidavellir/shared` and runs `ensure-mobile-node-modules.js` before Gradle.

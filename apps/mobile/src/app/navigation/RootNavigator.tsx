@@ -14,6 +14,10 @@ import { CheckoutScreen } from '../../features/checkout/CheckoutScreen';
 import { OrderConfirmationScreen } from '../../features/orders/OrderConfirmationScreen';
 import { OrdersScreen } from '../../features/orders/OrdersScreen';
 import { EditProfileScreen } from '../../features/profile/EditProfileScreen';
+import { FaqScreen } from '../../features/info/FaqScreen';
+import { ReturnsScreen } from '../../features/info/ReturnsScreen';
+import { ContactScreen } from '../../features/info/ContactScreen';
+import { WishlistScreen } from '../../features/wishlist/WishlistScreen';
 import { OnboardingScreen } from '../../features/auth/OnboardingScreen';
 import { LoginScreen } from '../../features/auth/LoginScreen';
 import { SignupScreen } from '../../features/auth/SignupScreen';
@@ -101,9 +105,6 @@ const rootScreenOptions = {
   headerTintColor: colors.text,
   headerTitleStyle: { fontWeight: '800' as const },
   contentStyle: { backgroundColor: colors.background },
-  statusBarStyle: 'dark' as const,
-  statusBarTranslucent: true,
-  statusBarBackgroundColor: 'transparent',
 };
 
 function AuthNavigator({ initialRouteName }: { initialRouteName: keyof AuthStackParamList }) {
@@ -116,9 +117,6 @@ function AuthNavigator({ initialRouteName }: { initialRouteName: keyof AuthStack
         headerTitleStyle: { fontWeight: '800' as const },
         contentStyle: { backgroundColor: colors.background },
         headerShown: false,
-        statusBarStyle: 'dark',
-        statusBarTranslucent: true,
-        statusBarBackgroundColor: 'transparent',
       }}
     >
       <AuthStack.Screen
@@ -126,9 +124,6 @@ function AuthNavigator({ initialRouteName }: { initialRouteName: keyof AuthStack
         component={OnboardingScreen}
         options={{
           contentStyle: { backgroundColor: '#07080C' },
-          statusBarStyle: 'light',
-          statusBarTranslucent: true,
-          statusBarBackgroundColor: 'transparent',
         }}
       />
       <AuthStack.Screen name="Login" component={LoginScreen} />
@@ -168,11 +163,19 @@ function ShopNavigator() {
         options={{ headerShown: false }}
       />
       <RootStack.Screen name="Orders" component={OrdersScreen} options={{ title: 'My Orders' }} />
+      <RootStack.Screen name="Wishlist" component={WishlistScreen} options={{ title: 'Wishlist' }} />
       <RootStack.Screen
         name="EditProfile"
         component={EditProfileScreen}
         options={{ title: 'Edit profile' }}
       />
+      <RootStack.Screen name="Faq" component={FaqScreen} options={{ title: 'FAQs' }} />
+      <RootStack.Screen
+        name="Returns"
+        component={ReturnsScreen}
+        options={{ title: 'Return & exchange' }}
+      />
+      <RootStack.Screen name="Contact" component={ContactScreen} options={{ title: 'Contact' }} />
     </RootStack.Navigator>
   );
 }

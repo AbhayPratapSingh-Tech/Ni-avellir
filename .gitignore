@@ -41,23 +41,46 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Editor files
+# Editor / local tooling
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
 .idea/
+.cursor/*
+!.cursor/rules/
 
 # React Native / Metro
 .metro-health-check*
+*.tsbuildinfo
 
-# iOS generated artifacts
-ios/Pods/
-ios/DerivedData/
+# iOS — machine-local / generated (paths must match monorepo layout)
+**/ios/Pods/
+**/ios/DerivedData/
+**/ios/build/
+**/ios/.xcode.env.local
+**/ios/*.xcworkspace/xcuserdata/
+**/ios/*.xcodeproj/xcuserdata/
+**/ios/*.xcodeproj/project.xcworkspace/xcuserdata/
 
-# Android generated artifacts
-android/.gradle/
+# Android — machine-local / generated
+**/android/.gradle/
+**/android/app/build/
+**/android/build/
+**/android/.cxx/
+**/android/local.properties
+**/android/=
 
 # Build output
 dist/
 build/
 coverage/
+
+# Accidental empty files from botched shell redirects
+/bash
+/npm
+/tsc
+/mobile@0.1.0
+/nidavellir@0.1.0
+/Configure
+/Configtive-firebase_app
+/Conlugin:

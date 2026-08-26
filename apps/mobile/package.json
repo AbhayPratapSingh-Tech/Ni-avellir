@@ -5,6 +5,8 @@
   "scripts": {
     "android": "bash ./scripts/wait-for-android-device.sh && react-native run-android",
     "android:install": "bash ./scripts/wait-for-android-device.sh && adb install -r android/app/build/outputs/apk/debug/app-debug.apk",
+    "android:release": "bash ./scripts/gradlew-android.sh",
+    "gradlew-android": "bash ./scripts/gradlew-android.sh",
     "build": "tsc -p tsconfig.json --noEmit",
     "dev": "react-native start",
     "ios": "react-native run-ios",
@@ -37,7 +39,6 @@
     "react-native-gesture-handler": "2.24.0",
     "react-native-image-picker": "^8.2.1",
     "react-native-keychain": "^9.2.2",
-    "react-native-mmkv": "3.2.0",
     "react-native-reanimated": "3.17.5",
     "react-native-safe-area-context": "^5.1.0",
     "react-native-screens": "4.9.2",

@@ -88,8 +88,18 @@ export function ProductDetailScreen() {
   }, [dispatch, product]);
 
   const brands = useMemo(
-    () => [...new Set([product.franchise, ...similar.map((item) => item.franchise), ...alsoLike.map((item) => item.franchise)])],
-    [alsoLike, product.franchise, similar],
+    () =>
+      [
+        ...new Set([
+          product.brand,
+          product.franchise,
+          ...similar.map((item) => item.brand),
+          ...similar.map((item) => item.franchise),
+          ...alsoLike.map((item) => item.brand),
+          ...alsoLike.map((item) => item.franchise),
+        ]),
+      ].filter(Boolean),
+    [alsoLike, product.brand, product.franchise, similar],
   );
 
   const openProduct = (next: Product) => {
@@ -166,6 +176,7 @@ export function ProductDetailScreen() {
         </View>
 
         <View style={styles.body}>
+          <Text style={styles.brand}>{product.brand}</Text>
           <Text style={styles.franchise}>{product.franchise}</Text>
           <Text style={styles.name}>{product.name}</Text>
           <Text style={styles.description}>{product.description}</Text>
@@ -544,9 +555,17 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   franchise: {
+    color: colors.textMuted,
+    fontSize: typography.caption,
+    fontWeight: '600',
+    marginTop: 2,
+    textTransform: 'uppercase',
+  },
+  brand: {
     color: colors.accent,
     fontSize: typography.caption,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   helpful: {

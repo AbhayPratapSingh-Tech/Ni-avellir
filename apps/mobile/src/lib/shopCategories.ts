@@ -30,7 +30,7 @@ export const shopCategories: ShopCategory[] = [
     id: 'ps5',
     name: 'PS5',
     image: 'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=400&q=80',
-    q: 'forge',
+    q: 'console',
   },
   {
     id: 'headsets',
@@ -73,6 +73,12 @@ export const shopCategories: ShopCategory[] = [
     name: 'Hoodies',
     image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=400&q=80',
     q: 'hoodie',
+  },
+  {
+    id: 'anime',
+    name: 'Anime',
+    image: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=400&q=80',
+    q: 'anime',
   },
   {
     id: 'drops',
