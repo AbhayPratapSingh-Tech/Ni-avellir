@@ -36,4 +36,5 @@ export type RootStackParamList = {
   Faq: undefined;
   Returns: undefined;
   Contact: undefined;
+  Support: undefined;
 };

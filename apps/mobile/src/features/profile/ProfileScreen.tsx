@@ -98,6 +98,10 @@ export function ProfileScreen() {
                 }
                 if (item.key === 'addresses') {
                   navigation.navigate('Addresses');
+                  return;
+                }
+                if (item.key === 'support') {
+                  navigation.navigate('Support');
                 }
               }}
             >
@@ -156,7 +160,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   editChipText: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '800',
   },
@@ -197,7 +201,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   loginText: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 15,
     fontWeight: '800',
   },
@@ -286,7 +290,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   xpTitle: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 14,
     fontWeight: '800',
   },

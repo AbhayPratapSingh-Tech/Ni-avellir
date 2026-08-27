@@ -19,6 +19,7 @@ import { AddressesScreen } from '../../features/addresses/AddressesScreen';
 import { FaqScreen } from '../../features/info/FaqScreen';
 import { ReturnsScreen } from '../../features/info/ReturnsScreen';
 import { ContactScreen } from '../../features/info/ContactScreen';
+import { SupportScreen } from '../../features/info/SupportScreen';
 import { WishlistScreen } from '../../features/wishlist/WishlistScreen';
 import { OnboardingScreen } from '../../features/auth/OnboardingScreen';
 import { LoginScreen } from '../../features/auth/LoginScreen';
@@ -38,14 +39,14 @@ const theme = {
     background: colors.background,
     border: colors.border,
     card: colors.surface,
-    primary: colors.accent,
+    primary: colors.text,
     text: colors.text,
   },
 };
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   return (
-    <Text style={{ color: focused ? colors.accent : colors.textMuted, fontSize: 18 }}>{label}</Text>
+    <Text style={{ color: focused ? colors.text : colors.textMuted, fontSize: 18 }}>{label}</Text>
   );
 }
 
@@ -54,7 +55,7 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accent,
+        tabBarActiveTintColor: colors.text,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
           backgroundColor: colors.surface,
@@ -187,7 +188,8 @@ function ShopNavigator() {
         component={ReturnsScreen}
         options={{ title: 'Return & exchange' }}
       />
-      <RootStack.Screen name="Contact" component={ContactScreen} options={{ title: 'Contact' }} />
+      <RootStack.Screen name="Contact" component={ContactScreen} options={{ title: 'Support' }} />
+      <RootStack.Screen name="Support" component={SupportScreen} options={{ title: 'Support' }} />
     </RootStack.Navigator>
   );
 }

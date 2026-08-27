@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   link: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 14,
     fontWeight: '700',
     marginTop: spacing.md,
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   xpStrong: {
-    color: colors.accent,
+    color: colors.text,
     fontWeight: '800',
   },
   xpText: {
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   xpTitle: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 14,
     fontWeight: '800',
   },

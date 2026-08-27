@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   change: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '800',
   },

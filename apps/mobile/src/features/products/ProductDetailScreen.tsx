@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     width: 36,
   },
   bankIconText: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -562,14 +562,14 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   brand: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: typography.caption,
     fontWeight: '800',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   helpful: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 12,
     fontWeight: '700',
     marginTop: 6,
@@ -671,7 +671,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   reviewClose: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -762,7 +762,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   stock: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 14,
     fontWeight: '600',
     marginTop: spacing.sm,
@@ -871,7 +871,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   writeLink: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '700',
     marginTop: spacing.lg,

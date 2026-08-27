@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   detailsText: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   statusText: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'capitalize',

@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   clearFilter: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '800',
   },
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   sortToggleValue: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '800',
     marginLeft: spacing.sm,
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   sortChipTextActive: {
-    color: colors.accent,
+    color: colors.text,
     fontWeight: '700',
   },
   sortLabel: {

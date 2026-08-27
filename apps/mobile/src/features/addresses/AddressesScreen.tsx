@@ -289,7 +289,7 @@ export function AddressesScreen() {
 
 const styles = StyleSheet.create({
   actionLink: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '700',
     marginLeft: spacing.md,
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   defaultText: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 11,
     fontWeight: '700',
   },

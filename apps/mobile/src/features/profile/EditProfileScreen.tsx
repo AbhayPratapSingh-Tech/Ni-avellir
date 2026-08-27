@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   changePhoto: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 14,
     fontWeight: '800',
     marginBottom: spacing.sm,

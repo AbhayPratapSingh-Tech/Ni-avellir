@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   statusText: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'capitalize',

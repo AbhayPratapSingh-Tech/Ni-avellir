@@ -144,7 +144,7 @@ export function LoginScreen() {
 
 const styles = StyleSheet.create({
   altLink: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   kicker: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1.6,
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   linkStrong: {
-    color: colors.accent,
+    color: colors.text,
     fontWeight: '800',
   },
   linkWrap: {

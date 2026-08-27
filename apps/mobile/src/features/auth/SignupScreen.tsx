@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   linkStrong: {
-    color: colors.accent,
+    color: colors.text,
     fontWeight: '800',
   },
   linkWrap: {

@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   brand: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.6,

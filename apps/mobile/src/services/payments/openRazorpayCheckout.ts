@@ -31,7 +31,7 @@ export async function openRazorpayCheckout(
       email: input.customerEmail,
       contact: input.customerPhone,
     },
-    theme: { color: colors.accent },
+    theme: { color: colors.text },
     notes: {
       orderNumber: input.orderNumber,
     },

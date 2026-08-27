@@ -117,7 +117,7 @@ export function ShopDrawer({ visible, onClose }: Props) {
     navigation.navigate('Products', params);
   };
 
-  const goInfo = (screen: 'Faq' | 'Returns' | 'Contact') => {
+  const goInfo = (screen: 'Faq' | 'Returns' | 'Contact' | 'Support') => {
     onClose();
     navigation.navigate(screen);
   };
@@ -181,8 +181,8 @@ export function ShopDrawer({ visible, onClose }: Props) {
               <Pressable style={styles.row} onPress={() => goInfo('Returns')}>
                 <Text style={styles.rowLabel}>Return & exchange</Text>
               </Pressable>
-              <Pressable style={styles.row} onPress={() => goInfo('Contact')}>
-                <Text style={styles.rowLabel}>Contact</Text>
+              <Pressable style={styles.row} onPress={() => goInfo('Support')}>
+                <Text style={styles.rowLabel}>Support</Text>
               </Pressable>
             </ScrollView>
           </View>

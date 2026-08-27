@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   brand: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '800',
     letterSpacing: 0.6,

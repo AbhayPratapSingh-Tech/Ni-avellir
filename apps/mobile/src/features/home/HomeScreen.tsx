@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   seeAll: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '700',
     marginBottom: spacing.sm,
