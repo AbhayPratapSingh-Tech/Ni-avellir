@@ -163,7 +163,7 @@ function ShopNavigator() {
       <RootStack.Screen
         name="OrderConfirmation"
         component={OrderConfirmationScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, gestureEnabled: false }}
       />
       <RootStack.Screen name="Orders" component={OrdersScreen} options={{ title: 'My Orders' }} />
       <RootStack.Screen

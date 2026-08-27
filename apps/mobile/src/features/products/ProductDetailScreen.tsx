@@ -25,6 +25,7 @@ import { toggleItem } from '../wishlist/wishlistSlice';
 import { viewProduct } from '../recent/recentSlice';
 import type { RootStackParamList } from '../../app/navigation/types';
 import { getProductImages } from '../../lib/productMedia';
+import { goBackOrHome } from '../../lib/navigation';
 import { productRepository } from '../../services/data/productRepository';
 import { demoReviews, type ProductReview } from '../../services/data/reviews';
 import { Accordion } from '../../components/commerce/Accordion';
@@ -134,7 +135,7 @@ export function ProductDetailScreen() {
   return (
     <View style={styles.screen}>
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.topBtn} hitSlop={12}>
+        <Pressable onPress={() => goBackOrHome(navigation)} style={styles.topBtn} hitSlop={12}>
           <Text style={styles.topBtnText}>‹</Text>
         </Pressable>
         <Text style={styles.topTitle} numberOfLines={1}>

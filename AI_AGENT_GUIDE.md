@@ -40,6 +40,13 @@ npm run android      # or ios (+ pod install first time)
 
 Do not invent alternate entrypoints. Root `dev` = mobile Metro. Root `dev:api` = Express (needs Mongo).
 
+### Navigation rules (shop / auth)
+
+- Prefer `goBackOrHome` / `resetToMainTabs` / `resetToOrders` from `lib/navigation.ts` over bare `goBack` or `navigate('MainTabs')` after checkout.
+- Guest “Login / Signup” uses `openLogin`; signed-out users return via Login back → `enterGuest` (do not leave the app).
+- Logout uses `signOutAndClearSession` → guest shop (not Onboarding).
+- Order confirmation must reset the stack (no back into Checkout/PDP).
+
 Checklist when flipping live:
 
 1. API running + seeded products.

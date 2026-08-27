@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useCallback, useState } from 'react';
+import { BackHandler, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
-import { useAppDispatch } from '../../app/store';
-import { signIn } from './authSlice';
+import { useAppDispatch, useAppSelector } from '../../app/store';
+import { enterGuest, signIn } from './authSlice';
 import { useToast } from '../../components/ui/Toast';
 import type { AuthStackParamList } from '../../app/navigation/types';
 
@@ -20,10 +20,41 @@ export function LoginScreen() {
   const navigation = useNavigation<Navigation>();
   const dispatch = useAppDispatch();
   const toast = useToast();
+  const startOnLogin = useAppSelector((state) => state.auth.startOnLogin);
   const [mode, setMode] = useState<Mode>('phone');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  /** Profile → Login clears guest; Back must restore shop instead of leaving the app. */
+  const returnToShopAsGuest = useCallback(() => {
+    dispatch(enterGuest());
+  }, [dispatch]);
+
+  const handleBack = useCallback(() => {
+    // Profile → Login always restores guest shop; don't get stuck under Signup/OTP quirks.
+    if (startOnLogin) {
+      returnToShopAsGuest();
+      return;
+    }
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
+  }, [navigation, returnToShopAsGuest, startOnLogin]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!startOnLogin) {
+        return undefined;
+      }
+      const onHardwareBack = () => {
+        returnToShopAsGuest();
+        return true;
+      };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onHardwareBack);
+      return () => sub.remove();
+    }, [returnToShopAsGuest, startOnLogin]),
+  );
 
   const submitPhone = () => {
     const mobile = digitsOnly(phone);
@@ -52,10 +83,12 @@ export function LoginScreen() {
     );
   };
 
+  const showBack = navigation.canGoBack() || startOnLogin;
+
   return (
     <Screen style={styles.screen}>
-      {navigation.canGoBack() ? (
-        <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+      {showBack ? (
+        <Pressable onPress={handleBack} hitSlop={12}>
           <Text style={styles.back}>‹ Back</Text>
         </Pressable>
       ) : null}

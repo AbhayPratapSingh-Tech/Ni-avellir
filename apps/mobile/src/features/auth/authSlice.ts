@@ -73,8 +73,10 @@ const authSlice = createSlice({
 export const { enterGuest, signIn, updateProfile, openLogin, signOut } = authSlice.actions;
 export const authReducer = authSlice.reducer;
 
-/** Call from UI instead of bare `signOut` so live API tokens clear too. */
+/** Call from UI instead of bare `signOut` so live API tokens clear too.
+ * Returns the user to the shop as guest (does not dump onto Onboarding).
+ */
 export function signOutAndClearSession() {
   clearSessionTokens();
-  return signOut();
+  return enterGuest();
 }

@@ -30,8 +30,10 @@ export function CartScreen() {
     ? `${defaultAddress.line1}, ${defaultAddress.city} ${defaultAddress.postalCode}`
     : 'Add a delivery address';
 
+  const canPop = navigation.canGoBack();
+
   const goBack = () => {
-    if (navigation.canGoBack()) {
+    if (canPop) {
       navigation.goBack();
       return;
     }
@@ -40,9 +42,13 @@ export function CartScreen() {
 
   const header = (
     <View style={styles.topBar}>
-      <Pressable onPress={goBack} style={styles.topBtn} hitSlop={12}>
-        <Text style={styles.topBtnText}>‹</Text>
-      </Pressable>
+      {canPop ? (
+        <Pressable onPress={goBack} style={styles.topBtn} hitSlop={12}>
+          <Text style={styles.topBtnText}>‹</Text>
+        </Pressable>
+      ) : (
+        <View style={styles.topBtn} />
+      )}
       <Text style={styles.topTitle}>My Cart</Text>
       <View style={styles.topBtn} />
     </View>

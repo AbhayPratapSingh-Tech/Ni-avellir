@@ -12,6 +12,7 @@ import { productRepository, type SearchSuggestions } from '../../services/data/p
 import { useAppDispatch } from '../../app/store';
 import { addItem } from '../cart/cartSlice';
 import { useToast } from '../../components/ui/Toast';
+import { goBackOrHome } from '../../lib/navigation';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -58,7 +59,7 @@ export function SearchScreen() {
   return (
     <Screen edges={['top']} style={styles.screen}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.back}>
+        <Pressable onPress={() => goBackOrHome(navigation)} hitSlop={12} style={styles.back}>
           <Text style={styles.backText}>‹</Text>
         </Pressable>
         <TextInput

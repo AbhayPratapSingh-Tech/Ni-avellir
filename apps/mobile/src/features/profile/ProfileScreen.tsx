@@ -113,7 +113,11 @@ export function ProfileScreen() {
         </View>
 
         <Pressable
-          style={({ pressed }) => [styles.logout, pressed && styles.logoutPressed]}
+          style={({ pressed }) => [
+            styles.logout,
+            user?.isGuest && styles.loginBtn,
+            pressed && (user?.isGuest ? styles.loginBtnPressed : styles.logoutPressed),
+          ]}
           onPress={() => dispatch(user?.isGuest ? openLogin() : signOutAndClearSession())}
         >
           <Text style={user?.isGuest ? styles.loginText : styles.logoutText}>
@@ -192,6 +196,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     paddingVertical: 14,
   },
+  loginBtn: {
+    backgroundColor: colors.text,
+    borderColor: colors.text,
+  },
+  loginBtnPressed: {
+    opacity: 0.85,
+  },
   logoutPressed: {
     backgroundColor: colors.accentSoft,
   },
@@ -201,7 +212,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   loginText: {
-    color: colors.text,
+    color: colors.onAccent,
     fontSize: 15,
     fontWeight: '800',
   },

@@ -73,7 +73,16 @@ export function OrderDetailsScreen() {
       <Screen edges={[]} style={styles.screen}>
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>Order not found</Text>
-          <Pressable style={styles.cta} onPress={() => navigation.navigate('Orders')}>
+          <Pressable
+            style={styles.cta}
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+                return;
+              }
+              navigation.navigate('Orders');
+            }}
+          >
             <Text style={styles.ctaText}>Back to orders</Text>
           </Pressable>
         </View>
