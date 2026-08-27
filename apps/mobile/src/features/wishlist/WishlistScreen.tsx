@@ -1,25 +1,37 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { Product } from '@nidavellir/shared';
 import { colors, spacing } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { removeItem } from './wishlistSlice';
 import { addItem } from '../cart/cartSlice';
 import { ProductCard } from '../../components/commerce/ProductCard';
+import { FloatingCartButton } from '../../components/commerce/FloatingCartButton';
 import { Screen } from '../../components/ui/Screen';
 import { useToast } from '../../components/ui/Toast';
+import { normalizeProduct } from '../../lib/productMedia';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 export function WishlistScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const dispatch = useAppDispatch();
   const toast = useToast();
-  const items = useAppSelector((state) => state.wishlist.items);
+  const items = useAppSelector((state) => state.wishlist.items.map(normalizeProduct));
+  const { width: screenWidth } = useWindowDimensions();
+  // Keep one card the same width as a cell in a 2-column grid.
+  const itemWidth = (screenWidth - spacing.md * 2 - spacing.sm) / 2;
+
+  const handleAdd = (product: Product) => {
+    dispatch(addItem({ product, quantity: 1 }));
+    dispatch(removeItem(product.id));
+    toast.show('Struck the cart ⚡');
+  };
 
   if (items.length === 0) {
     return (
       <Screen style={styles.empty}>
-        <Text style={styles.emptyEmoji}>💎</Text>
+        <Text style={styles.emptyEmoji}>♡</Text>
         <Text style={styles.emptyTitle}>No saved gear yet</Text>
         <Text style={styles.emptySub}>Tap the heart on any product to save it here.</Text>
       </Screen>
@@ -28,30 +40,24 @@ export function WishlistScreen() {
 
   return (
     <Screen style={styles.screen}>
-      <View style={styles.grid}>
-        {items.map((product) => (
-          <View key={product.id} style={styles.item}>
+      <FlatList
+        data={items}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        contentContainerStyle={styles.list}
+        columnWrapperStyle={styles.row}
+        renderItem={({ item }) => (
+          <View style={{ width: itemWidth }}>
             <ProductCard
-              product={product}
-              onPress={(p) => navigation.navigate('ProductDetail', { product: p })}
-              onAddToCart={(p) => {
-                dispatch(addItem({ product: p, quantity: 1 }));
-                dispatch(removeItem(p.id));
-                toast.show('Struck the cart ⚡');
-              }}
+              product={item}
+              large
+              onPress={(product) => navigation.navigate('ProductDetail', { product })}
+              onAddToCart={handleAdd}
             />
-            <Pressable
-              style={styles.remove}
-              onPress={() => {
-                dispatch(removeItem(product.id));
-                toast.show('Removed from wishlist');
-              }}
-            >
-              <Text style={styles.removeText}>✕ Remove</Text>
-            </Pressable>
           </View>
-        ))}
-      </View>
+        )}
+      />
+      <FloatingCartButton />
     </Screen>
   );
 }
@@ -65,6 +71,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   emptyEmoji: {
+    color: colors.danger,
     fontSize: 48,
     marginBottom: spacing.md,
   },
@@ -72,31 +79,24 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     marginTop: spacing.sm,
+    textAlign: 'center',
   },
   emptyTitle: {
     color: colors.text,
     fontSize: 20,
     fontWeight: '800',
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  list: {
+    paddingBottom: 96,
   },
-  item: {
-    width: '50%',
-  },
-  remove: {
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-  },
-  removeText: {
-    color: colors.danger,
-    fontSize: 12,
-    fontWeight: '600',
+  row: {
+    gap: spacing.sm,
+    justifyContent: 'flex-start',
   },
   screen: {
     backgroundColor: colors.background,
     flex: 1,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
   },
 });

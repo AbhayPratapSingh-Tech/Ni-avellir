@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { clearSessionTokens } from '../../services/api/sessionTokens';
 
 export type AuthUser = {
   name: string;
@@ -71,3 +72,9 @@ const authSlice = createSlice({
 
 export const { enterGuest, signIn, updateProfile, openLogin, signOut } = authSlice.actions;
 export const authReducer = authSlice.reducer;
+
+/** Call from UI instead of bare `signOut` so live API tokens clear too. */
+export function signOutAndClearSession() {
+  clearSessionTokens();
+  return signOut();
+}

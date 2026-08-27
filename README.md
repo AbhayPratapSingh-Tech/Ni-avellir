@@ -35,6 +35,8 @@ npm run seed --workspace apps/api
 
 ## Documentation
 
+- `AI_AGENT_GUIDE.md` — **required for AI agents**: keep mock/live API, payments, nav, and docs aligned on every change.
+- `PROJECT_INSIGHTS.md` — operating rules + live API / Razorpay switch notes.
 - `DEVELOPER_GUIDE.md` — feature→file map and run instructions.
 - `ARCHITECTURE.md` — full architecture plan.
 - `INSTALLATION.md` — native tooling prerequisites.

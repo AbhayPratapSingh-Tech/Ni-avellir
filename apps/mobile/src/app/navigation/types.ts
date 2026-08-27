@@ -29,8 +29,10 @@ export type RootStackParamList = {
   Checkout: undefined;
   OrderConfirmation: { orderId: string };
   Orders: undefined;
+  OrderDetails: { orderId: string };
   Wishlist: undefined;
   EditProfile: undefined;
+  Addresses: undefined;
   Faq: undefined;
   Returns: undefined;
   Contact: undefined;

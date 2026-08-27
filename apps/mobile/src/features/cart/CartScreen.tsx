@@ -13,8 +13,6 @@ import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
-const DEFAULT_ADDRESS = '12 Forge Lane, Indiranagar, Bengaluru 560038';
-
 export function CartScreen() {
   const navigation = useNavigation<Navigation>();
   const dispatch = useAppDispatch();
@@ -22,7 +20,15 @@ export function CartScreen() {
   const { items, total } = useAppSelector((state) => state.cart);
   const user = useAppSelector((state) => state.auth.user);
   const wishlistItems = useAppSelector((state) => state.wishlist.items);
-  const recipient = user?.isGuest ? 'Guest' : user?.name?.trim() || 'Forgehand';
+  const defaultAddress = useAppSelector(
+    (state) => state.addresses.items.find((item) => item.isDefault) ?? state.addresses.items[0],
+  );
+  const recipient = user?.isGuest
+    ? defaultAddress?.fullName || 'Guest'
+    : user?.name?.trim() || defaultAddress?.fullName || 'Forgehand';
+  const addressLine = defaultAddress
+    ? `${defaultAddress.line1}, ${defaultAddress.city} ${defaultAddress.postalCode}`
+    : 'Add a delivery address';
 
   const goBack = () => {
     if (navigation.canGoBack()) {
@@ -73,11 +79,11 @@ export function CartScreen() {
                 Deliver to {recipient}
               </Text>
               <Text style={styles.addressLine} numberOfLines={1}>
-                {DEFAULT_ADDRESS}
+                {addressLine}
               </Text>
             </View>
-            <Pressable onPress={() => navigation.navigate('Checkout')} hitSlop={8}>
-              <Text style={styles.change}>Change</Text>
+            <Pressable onPress={() => navigation.navigate('Addresses')} hitSlop={8}>
+              <Text style={styles.change}>{defaultAddress ? 'Change' : 'Add'}</Text>
             </Pressable>
           </View>
         }

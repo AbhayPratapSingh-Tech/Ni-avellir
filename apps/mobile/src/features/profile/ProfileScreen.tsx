@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { Screen } from '../../components/ui/Screen';
-import { signOut, openLogin } from '../auth/authSlice';
+import { openLogin, signOutAndClearSession } from '../auth/authSlice';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -92,7 +92,13 @@ export function ProfileScreen() {
                   openEditProfile();
                   return;
                 }
-                if (item.key === 'orders') navigation.navigate('Orders');
+                if (item.key === 'orders') {
+                  navigation.navigate('Orders');
+                  return;
+                }
+                if (item.key === 'addresses') {
+                  navigation.navigate('Addresses');
+                }
               }}
             >
               <Text style={styles.menuIcon}>{item.icon}</Text>
@@ -104,7 +110,7 @@ export function ProfileScreen() {
 
         <Pressable
           style={({ pressed }) => [styles.logout, pressed && styles.logoutPressed]}
-          onPress={() => dispatch(user?.isGuest ? openLogin() : signOut())}
+          onPress={() => dispatch(user?.isGuest ? openLogin() : signOutAndClearSession())}
         >
           <Text style={user?.isGuest ? styles.loginText : styles.logoutText}>
             {user?.isGuest ? 'Login / Signup' : 'Log out'}

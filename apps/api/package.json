@@ -7,14 +7,14 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx watch src/server.ts",
-"lint": "eslint src --ext .ts",
+    "lint": "eslint src --ext .ts",
     "seed": "tsx src/scripts/seed.ts",
     "start": "node dist/server.js",
     "test": "echo \"No API tests yet\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-"@nidavellir/shared":"*",
+    "@nidavellir/shared": "*",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.5.1",
     "compression": "^1.7.5",
@@ -32,6 +32,7 @@
     "nanoid": "^5.0.9",
     "pino": "^9.6.0",
     "pino-http": "^10.4.0",
+    "razorpay": "^2.9.8",
     "resend": "^4.1.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",

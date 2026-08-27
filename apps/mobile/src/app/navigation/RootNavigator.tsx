@@ -13,7 +13,9 @@ import { ProfileScreen } from '../../features/profile/ProfileScreen';
 import { CheckoutScreen } from '../../features/checkout/CheckoutScreen';
 import { OrderConfirmationScreen } from '../../features/orders/OrderConfirmationScreen';
 import { OrdersScreen } from '../../features/orders/OrdersScreen';
+import { OrderDetailsScreen } from '../../features/orders/OrderDetailsScreen';
 import { EditProfileScreen } from '../../features/profile/EditProfileScreen';
+import { AddressesScreen } from '../../features/addresses/AddressesScreen';
 import { FaqScreen } from '../../features/info/FaqScreen';
 import { ReturnsScreen } from '../../features/info/ReturnsScreen';
 import { ContactScreen } from '../../features/info/ContactScreen';
@@ -163,11 +165,21 @@ function ShopNavigator() {
         options={{ headerShown: false }}
       />
       <RootStack.Screen name="Orders" component={OrdersScreen} options={{ title: 'My Orders' }} />
+      <RootStack.Screen
+        name="OrderDetails"
+        component={OrderDetailsScreen}
+        options={{ title: 'Order details' }}
+      />
       <RootStack.Screen name="Wishlist" component={WishlistScreen} options={{ title: 'Wishlist' }} />
       <RootStack.Screen
         name="EditProfile"
         component={EditProfileScreen}
         options={{ title: 'Edit profile' }}
+      />
+      <RootStack.Screen
+        name="Addresses"
+        component={AddressesScreen}
+        options={{ title: 'Addresses' }}
       />
       <RootStack.Screen name="Faq" component={FaqScreen} options={{ title: 'FAQs' }} />
       <RootStack.Screen

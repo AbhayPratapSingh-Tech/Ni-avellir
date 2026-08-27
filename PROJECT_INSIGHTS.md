@@ -45,7 +45,7 @@ Nidavellir is intended to become a real premium gaming merchandise marketplace, 
 
 ## How AI Assistants Should Work Here
 
-1. Read `ARCHITECTURE.md`, `PROJECT_PROGRESS.md`, `TODO.md`, and this file before editing.
+1. Read `AI_AGENT_GUIDE.md` first (alignment checklist), then `ARCHITECTURE.md`, `PROJECT_PROGRESS.md`, `TODO.md`, and this file before editing.
 2. Check the current phase and approval status.
 3. Inspect the repository before changing files.
 4. If the user asks for implementation before Phase 1 approval, remind them of the gate and ask for explicit approval.
@@ -54,6 +54,7 @@ Nidavellir is intended to become a real premium gaming merchandise marketplace, 
 7. Update `CHANGELOG.md` for meaningful documentation or code changes.
 8. Update `TODO.md` when tasks are added, completed, or deferred.
 9. Use `LOCAL_COMMANDS.md` as a machine-local command notebook when present, but never commit it.
+10. Keep mock and live API paths aligned (repository + `appConfig`); never break `intent.demoMode` payment branching.
 
 ## Local-Only Files
 
@@ -102,3 +103,106 @@ Nidavellir is intended to become a real premium gaming merchandise marketplace, 
 ## Current Status
 
 Phases 1–9 are complete for the college demo (architecture through catalog / PDP / Account polish). Optional next work is session persistence, automated tests, and store deployment. Live tracking: `PROJECT_PROGRESS.md` and `TODO.md`.
+
+## Live Database + API (how to go beyond mock)
+
+Mobile defaults to **mock** via `apps/mobile/src/config/appConfig.ts`.
+
+**Flip to live**
+
+1. `dataSource: 'api'`
+2. `allowMockFallback: false` (strict — no silent demo catalog/order fakes for critical paths)
+3. `apiBaseUrl` → staging/production HTTPS `…/api/v1` (Android emulator host remains `10.0.2.2` for local API)
+4. Follow the agent checklist in **`AI_AGENT_GUIDE.md`**
+
+**Backend path**
+
+1. Install MongoDB locally (or Atlas) and set `MONGODB_URI` in `apps/api/.env.development`.
+2. Copy `apps/api/.env.development.example` → `.env.development`, set JWT secrets.
+3. From repo root: start API (`npm run dev --workspace apps/api` or the package script in docs).
+4. Seed products if a seed script exists; otherwise create catalog via admin/product routes.
+5. Auth (next): register/login → `setSessionTokens` → Bearer on `apiClient` (Keychain hydrate stub in `sessionTokens.ts`).
+
+**Core collections (Mongoose)**
+
+- Users (auth/RBAC — pending), Products (stock), Orders (line snapshots + status), Payments (provider intent + HMAC verify), plus cart/wishlist as product evolves.
+
+**Orders + payments flow**
+
+- `POST /api/v1/orders` — COD → `confirmed` + stock decrement; Razorpay (`razorpay_demo`) → `pending_payment` (stock held until pay).
+- `POST /api/v1/payments/intents` — creates Razorpay order (or demo intent).
+- `POST /api/v1/payments/razorpay/confirm` — HMAC verify → mark payment + order `paid` + decrement stock.
+- `POST /api/v1/payments/razorpay/demo-complete` — college/test path without charging (blocked in production when real keys are set).
+
+**Mobile local state (until API sync)**
+
+- Orders history + addresses live in Redux (`orders`, `addresses`). Checkout prefills default address and signed-in email; placing an order upserts the address book.
+
+## Razorpay test / dummy checkout
+
+- Provider: `apps/api/src/modules/payments/providers/razorpay.provider.ts`.
+- Leave `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` as `replace-with-*` → **demo mode** (signed dummy intents, same HMAC verify path).
+- Or paste Dashboard **Test Mode** keys (`rzp_test_…`) → real Razorpay Orders API create + verify.
+- Mobile: Checkout branches on `intent.demoMode` — demo sheet + `/demo-complete`, or `react-native-razorpay` + `/confirm`.
+- Never commit real keys. Prefer Test Mode until production go-live; webhook idempotency remains a follow-up.
+- Agent rules for future edits: **`AI_AGENT_GUIDE.md`** + `.cursor/rules/nidavellir-agent-alignment.mdc`.
+
+## `intent.demoMode` — how to branch checkout (college demo → live)
+
+After `POST /api/v1/payments/intents`, the response includes `intent.demoMode`. **Always branch on this flag** (and persist it on the pending checkout state). Do not hard-code “always demo sheet” or “always native SDK.”
+
+### When is `demoMode` true vs false?
+
+| Condition | `intent.demoMode` | What the API did |
+|-----------|-------------------|------------------|
+| Env keys missing, empty, or still `replace-with-*` | `true` | Fake `order_demo_*` intent; no Razorpay network call |
+| Real Test/Live keys set (`rzp_test_…` / `rzp_live_…`) | `false` | Real `razorpay.orders.create`; public `keyId` is your Dashboard key |
+
+Mobile mock fallback in `productRepository.createPaymentIntent` also returns `demoMode: true` when the API is unreachable / `dataSource: 'mock'`.
+
+### Checkout branching (required for go-live)
+
+```text
+createOrder (razorpay) → createPaymentIntent → read intent.demoMode
+
+if (intent.demoMode === true):
+  → show RazorpayTestCheckout (in-app sheet)
+  → on Pay: POST /payments/razorpay/demo-complete
+  → finish order (paid)
+
+if (intent.demoMode === false):
+  → open react-native-razorpay Checkout with:
+       key: intent.keyId
+       order_id: intent.providerIntentId
+       amount: intent.amountMinor
+       currency: intent.currency
+  → on success: POST /payments/razorpay/confirm
+       { orderId, providerIntentId, providerPaymentId, signature }
+  → finish order (paid)
+  → on cancel/failure: leave order pending_payment; do not call demo-complete
+```
+
+Today the app branches on `intent.demoMode` in `CheckoutScreen`: demo sheet + `/demo-complete` when `true`; `react-native-razorpay` (`openRazorpayCheckout`) + `/confirm` when `false`.
+
+### Native SDK install notes
+
+- Dependency: `react-native-razorpay@^3.0.0` in `apps/mobile`.
+- After install / pull: `node apps/mobile/scripts/ensure-mobile-node-modules.js`, then `cd apps/mobile/ios && pod install`.
+- Rebuild the native app (Metro reload is not enough). New Architecture stays **off** for this project.
+- Placeholder/mock path never opens the native SDK (`demoMode: true`).
+
+### Checklist when making the app live
+
+1. Set `appConfig.dataSource` to `'api'` and a real `apiBaseUrl` (staging/production host, HTTPS).
+2. Set **real** Razorpay keys in the API env (start with Test Mode `rzp_test_…`, then Live `rzp_live_…` for store builds). Never ship the **key secret** in the mobile app — only `intent.keyId` is public.
+3. Confirm `POST /payments/intents` returns `demoMode: false`. If it is still `true`, keys are wrong/placeholder — fix API env before expecting Checkout to work.
+4. Mobile must call **`/razorpay/confirm`** after native Checkout success — **not** `/razorpay/demo-complete`.
+5. Ensure production blocks demo-complete when real keys are configured (`PaymentService.completeDemoRazorpayPayment` already rejects demo in `NODE_ENV=production` when not in provider demo mode).
+6. Rebuild native apps after adding `react-native-razorpay` (pods / Gradle); New Architecture is currently off, which is preferred for this SDK.
+7. Optional later: Razorpay webhooks (idempotent) as a second source of truth besides client confirm.
+
+### Quick sanity check
+
+- Placeholder keys + mock app → `demoMode: true` → sheet + demo-complete (expected for demos).
+- Live API + Test keys → `demoMode: false` → native Checkout + confirm (path for staging).
+- Live API + Live keys + production → `demoMode: false` + demo-complete disabled → store-ready payments.

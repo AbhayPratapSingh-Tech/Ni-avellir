@@ -143,13 +143,30 @@ function suggestionsFromMock(): SearchSuggestions {
 export class ProductRepository {
   private readonly useApi = appConfig.dataSource === 'api';
 
-  private async withFallback<T>(apiCall: () => Promise<T>, fallback: () => T): Promise<T> {
+  /**
+   * @param critical - orders/payments: never soft-fallback in api mode
+   *   (avoids fake paid orders when the API is down).
+   */
+  private async withFallback<T>(
+    apiCall: () => Promise<T>,
+    fallback: () => T,
+    options?: { critical?: boolean },
+  ): Promise<T> {
     if (!this.useApi) {
       return fallback();
     }
     try {
       return await apiCall();
-    } catch {
+    } catch (error) {
+      const allowSoft =
+        !options?.critical && appConfig.allowMockFallback === true;
+      if (!allowSoft) {
+        throw error;
+      }
+      if (__DEV__) {
+        // eslint-disable-next-line no-console
+        console.warn('[ProductRepository] API failed; using mock fallback', error);
+      }
       return fallback();
     }
   }
@@ -259,10 +276,12 @@ export class ProductRepository {
   }
 
   async createOrder(input: CreateOrderInput) {
-    return this.withFallback(async () => {
-      const { data } = await apiClient.post('/orders', input);
-      return data.data.order;
-    }, () => {
+    return this.withFallback(
+      async () => {
+        const { data } = await apiClient.post('/orders', input);
+        return data.data.order;
+      },
+      () => {
       let subtotal = 0;
       let itemCount = 0;
       const lines = [];
@@ -283,6 +302,7 @@ export class ProductRepository {
       }
       const shipping = subtotal >= 1499 ? 0 : 99;
       const tax = Math.round(subtotal * 0.05);
+      const isCod = input.paymentMethod === 'cash_on_delivery';
       return {
         id: `ORD-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
         orderNumber: `ORD-NDV-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -292,13 +312,75 @@ export class ProductRepository {
         tax,
         total: subtotal + shipping + tax,
         currency: 'INR',
-        status: input.paymentMethod === 'cash_on_delivery' ? 'confirmed' : 'paid',
+        status: isCod ? 'confirmed' : 'pending_payment',
         estimatedDelivery: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
         shippingAddress: input.shippingAddress,
         customer: input.customer,
         createdAt: new Date().toISOString(),
       };
-    });
+    },
+      { critical: true },
+    );
+  }
+
+  async createPaymentIntent(orderId: string) {
+    return this.withFallback(
+      async () => {
+        const { data } = await apiClient.post('/payments/intents', { orderId });
+        return data.data.intent as {
+          orderId: string;
+          orderNumber: string;
+          providerIntentId: string;
+          keyId: string;
+          amountMinor: number;
+          currency: string;
+          demoMode: boolean;
+        };
+      },
+      () => ({
+        orderId,
+        orderNumber: orderId,
+        providerIntentId: `order_demo_${Math.random().toString(36).slice(2, 10)}`,
+        keyId: 'rzp_test_demo_nidavellir',
+        amountMinor: 0,
+        currency: 'INR',
+        demoMode: true,
+      }),
+      { critical: true },
+    );
+  }
+
+  async completeRazorpayDemo(orderId: string) {
+    return this.withFallback(
+      async () => {
+        const { data } = await apiClient.post('/payments/razorpay/demo-complete', { orderId });
+        return data.data.order;
+      },
+      () => ({
+        id: orderId,
+        status: 'paid',
+      }),
+      { critical: true },
+    );
+  }
+
+  async confirmRazorpayPayment(input: {
+    orderId: string;
+    providerIntentId: string;
+    providerPaymentId: string;
+    signature: string;
+  }) {
+    return this.withFallback(
+      async () => {
+        const { data } = await apiClient.post('/payments/razorpay/confirm', input);
+        return data.data.order;
+      },
+      () => ({
+        id: input.orderId,
+        status: 'paid',
+      }),
+      { critical: true },
+    );
   }
 }
 

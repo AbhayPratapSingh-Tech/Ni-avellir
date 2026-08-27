@@ -5,12 +5,22 @@ export type CreatePaymentIntentInput = {
   checkoutId: string;
   amount: Money;
   customerId: string;
+  customer?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+  };
 };
 
 export type CreatePaymentIntentResult = {
   provider: PaymentProviderCode;
+  /** Razorpay order id (or demo order id). */
   providerIntentId: string;
-  clientSecret?: string;
+  /** Public key id for Checkout (test or live). */
+  keyId: string;
+  amountMinor: number;
+  currency: string;
+  demoMode: boolean;
 };
 
 export type VerifyPaymentInput = {

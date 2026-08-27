@@ -5,6 +5,7 @@ import { wishlistReducer } from '../../features/wishlist/wishlistSlice';
 import { recentReducer } from '../../features/recent/recentSlice';
 import { authReducer } from '../../features/auth/authSlice';
 import { ordersReducer } from '../../features/orders/ordersSlice';
+import { addressesReducer } from '../../features/addresses/addressesSlice';
 
 export const store = configureStore({
   reducer: {
@@ -13,6 +14,7 @@ export const store = configureStore({
     wishlist: wishlistReducer,
     recent: recentReducer,
     orders: ordersReducer,
+    addresses: addressesReducer,
   },
 });
 

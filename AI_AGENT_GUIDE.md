@@ -1,0 +1,137 @@
+# AI Agent Guide — Nidavellir
+
+**Read this before adding or changing app features.** Keep mock demo, live API, payments, navigation, and docs aligned so the college demo stays stable and the live switch stays one config flip away.
+
+Related: `PROJECT_INSIGHTS.md`, `ARCHITECTURE.md`, `apps/mobile/src/config/appConfig.ts`.
+
+---
+
+## Non‑negotiables
+
+1. **No Expo** — bare React Native Community CLI only (`apps/mobile/ios`, `apps/mobile/android`).
+2. **No secrets in git** — no real JWT, Razorpay live keys, Mongo URIs, or Keychain dumps.
+3. **Money paths are critical** — orders + payments must not silently invent “paid” results when `dataSource === 'api'`.
+4. **Branch on `intent.demoMode`** for Razorpay UI (demo sheet vs `react-native-razorpay` + `/confirm`).
+5. **New Architecture stays off** until libs are stable (see Podfile / `gradle.properties`).
+6. **Prefer repository + Redux patterns already in the app** — do not invent parallel data layers.
+
+---
+
+## Live API switch (single source of truth)
+
+File: `apps/mobile/src/config/appConfig.ts`
+
+| Setting | College demo | Live / staging |
+|---------|--------------|----------------|
+| `dataSource` | `'mock'` | `'api'` |
+| `allowMockFallback` | `true` | `false` |
+| `apiBaseUrl` | emulator host `:4000/api/v1` | HTTPS staging/prod `/api/v1` |
+
+Also required on the server: Mongo, JWT secrets, Razorpay Test then Live keys (`apps/api/.env.*`).
+
+Checklist when flipping live:
+
+1. API running + seeded products.
+2. Mobile `dataSource: 'api'`, `allowMockFallback: false`.
+3. Auth tokens via `sessionTokens` + `apiClient` Bearer (Keychain hydrate later).
+4. Razorpay: real keys → `demoMode: false` → native Checkout → `POST /payments/razorpay/confirm`.
+5. Rebuild native app after native dependency changes; run `ensure-mobile-node-modules.js` + `pod install` when needed.
+
+---
+
+## Alignment checklist (every change)
+
+When you **add or change** a screen, feature, API, or payment path, complete the matching rows:
+
+### A. New mobile screen / flow
+
+- [ ] Add route to `apps/mobile/src/app/navigation/types.ts` (`RootStackParamList` or tabs).
+- [ ] Register screen in `RootNavigator.tsx` with title / header options.
+- [ ] Wire entry points (Profile menu, Cart, deep links, confirmation CTAs).
+- [ ] Use `colors` / `spacing` / `typography` from `theme/tokens.ts` (no one-off design systems).
+- [ ] Forms: shared validators (`lib/addressValidation.ts` or same pattern) + inline errors.
+- [ ] Empty + error + loading states.
+
+### B. New or changed data (products, orders, addresses, cart)
+
+- [ ] Extend **shared** types in `packages/shared` if the contract is cross-app.
+- [ ] Mobile: go through `productRepository` (or a dedicated repository), not raw `axios` in screens.
+- [ ] Implement **mock fallback** for catalog reads; mark **`critical: true`** for create order / payment confirm.
+- [ ] Redux slice: shape complete enough for UI (e.g. orders need line items + address for Order Details).
+- [ ] Persist locally only what UX needs until API exists; document “live: sync to `/api/v1/...`”.
+- [ ] Checkout / finishOrder: keep Redux + Address book + API payload in sync.
+
+### C. New or changed API endpoint
+
+- [ ] Route under `/api/v1/...`, mounted in `apps/api/src/app.ts`.
+- [ ] Controller → service → model; use `AppError` + envelope `{ data }` / `{ error }`.
+- [ ] Update mobile repository method + types.
+- [ ] Env vars in `.env.*.example` (never commit real values).
+- [ ] Note auth requirement (JWT) when auth module lands — client already sends Bearer if token set.
+
+### D. Payments
+
+- [ ] Provider implements `PaymentProvider`; Razorpay keeps HMAC verify.
+- [ ] Mobile: `intent.demoMode === true` → demo sheet + `/demo-complete`; `false` → SDK + `/confirm`.
+- [ ] Never put `RAZORPAY_KEY_SECRET` in the app.
+- [ ] Update `PROJECT_INSIGHTS.md` Razorpay section if behavior changes.
+
+### E. Native modules
+
+- [ ] Add to `apps/mobile/package.json`.
+- [ ] Symlink in `scripts/ensure-mobile-node-modules.js` if autolinking needs the mobile `node_modules` path.
+- [ ] `pod install` (UTF-8 locale) + Android rebuild.
+- [ ] Document rebuild requirement in `PROJECT_INSIGHTS.md` or this file.
+
+### F. Docs agents must keep current
+
+- [ ] Meaningful behavior → update `PROJECT_INSIGHTS.md` and/or this guide.
+- [ ] Phase / TODO changes → `PROJECT_PROGRESS.md`, `TODO.md`, `CHANGELOG.md` when the user expects tracking.
+
+---
+
+## Where things live
+
+| Concern | Path |
+|---------|------|
+| Mock vs API switch | `apps/mobile/src/config/appConfig.ts` |
+| HTTP client + Bearer | `apps/mobile/src/services/api/apiClient.ts` |
+| Token stubs / Keychain hook | `apps/mobile/src/services/api/sessionTokens.ts` |
+| Catalog / orders / payments repository | `apps/mobile/src/services/data/productRepository.ts` |
+| Razorpay native open | `apps/mobile/src/services/payments/openRazorpayCheckout.ts` |
+| Orders list / details | `features/orders/*` |
+| Addresses | `features/addresses/*` |
+| Address validation | `lib/addressValidation.ts` |
+| Navigation | `app/navigation/*` |
+| Express app | `apps/api/src/app.ts` |
+| Payments API | `apps/api/src/modules/payments/*` |
+
+---
+
+## Do / Don’t
+
+**Do**
+
+- Prefer small, production-shaped changes over throwaway demos when the user wants “real app” quality.
+- Reuse checkout address validation for any address form.
+- Prefill checkout from saved default address + signed-in profile when possible.
+- Surface API errors with `getApiErrorMessage` in checkout/payment alerts.
+
+**Don’t**
+
+- Hard-code always-demo payment UI.
+- Soft-fallback paid orders when `dataSource === 'api'`.
+- Add Expo, EAS, or App Center CodePush.
+- Commit `.env` with real secrets.
+- Leave Profile menu rows without navigation when the screen exists.
+
+---
+
+## Quick “future live” backlog (do not block college demo)
+
+- JWT auth module on API + login → `setSessionTokens` + Keychain hydrate.
+- Persist Redux (orders/addresses) or refetch from API when logged in.
+- Addresses CRUD API mirrored to `addressesSlice`.
+- Orders list from `GET /orders` instead of local-only history.
+- Razorpay webhooks (idempotent) beside client confirm.
+- Strict `allowMockFallback: false` on staging/prod builds.

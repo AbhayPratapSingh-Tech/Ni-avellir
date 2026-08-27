@@ -1,21 +1,36 @@
 import { Platform } from 'react-native';
 
 /**
- * Central app configuration.
+ * Central app configuration — single switchboard for mock vs live API.
  *
- * To switch data sources:
- *   - `mock`  -> uses bundled demo data instantly (no server needed).
- *   - `api`   -> uses the live backend API (requires the API running).
+ * LIVE SWITCH (when backend + Mongo are ready):
+ *   1. Set `dataSource` to `'api'`
+ *   2. Set `apiBaseUrl` to staging/production HTTPS `/api/v1`
+ *   3. Set `allowMockFallback` to `false` so failed API calls surface errors
+ *      instead of silently using demo catalog / fake orders
+ *   4. Restart Metro + rebuild if native modules changed
  *
- * Android emulator reaches the host machine at 10.0.2.2, not localhost.
+ * See `AI_AGENT_GUIDE.md` and `PROJECT_INSIGHTS.md`.
  */
 export type DataSourceMode = 'mock' | 'api';
 
 const apiHost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 
 export const appConfig = {
-  /** Catalog uses mock data so the shop works without a running API. */
+  /**
+   * `mock` — bundled demo data (college demo, no server).
+   * `api`  — Express `/api/v1` (requires API + Mongo running).
+   */
   dataSource: 'mock' as DataSourceMode,
+
+  /**
+   * When `dataSource === 'api'` and a request fails:
+   * - `true`  → catalog helpers may fall back to demo products (dev convenience)
+   * - `false` → throw (required for staging/production / live payments)
+   *
+   * Money paths (orders + payments) never soft-fallback in `api` mode.
+   */
+  allowMockFallback: true,
 
   /** Base URL of the API server (used only when dataSource === 'api'). */
   apiBaseUrl: `http://${apiHost}:4000/api/v1`,
@@ -25,13 +40,9 @@ export const appConfig = {
 
   /** Feature flags. */
   features: {
-    /** Show the Forge customizer experimental feature. */
     forgeStudio: true,
-    /** Show the Rune XP loyalty gamification widget. */
     runeXp: true,
-    /** Show animated hero carousel. */
     heroCarousel: true,
-    /** Show the flash-sale countdown. */
     flashSale: true,
   },
 
@@ -47,3 +58,8 @@ export const appConfig = {
 } as const;
 
 export type AppConfig = typeof appConfig;
+
+/** True when the app should talk to the Express API. */
+export function isApiMode() {
+  return appConfig.dataSource === 'api';
+}

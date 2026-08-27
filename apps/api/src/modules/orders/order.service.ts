@@ -63,6 +63,7 @@ export class OrderService {
       .toISOString()
       .slice(0, 10);
 
+    const isCod = input.paymentMethod === 'cash_on_delivery';
     const order = await Order.create({
       orderNumber,
       customer: input.customer,
@@ -74,16 +75,18 @@ export class OrderService {
       tax,
       total,
       currency: 'INR',
-      status: input.paymentMethod === 'cash_on_delivery' ? 'confirmed' : 'paid',
+      // Online (Razorpay): wait for payment verify before stock decrement.
+      status: isCod ? 'confirmed' : 'pending_payment',
       estimatedDelivery,
     });
 
-    // Decrement stock
-    await Promise.all(
-      items.map((item) =>
-        Product.updateOne({ _id: item.productId }, { $inc: { stock: -item.quantity } }),
-      ),
-    );
+    if (isCod) {
+      await Promise.all(
+        items.map((item) =>
+          Product.updateOne({ _id: item.productId }, { $inc: { stock: -item.quantity } }),
+        ),
+      );
+    }
 
     return order;
   }

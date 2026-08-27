@@ -13,6 +13,7 @@ import { healthRouter } from './modules/health/health.routes.js';
 import { createProductRouter } from './modules/products/product.routes.js';
 import { createCartRouter } from './modules/cart/cart.routes.js';
 import { createOrderRouter } from './modules/orders/order.routes.js';
+import { createPaymentRouter } from './modules/payments/payment.routes.js';
 
 export function createApp(env: Env) {
   const app = express();
@@ -31,11 +32,12 @@ export function createApp(env: Env) {
   app.use(express.json({ limit: '1mb' }));
   app.use(mongoSanitize());
 
-app.use('/health', healthRouter);
+  app.use('/health', healthRouter);
   app.use('/api/v1/health', healthRouter);
   app.use('/api/v1/products', createProductRouter());
   app.use('/api/v1/cart', createCartRouter());
   app.use('/api/v1/orders', createOrderRouter());
+  app.use('/api/v1/payments', createPaymentRouter(env));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
