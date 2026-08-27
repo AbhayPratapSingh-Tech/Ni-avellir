@@ -6,32 +6,48 @@ Premium gaming merchandise marketplace — a full-stack mobile commerce app.
 
 ## What's Included
 
-- **Mobile app** (bare React Native CLI, no Expo): Onboarding, Login, Signup, OTP, Forge (Home), Categories, Search, Products, Product Detail, Cart, Checkout, Order Confirmation, Orders, Wishlist, Account, and Edit Profile.
-- **Backend API** (Node.js + Express + MongoDB): products, cart quotes, orders, payment provider abstraction (Razorpay + COD), email provider abstraction (Resend), health, seed script.
+- **Mobile app** (bare React Native CLI, no Expo): Onboarding, Login, Signup, OTP, Forge (Home), Categories, Search, Products, Product Detail, Cart, Checkout, Order Confirmation, Orders, Order Details, Addresses, Wishlist, Account, and Edit Profile.
+- **Backend API** (Node.js + Express + MongoDB): products, cart quotes, orders, Razorpay + COD payments, health, seed script.
 - **Shared package** (`@nidavellir/shared`): contracts, types, constants, Zod validation, and expanded mock catalog (~28 products).
-- **Shop UI**: light esports theme; daily sale window 09:00–16:00; You may also like shelf; image galleries, MRP / % off, sticky cart and PDP bars; write-review modal.
-- **Account**: edit name / email / phone and profile photo (library, camera, or preset avatars).
-- **Innovative features**: animated hero carousel (Reanimated), sale countdown, Rune XP loyalty widget, mock/live data switching.
+- **Payments**: demo sheet + `react-native-razorpay` when live keys return `intent.demoMode === false`.
+- **Account**: addresses CRUD, edit profile, orders with product images and details.
 
-## Quick Start
+## Quick Start (clone → run)
 
 ```bash
-# 1. From repo root, install dependencies (npm workspaces)
+git clone <your-repo-url> Ni-avellir
+cd Ni-avellir
+git checkout <your-branch>   # if not main
+
+# 1. Install (also builds @nidavellir/shared via postinstall)
 npm install
-# or: pnpm install
 
-# 2. Run the mobile app (zero-setup demo mode)
-npm run start --workspace apps/mobile
-npm run android   # or: npm run ios
+# 2. Copy API env example + link RN modules under apps/mobile
+npm run setup
 
-# 3. (Optional) Run the backend + seed demo data
-npm run dev --workspace apps/api
-npm run seed --workspace apps/api
+# 3. Start Metro (mock catalog — no Mongo/API required)
+npm run dev
+
+# 4. In another terminal, launch a device/simulator
+npm run android
+# or (macOS + Xcode; first time run pods):
+#   cd apps/mobile/ios && pod install && cd -
+npm run ios
 ```
 
-> Set `dataSource: 'mock'` in `apps/mobile/src/config/appConfig.ts` for a fully offline demo. Flip it to `'api'` to use the live backend.
+`npm run dev` starts the **React Native Metro bundler** for the mobile app in **mock** mode (`apps/mobile/src/config/appConfig.ts` → `dataSource: 'mock'`). You do **not** need MongoDB for the college demo.
 
-> After `npm install`, mobile runs `ensure-mobile-node-modules.js` so React Native stays linked under `apps/mobile/node_modules` for Android Gradle and Metro (workspace hoist otherwise breaks those paths).
+### Optional: live API
+
+```bash
+# Needs MongoDB on mongodb://localhost:27017
+npm run setup                 # creates apps/api/.env.development if missing
+npm run dev:api
+npm run seed --workspace apps/api
+# then set appConfig.dataSource to 'api' and restart Metro
+```
+
+> After `npm install`, root `postinstall` builds `@nidavellir/shared`, and mobile `ensure-mobile-node-modules.js` restores RN symlinks for Android Gradle / Metro.
 
 ## Documentation
 
@@ -44,9 +60,9 @@ npm run seed --workspace apps/api
 
 ## Tech Stack
 
-- **Mobile:** React Native, React Navigation, Redux Toolkit, TanStack Query, Reanimated, Gesture Handler, FlashList, react-native-image-picker.
+- **Mobile:** React Native, React Navigation, Redux Toolkit, TanStack Query, Reanimated, Gesture Handler, FlashList, react-native-image-picker, react-native-razorpay.
 - **Backend:** Node.js, Express, TypeScript, MongoDB (Mongoose), Zod, JWT, Helmet.
-- **Tooling:** npm/pnpm workspaces, Turborepo, strict TypeScript, ESLint, Prettier.
+- **Tooling:** npm workspaces, Turborepo, strict TypeScript, ESLint, Prettier.
 
 ## Native Tooling
 

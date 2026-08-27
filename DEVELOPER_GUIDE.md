@@ -15,15 +15,15 @@ sudo gem install cocoapods  # iOS
 # 2. Clone + install
 git clone <your-repo-url> Nidavellir
 cd Nidavellir
-pnpm install
+npm install
+npm run setup
 cd apps/mobile/ios && pod install && cd ../../../
 
-# 3. Set offline demo mode (recommended — no server needed)
-#    In apps/mobile/src/config/appConfig.ts set: dataSource: 'mock'
+# 3. Offline demo mode is default (appConfig dataSource: 'mock')
 
 # 4. Run — two terminals
-pnpm --filter mobile start   # terminal 1: Metro
-pnpm --filter mobile ios     # terminal 2: iOS simulator (or: mobile android)
+npm run dev                  # terminal 1: Metro
+npm run ios                  # terminal 2: iOS (or: npm run android)
 ```
 
 The app then opens in the iOS Simulator / Android emulator and works fully offline with bundled demo data.
@@ -33,10 +33,12 @@ The app then opens in the iOS Simulator / Android emulator and works fully offli
 ### 1. Install dependencies (from repo root)
 
 ```bash
-pnpm install
-# or
 npm install
+npm run setup
+# or: pnpm install && npm run setup
 ```
+
+`npm install` builds `@nidavellir/shared`. `npm run setup` copies `apps/api/.env.development` from the example (if missing) and restores mobile RN symlinks.
 
 ### 2. iOS — CocoaPods + run (macOS + Xcode)
 
@@ -77,7 +79,9 @@ The app works in **two data modes** controlled by `apps/mobile/src/config/appCon
 Start Metro:
 
 ```bash
-pnpm --filter mobile start
+npm run dev
+# or: npm run start --workspace apps/mobile
+# or: pnpm --filter mobile start
 ```
 
 Then run on a device/emulator:

@@ -9,11 +9,13 @@
     "gradlew-android": "bash ./scripts/gradlew-android.sh",
     "build": "tsc -p tsconfig.json --noEmit",
     "dev": "react-native start",
+    "predev": "npm run build -w @nidavellir/shared && node ./scripts/ensure-mobile-node-modules.js",
     "ios": "react-native run-ios",
     "lint": "eslint src --ext .ts,.tsx",
     "postinstall": "node ./scripts/ensure-mobile-node-modules.js",
     "prestart": "npm run build -w @nidavellir/shared && node ./scripts/ensure-mobile-node-modules.js",
     "preandroid": "npm run build -w @nidavellir/shared && node ./scripts/ensure-mobile-node-modules.js",
+    "preios": "npm run build -w @nidavellir/shared && node ./scripts/ensure-mobile-node-modules.js",
     "start": "react-native start",
     "test": "echo \"No mobile tests yet\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"

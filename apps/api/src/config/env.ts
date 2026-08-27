@@ -1,5 +1,13 @@
-import 'dotenv/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
 import { z } from 'zod';
+
+const apiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+
+// Prefer local development file after clone (`npm run setup` copies the example).
+dotenv.config({ path: path.join(apiRoot, '.env.development') });
+dotenv.config({ path: path.join(apiRoot, '.env') });
 
 const envSchema = z.object({
   API_BASE_URL: z.string().url().default('http://localhost:4000'),

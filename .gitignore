@@ -48,6 +48,7 @@ Thumbs.db
 .idea/
 .cursor/*
 !.cursor/rules/
+!.cursor/rules/**
 
 # React Native / Metro
 .metro-health-check*

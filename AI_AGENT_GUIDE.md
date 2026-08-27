@@ -29,6 +29,17 @@ File: `apps/mobile/src/config/appConfig.ts`
 
 Also required on the server: Mongo, JWT secrets, Razorpay Test then Live keys (`apps/api/.env.*`).
 
+### Fresh clone must run
+
+```bash
+npm install
+npm run setup
+npm run dev          # Metro (mock) — root script
+npm run android      # or ios (+ pod install first time)
+```
+
+Do not invent alternate entrypoints. Root `dev` = mobile Metro. Root `dev:api` = Express (needs Mongo).
+
 Checklist when flipping live:
 
 1. API running + seeded products.

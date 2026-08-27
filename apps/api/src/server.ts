@@ -7,7 +7,15 @@ async function main() {
   const env = loadEnv();
   const app = createApp(env);
 
-  await connectDatabase(env.mongodbUri);
+  try {
+    await connectDatabase(env.mongodbUri);
+  } catch (error) {
+    logger.error(
+      error,
+      'MongoDB connection failed. Start MongoDB locally, or use mobile mock mode (`appConfig.dataSource = "mock"`) with `npm run dev` only.',
+    );
+    process.exit(1);
+  }
 
   app.listen(env.port, () => {
     logger.info({ port: env.port, environment: env.nodeEnv }, 'API server listening');
