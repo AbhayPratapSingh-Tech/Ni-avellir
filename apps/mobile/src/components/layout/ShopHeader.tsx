@@ -3,7 +3,9 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing } from '../../theme/tokens';
 import { BrandMark } from '../ui/BrandMark';
-import { useAppSelector } from '../../app/store';
+import { useAppDispatch, useAppSelector } from '../../app/store';
+import { requireLogin } from '../../lib/authGates';
+import { useToast } from '../ui/Toast';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -19,10 +21,20 @@ export function cartBadgeLabel(count: number) {
 
 export function ShopHeader({ onMenuPress }: Props) {
   const navigation = useNavigation<Navigation>();
+  const dispatch = useAppDispatch();
+  const toast = useToast();
+  const user = useAppSelector((state) => state.auth.user);
   const itemCount = useAppSelector((state) => state.cart.itemCount);
   const wishlistCount = useAppSelector((state) => state.wishlist.items.length);
   const cartBadge = cartBadgeLabel(itemCount);
   const wishBadge = cartBadgeLabel(wishlistCount);
+
+  const openWishlist = () => {
+    if (!requireLogin({ user, dispatch, toast, reason: 'wishlist' })) {
+      return;
+    }
+    navigation.navigate('Wishlist');
+  };
 
   return (
     <View style={styles.row}>
@@ -40,7 +52,7 @@ export function ShopHeader({ onMenuPress }: Props) {
       </View>
       <View style={styles.rightActions}>
         <Pressable
-          onPress={() => navigation.navigate('Wishlist')}
+          onPress={openWishlist}
           style={styles.sideBtn}
           hitSlop={8}
           accessibilityRole="button"

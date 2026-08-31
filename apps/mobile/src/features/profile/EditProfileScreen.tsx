@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Image,
@@ -21,11 +21,16 @@ import { Screen } from '../../components/ui/Screen';
 import { useToast } from '../../components/ui/Toast';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { updateProfile } from '../auth/authSlice';
+import { appConfig } from '../../config/appConfig';
+import { authRepository } from '../../services/data/authRepository';
+import { digitsOnly } from '../../lib/addressValidation';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_RE = /^[a-zA-Z][a-zA-Z\s.'-]{1,59}$/;
+const INDIAN_MOBILE_RE = /^[6-9]\d{9}$/;
 
 const PRESET_AVATARS = [
   'https://i.pravatar.cc/240?img=12',
@@ -49,6 +54,28 @@ const PICKER_OPTIONS = {
   maxHeight: 800,
   selectionLimit: 1,
 };
+
+type ProfileErrors = Partial<{ name: string; email: string; phone: string }>;
+
+function validateProfile(fields: { name: string; email: string; phone: string }): ProfileErrors {
+  const errors: ProfileErrors = {};
+  const name = fields.name.trim();
+  const email = fields.email.trim();
+  const phone = digitsOnly(fields.phone);
+
+  if (!name) errors.name = 'Full name is required';
+  else if (name.length < 2) errors.name = 'Enter at least 2 characters';
+  else if (!NAME_RE.test(name)) errors.name = 'Use letters only (spaces, . \' - allowed)';
+
+  if (!email) errors.email = 'Email is required';
+  else if (!EMAIL_RE.test(email)) errors.email = 'Enter a valid email address';
+
+  if (!phone) errors.phone = 'Phone number is required';
+  else if (phone.length !== 10) errors.phone = 'Enter a valid 10-digit mobile number';
+  else if (!INDIAN_MOBILE_RE.test(phone)) errors.phone = 'Mobile number must start with 6–9';
+
+  return errors;
+}
 
 async function ensureAndroidCameraPermission(): Promise<boolean> {
   if (Platform.OS !== 'android') {
@@ -82,6 +109,13 @@ export function EditProfileScreen() {
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [avatarUri, setAvatarUri] = useState<string | undefined>(user?.avatarUri);
   const [presetsOpen, setPresetsOpen] = useState(false);
+  const [tried, setTried] = useState(false);
+  const [touched, setTouched] = useState<Partial<Record<keyof ProfileErrors, boolean>>>({});
+
+  const errors = useMemo(() => validateProfile({ name, email, phone }), [name, email, phone]);
+
+  const showError = (key: keyof ProfileErrors) =>
+    (tried || touched[key]) && errors[key] ? errors[key] : undefined;
 
   const goBackToAccount = () => {
     if (navigation.canGoBack()) {
@@ -136,37 +170,45 @@ export function EditProfileScreen() {
     ]);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!user) {
       goBackToAccount();
       return;
     }
 
-    const nextName = name.trim();
-    const nextEmail = email.trim();
-    const nextPhone = phone.replace(/\D/g, '');
-
-    if (!nextName) {
-      toast.show('Enter your name');
-      return;
-    }
-    if (!nextEmail || !EMAIL_RE.test(nextEmail)) {
-      toast.show('Enter a valid email');
-      return;
-    }
-    if (nextPhone.length !== 10) {
-      toast.show('Enter a 10-digit phone');
+    setTried(true);
+    if (Object.keys(errors).length > 0) {
       return;
     }
 
-    dispatch(
-      updateProfile({
-        name: nextName,
-        email: nextEmail,
-        phone: nextPhone,
-        avatarUri: avatarUri ?? null,
-      }),
-    );
+    if (appConfig.dataSource === 'api') {
+      try {
+        const updated = await authRepository.updateProfile({
+          name: name.trim(),
+          email: email.trim(),
+          avatarUrl: avatarUri,
+        });
+        dispatch(
+          updateProfile({
+            name: updated.name,
+            email: updated.email,
+            phone: updated.phone,
+            avatarUri: updated.avatarUrl ?? null,
+          }),
+        );
+      } catch (error) {
+        toast.show(authRepository.getApiErrorMessage(error));
+        return;
+      }
+    } else {
+      dispatch(
+        updateProfile({
+          name: name.trim(),
+          email: email.trim(),
+          avatarUri: avatarUri ?? null,
+        }),
+      );
+    }
     toast.show('Profile updated');
     goBackToAccount();
   };
@@ -202,36 +244,41 @@ export function EditProfileScreen() {
 
           <Text style={styles.label}>Full name</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, showError('name') ? styles.inputError : null]}
             placeholder="Your name"
             placeholderTextColor={colors.textMuted}
             value={name}
             onChangeText={setName}
+            onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
             autoCapitalize="words"
+            maxLength={60}
           />
+          {showError('name') ? <Text style={styles.error}>{showError('name')}</Text> : null}
 
           <Text style={styles.label}>Email</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, showError('email') ? styles.inputError : null]}
             placeholder="you@email.com"
             placeholderTextColor={colors.textMuted}
             value={email}
             onChangeText={setEmail}
+            onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
             autoCapitalize="none"
             keyboardType="email-address"
             autoCorrect={false}
           />
+          {showError('email') ? <Text style={styles.error}>{showError('email')}</Text> : null}
 
           <Text style={styles.label}>Phone</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, styles.inputDisabled]}
             placeholder="10-digit mobile"
             placeholderTextColor={colors.textMuted}
             value={phone}
-            onChangeText={(value) => setPhone(value.replace(/\D/g, '').slice(0, 10))}
+            editable={false}
             keyboardType="phone-pad"
-            maxLength={10}
           />
+          <Text style={styles.fieldHint}>Phone number cannot be changed after signup.</Text>
 
           <Pressable style={styles.saveBtn} onPress={save}>
             <Text style={styles.saveText}>Save changes</Text>
@@ -320,7 +367,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   changePhoto: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 14,
     fontWeight: '800',
     marginBottom: spacing.sm,
@@ -329,6 +376,12 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     paddingBottom: spacing.xl,
+  },
+  error: {
+    color: colors.danger,
+    fontSize: 12,
+    marginBottom: spacing.md,
+    marginTop: -8,
   },
   flex: {
     flex: 1,
@@ -350,6 +403,21 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 14,
+  },
+  inputError: {
+    borderColor: colors.danger,
+    marginBottom: 6,
+  },
+  inputDisabled: {
+    backgroundColor: colors.background,
+    color: colors.textMuted,
+    opacity: 0.85,
+  },
+  fieldHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginBottom: spacing.md,
+    marginTop: -8,
   },
   label: {
     color: colors.text,

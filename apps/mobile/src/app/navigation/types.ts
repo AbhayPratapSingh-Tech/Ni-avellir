@@ -12,7 +12,23 @@ export type AuthStackParamList = {
   Onboarding: undefined;
   Login: undefined;
   Signup: undefined;
-  Otp: { name: string; email: string; phone: string };
+  ForgotPassword: undefined;
+  ResetPassword: { email?: string } | undefined;
+  Otp: {
+    name: string;
+    email: string;
+    phone: string;
+    password?: string;
+    purpose?: 'login' | 'verify_email';
+    /** Shown on-screen when API email demo mode is active (no real mail sent). */
+    devVerifyCode?: string;
+  };
+  AuthSuccess: {
+    name: string;
+    email: string;
+    phone: string;
+    avatarUri?: string;
+  };
 };
 
 export type RootStackParamList = {
@@ -29,9 +45,16 @@ export type RootStackParamList = {
   Checkout: undefined;
   OrderConfirmation: { orderId: string };
   Orders: undefined;
+  OrderDetails: { orderId: string };
   Wishlist: undefined;
   EditProfile: undefined;
+  ChangePassword: undefined;
+  Sessions: undefined;
+  VerifyEmail: undefined;
+  Notifications: undefined;
+  Addresses: undefined;
   Faq: undefined;
   Returns: undefined;
   Contact: undefined;
+  Support: undefined;
 };

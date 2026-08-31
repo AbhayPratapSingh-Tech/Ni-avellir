@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect } from 'react';
+import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -7,10 +7,11 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
+import { resetToMainTabs, resetToOrders } from '../../lib/navigation';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -38,6 +39,17 @@ export function OrderConfirmationScreen() {
     opacity.value = withTiming(1, { duration: 400 });
     ring.value = withSpring(1, { damping: 10, stiffness: 60 });
   }, [opacity, ring, scale]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onHardwareBack = () => {
+        resetToMainTabs(navigation, 'Home');
+        return true;
+      };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onHardwareBack);
+      return () => sub.remove();
+    }, [navigation]),
+  );
 
   const checkStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -87,10 +99,10 @@ export function OrderConfirmationScreen() {
         </Text>
       </View>
 
-      <Pressable style={styles.btn} onPress={() => navigation.navigate('MainTabs')}>
+      <Pressable style={styles.btn} onPress={() => resetToMainTabs(navigation, 'Home')}>
         <Text style={styles.btnText}>Continue shopping</Text>
       </Pressable>
-      <Pressable onPress={() => navigation.navigate('Orders')}>
+      <Pressable onPress={() => resetToOrders(navigation)}>
         <Text style={styles.link}>View my orders</Text>
       </Pressable>
     </Screen>
@@ -128,84 +140,87 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 160,
     justifyContent: 'center',
-    marginTop: spacing.xl,
+    marginBottom: spacing.lg,
+    width: 160,
   },
   label: {
     color: colors.textMuted,
-    fontSize: 14,
+    fontSize: 13,
   },
   link: {
-    color: colors.accent,
-    fontSize: 14,
+    color: colors.text,
+    fontSize: 15,
     fontWeight: '700',
     marginTop: spacing.md,
-    textAlign: 'center',
   },
   orderCard: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    marginTop: spacing.lg,
+    borderColor: colors.border,
+    borderRadius: 14,
+    borderWidth: 1,
     padding: spacing.md,
     width: '100%',
   },
   ring: {
     borderColor: colors.accent,
-    borderRadius: 60,
+    borderRadius: 70,
     borderWidth: 3,
-    height: 120,
+    height: 140,
     position: 'absolute',
-    width: 120,
+    width: 140,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 4,
+    marginVertical: 6,
   },
   screen: {
     alignItems: 'center',
     backgroundColor: colors.background,
     flex: 1,
+    justifyContent: 'center',
     padding: spacing.lg,
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 22,
-    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
     textAlign: 'center',
   },
   title: {
     color: colors.text,
     fontSize: typography.title,
     fontWeight: '800',
-    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   value: {
     color: colors.text,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
   },
   xpCard: {
     backgroundColor: colors.accentSoft,
     borderColor: colors.accent,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     marginTop: spacing.md,
     padding: spacing.md,
     width: '100%',
   },
   xpStrong: {
-    color: colors.accent,
+    color: colors.text,
     fontWeight: '800',
   },
   xpText: {
     color: colors.textMuted,
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 20,
-    marginTop: 4,
+    marginTop: 6,
   },
   xpTitle: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 14,
     fontWeight: '800',
   },

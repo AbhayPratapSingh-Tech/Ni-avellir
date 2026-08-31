@@ -11,19 +11,29 @@ export interface CartState {
   items: CartItem[];
   /** Client-side computed totals (replaced by server quote in api mode). */
   subtotal: number;
+  discount: number;
   shipping: number;
   tax: number;
   total: number;
   itemCount: number;
+  couponCode?: string;
+  couponDiscountType?: 'percent' | 'flat';
+  couponDiscountValue?: number;
+  totalBeforeDiscount?: number;
 }
 
 const initialState: CartState = {
   items: [],
   subtotal: 0,
+  discount: 0,
   shipping: 0,
   tax: 0,
   total: 0,
   itemCount: 0,
+  couponCode: undefined,
+  couponDiscountType: undefined,
+  couponDiscountValue: undefined,
+  totalBeforeDiscount: undefined,
 };
 
 function recomputeTotals(state: CartState) {
@@ -70,24 +80,49 @@ const cartSlice = createSlice({
     },
     setServerQuote(
       state,
-      action: PayloadAction<{ subtotal: number; shipping: number; tax: number; total: number; itemCount: number }>,
+      action: PayloadAction<{
+        subtotal: number;
+        shipping: number;
+        tax: number;
+        total: number;
+        itemCount: number;
+        discount?: number;
+        couponCode?: string;
+        couponDiscountType?: 'percent' | 'flat';
+        couponDiscountValue?: number;
+        totalBeforeDiscount?: number;
+      }>,
     ) {
       state.subtotal = action.payload.subtotal;
       state.shipping = action.payload.shipping;
       state.tax = action.payload.tax;
       state.total = action.payload.total;
       state.itemCount = action.payload.itemCount;
+      state.discount = action.payload.discount ?? 0;
+      state.couponCode = action.payload.couponCode;
+      state.couponDiscountType = action.payload.couponDiscountType;
+      state.couponDiscountValue = action.payload.couponDiscountValue;
+      state.totalBeforeDiscount = action.payload.totalBeforeDiscount;
     },
     clearCart(state) {
       state.items = [];
       state.subtotal = 0;
+      state.discount = 0;
       state.shipping = 0;
       state.tax = 0;
       state.total = 0;
       state.itemCount = 0;
+      state.couponCode = undefined;
+      state.couponDiscountType = undefined;
+      state.couponDiscountValue = undefined;
+      state.totalBeforeDiscount = undefined;
+    },
+    setCartItems(state, action: PayloadAction<CartItem[]>) {
+      state.items = action.payload;
     },
   },
 });
 
-export const { addItem, removeItem, updateQuantity, setServerQuote, clearCart } = cartSlice.actions;
+export const { addItem, removeItem, updateQuantity, setServerQuote, clearCart, setCartItems } =
+  cartSlice.actions;
 export default cartSlice.reducer;

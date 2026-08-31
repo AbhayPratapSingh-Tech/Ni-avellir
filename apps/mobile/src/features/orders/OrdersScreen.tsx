@@ -1,10 +1,14 @@
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useCallback } from 'react';
 import { colors, spacing } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
 import { useAppSelector } from '../../app/store';
+import { appConfig } from '../../config/appConfig';
+import { orderRepository } from '../../services/data/orderRepository';
 import { formatInr } from '../../lib/productMedia';
+import type { OrderHistoryItem } from './ordersSlice';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -19,9 +23,65 @@ function formatDate(value: string) {
   });
 }
 
+function OrderCard({
+  item,
+  onDetails,
+}: {
+  item: OrderHistoryItem;
+  onDetails: () => void;
+}) {
+  const primary = item.items[0];
+  const extraCount = Math.max(0, item.items.length - 1);
+  const title = primary?.name ?? `${item.itemCount} item${item.itemCount === 1 ? '' : 's'}`;
+  const price = primary ? primary.lineTotal : item.total;
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardBody}>
+        {primary?.imageUrl ? (
+          <Image source={{ uri: primary.imageUrl }} style={styles.image} />
+        ) : (
+          <View style={[styles.image, styles.imageFallback]}>
+            <Text style={styles.fallbackText}>📦</Text>
+          </View>
+        )}
+        <View style={styles.copy}>
+          <View style={styles.topRow}>
+            <Text style={styles.orderNumber} numberOfLines={1}>
+              {item.orderNumber}
+            </Text>
+            <View style={styles.statusBadge}>
+              <Text style={styles.statusText}>{item.status.replace(/_/g, ' ')}</Text>
+            </View>
+          </View>
+          <Text style={styles.name} numberOfLines={2}>
+            {title}
+            {extraCount > 0 ? ` +${extraCount} more` : ''}
+          </Text>
+          <Text style={styles.price}>{formatInr(price)}</Text>
+          <Text style={styles.meta}>
+            {formatDate(item.createdAt)} · Total {formatInr(item.total)}
+          </Text>
+        </View>
+      </View>
+      <Pressable style={styles.detailsBtn} onPress={onDetails}>
+        <Text style={styles.detailsText}>View details</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export function OrdersScreen() {
   const navigation = useNavigation<Navigation>();
   const orders = useAppSelector((state) => state.orders.items);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (appConfig.dataSource === 'api') {
+        void orderRepository.syncToStore();
+      }
+    }, []),
+  );
 
   return (
     <Screen edges={[]} style={styles.screen}>
@@ -34,36 +94,19 @@ export function OrdersScreen() {
             <Text style={styles.emptyEmoji}>📦</Text>
             <Text style={styles.emptyTitle}>No orders yet</Text>
             <Text style={styles.emptySub}>Place an order and it will show up here.</Text>
-            <Pressable style={styles.cta} onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })}>
+            <Pressable
+              style={styles.cta}
+              onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })}
+            >
               <Text style={styles.ctaText}>Browse the forge</Text>
             </Pressable>
           </View>
         }
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardTop}>
-              <Text style={styles.orderNumber}>{item.orderNumber}</Text>
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusText}>{item.status}</Text>
-              </View>
-            </View>
-            <View style={styles.cardRow}>
-              <Text style={styles.meta}>Placed on</Text>
-              <Text style={styles.value}>{formatDate(item.createdAt)}</Text>
-            </View>
-            <View style={styles.cardRow}>
-              <Text style={styles.meta}>Total</Text>
-              <Text style={styles.value}>{formatInr(item.total)}</Text>
-            </View>
-            <View style={styles.cardRow}>
-              <Text style={styles.meta}>Items</Text>
-              <Text style={styles.value}>{item.itemCount}</Text>
-            </View>
-            <View style={styles.cardRow}>
-              <Text style={styles.meta}>Est. delivery</Text>
-              <Text style={styles.value}>{item.estimatedDelivery}</Text>
-            </View>
-          </View>
+          <OrderCard
+            item={item}
+            onDetails={() => navigation.navigate('OrderDetails', { orderId: item.id })}
+          />
         )}
       />
     </Screen>
@@ -77,21 +120,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     marginBottom: spacing.sm,
+    overflow: 'hidden',
+  },
+  cardBody: {
+    flexDirection: 'row',
     padding: spacing.md,
   },
-  cardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 3,
-  },
-  cardTop: {
-    alignItems: 'center',
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-    paddingBottom: spacing.sm,
+  copy: {
+    flex: 1,
   },
   cta: {
     backgroundColor: colors.text,
@@ -102,6 +138,17 @@ const styles = StyleSheet.create({
   },
   ctaText: {
     color: colors.onAccent,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  detailsBtn: {
+    alignItems: 'center',
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingVertical: 12,
+  },
+  detailsText: {
+    color: colors.text,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -129,17 +176,46 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
   },
+  fallbackText: {
+    fontSize: 22,
+  },
+  image: {
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    height: 84,
+    marginRight: spacing.md,
+    width: 84,
+  },
+  imageFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   list: {
     paddingBottom: spacing.xl,
   },
   meta: {
     color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  name: {
+    color: colors.text,
     fontSize: 14,
+    fontWeight: '700',
+    marginTop: 4,
   },
   orderNumber: {
+    color: colors.textMuted,
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    marginRight: spacing.sm,
+  },
+  price: {
     color: colors.text,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '900',
+    marginTop: 6,
   },
   screen: {
     backgroundColor: colors.background,
@@ -153,14 +229,14 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   statusText: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'capitalize',
   },
-  value: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '700',
+  topRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
 });

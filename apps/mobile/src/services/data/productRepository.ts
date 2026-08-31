@@ -114,8 +114,23 @@ function listFromMock(query: ProductListQuery = {}): ProductListResult {
   };
 }
 
-function mapProducts(items: Product[] = []): Product[] {
-  return items.map(normalizeProduct);
+function mapApiProduct(raw: Record<string, unknown>): Product {
+  const id = String(raw._id ?? raw.id ?? '');
+  const franchise = String(raw.franchise ?? '');
+  const mapped: Product = {
+    ...(raw as Product),
+    id,
+    brand: String(raw.brand ?? franchise),
+    franchise,
+  };
+  if (raw.compareAtPrice !== undefined) {
+    mapped.compareAtPrice = Number(raw.compareAtPrice);
+  }
+  return normalizeProduct(mapped);
+}
+
+function mapProducts(items: unknown[] = []): Product[] {
+  return items.map((item) => mapApiProduct(item as Record<string, unknown>));
 }
 
 function categoriesFromMock(): string[] {
@@ -143,13 +158,30 @@ function suggestionsFromMock(): SearchSuggestions {
 export class ProductRepository {
   private readonly useApi = appConfig.dataSource === 'api';
 
-  private async withFallback<T>(apiCall: () => Promise<T>, fallback: () => T): Promise<T> {
+  /**
+   * @param critical - orders/payments: never soft-fallback in api mode
+   *   (avoids fake paid orders when the API is down).
+   */
+  private async withFallback<T>(
+    apiCall: () => Promise<T>,
+    fallback: () => T,
+    options?: { critical?: boolean },
+  ): Promise<T> {
     if (!this.useApi) {
       return fallback();
     }
     try {
       return await apiCall();
-    } catch {
+    } catch (error) {
+      const allowSoft =
+        !options?.critical && (appConfig.allowMockFallback as boolean) === true;
+      if (!allowSoft) {
+        throw error;
+      }
+      if (__DEV__) {
+        // eslint-disable-next-line no-console
+        console.warn('[ProductRepository] API failed; using mock fallback', error);
+      }
       return fallback();
     }
   }
@@ -157,17 +189,33 @@ export class ProductRepository {
   async list(query: ProductListQuery = {}): Promise<ProductListResult> {
     return this.withFallback(async () => {
       const { data } = await apiClient.get('/products', { params: query });
-      const result = data.data as ProductListResult;
-      return { ...result, items: mapProducts(result.items) };
+      const payload = data.data as {
+        items: unknown[];
+        pagination?: { page: number; limit: number; total: number; pages: number };
+        page?: number;
+        limit?: number;
+        total?: number;
+        pages?: number;
+      };
+      const pagination = payload.pagination ?? payload;
+      return {
+        items: mapProducts(payload.items),
+        page: pagination.page ?? 1,
+        limit: pagination.limit ?? 20,
+        total: pagination.total ?? payload.items.length,
+        pages: pagination.pages ?? 1,
+      };
     }, () => listFromMock(query));
   }
 
   async getBySlug(slug: string): Promise<Product | undefined> {
     return this.withFallback(async () => {
       const { data } = await apiClient.get(`/products/${slug}`);
-      return data.data.product ? normalizeProduct(data.data.product) : undefined;
+      return data.data.product ? mapApiProduct(data.data.product) : undefined;
     }, () => {
-      const found = demoProducts.find((p) => p.id === slug);
+      const found =
+        demoProducts.find((p) => p.id === slug) ??
+        demoProducts.find((p) => (p as Product & { slug?: string }).slug === slug);
       return found ? normalizeProduct(found) : undefined;
     });
   }
@@ -190,8 +238,9 @@ export class ProductRepository {
 
   async getDeals(): Promise<Product[]> {
     return this.withFallback(async () => {
-      const { data } = await apiClient.get('/products/deals');
-      return mapProducts(data.data.products);
+      const { data } = await apiClient.get('/products', { params: { collection: 'deals', limit: 6 } });
+      const payload = data.data as { items?: unknown[]; products?: unknown[] };
+      return mapProducts(payload.items ?? payload.products ?? []);
     }, () =>
       mapProducts(
         [...demoProducts]
@@ -203,8 +252,11 @@ export class ProductRepository {
 
   async getBestSellers(): Promise<Product[]> {
     return this.withFallback(async () => {
-      const { data } = await apiClient.get('/products/best-sellers');
-      return mapProducts(data.data.products);
+      const { data } = await apiClient.get('/products', {
+        params: { collection: 'bestsellers', limit: 6 },
+      });
+      const payload = data.data as { items?: unknown[]; products?: unknown[] };
+      return mapProducts(payload.items ?? payload.products ?? []);
     }, () => mapProducts([...demoProducts].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 6)));
   }
 
@@ -216,13 +268,22 @@ export class ProductRepository {
   }
 
   async getRelated(product: Product): Promise<{ similar: Product[]; alsoLike: Product[] }> {
-    const similar = mapProducts(
-      demoProducts.filter((item) => item.id !== product.id && item.category === product.category).slice(0, 8),
-    );
-    const alsoLike = mapProducts(
-      demoProducts.filter((item) => item.id !== product.id && item.franchise !== product.franchise).slice(0, 8),
-    );
-    return { similar, alsoLike };
+    const slug = (product as Product & { slug?: string }).slug ?? product.id;
+    return this.withFallback(async () => {
+      const { data } = await apiClient.get(`/products/${slug}/related`);
+      return {
+        similar: mapProducts(data.data.similar ?? []),
+        alsoLike: mapProducts(data.data.alsoLike ?? []),
+      };
+    }, () => {
+      const similar = mapProducts(
+        demoProducts.filter((item) => item.id !== product.id && item.category === product.category).slice(0, 8) as unknown[],
+      );
+      const alsoLike = mapProducts(
+        demoProducts.filter((item) => item.id !== product.id && item.franchise !== product.franchise).slice(0, 8) as unknown[],
+      );
+      return { similar, alsoLike };
+    });
   }
 
   async getCategories(): Promise<string[]> {
@@ -259,10 +320,12 @@ export class ProductRepository {
   }
 
   async createOrder(input: CreateOrderInput) {
-    return this.withFallback(async () => {
-      const { data } = await apiClient.post('/orders', input);
-      return data.data.order;
-    }, () => {
+    return this.withFallback(
+      async () => {
+        const { data } = await apiClient.post('/orders', input);
+        return data.data.order;
+      },
+      () => {
       let subtotal = 0;
       let itemCount = 0;
       const lines = [];
@@ -283,6 +346,7 @@ export class ProductRepository {
       }
       const shipping = subtotal >= 1499 ? 0 : 99;
       const tax = Math.round(subtotal * 0.05);
+      const isCod = input.paymentMethod === 'cash_on_delivery';
       return {
         id: `ORD-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
         orderNumber: `ORD-NDV-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -292,13 +356,75 @@ export class ProductRepository {
         tax,
         total: subtotal + shipping + tax,
         currency: 'INR',
-        status: input.paymentMethod === 'cash_on_delivery' ? 'confirmed' : 'paid',
+        status: isCod ? 'confirmed' : 'pending_payment',
         estimatedDelivery: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
         shippingAddress: input.shippingAddress,
         customer: input.customer,
         createdAt: new Date().toISOString(),
       };
-    });
+    },
+      { critical: true },
+    );
+  }
+
+  async createPaymentIntent(orderId: string) {
+    return this.withFallback(
+      async () => {
+        const { data } = await apiClient.post('/payments/intents', { orderId });
+        return data.data.intent as {
+          orderId: string;
+          orderNumber: string;
+          providerIntentId: string;
+          keyId: string;
+          amountMinor: number;
+          currency: string;
+          demoMode: boolean;
+        };
+      },
+      () => ({
+        orderId,
+        orderNumber: orderId,
+        providerIntentId: `order_demo_${Math.random().toString(36).slice(2, 10)}`,
+        keyId: 'rzp_test_demo_nidavellir',
+        amountMinor: 0,
+        currency: 'INR',
+        demoMode: true,
+      }),
+      { critical: true },
+    );
+  }
+
+  async completeRazorpayDemo(orderId: string) {
+    return this.withFallback(
+      async () => {
+        const { data } = await apiClient.post('/payments/razorpay/demo-complete', { orderId });
+        return data.data.order;
+      },
+      () => ({
+        id: orderId,
+        status: 'paid',
+      }),
+      { critical: true },
+    );
+  }
+
+  async confirmRazorpayPayment(input: {
+    orderId: string;
+    providerIntentId: string;
+    providerPaymentId: string;
+    signature: string;
+  }) {
+    return this.withFallback(
+      async () => {
+        const { data } = await apiClient.post('/payments/razorpay/confirm', input);
+        return data.data.order;
+      },
+      () => ({
+        id: input.orderId,
+        status: 'paid',
+      }),
+      { critical: true },
+    );
   }
 }
 

@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { Screen } from '../../components/ui/Screen';
-import { signOut, openLogin } from '../auth/authSlice';
+import { openLogin, signOutAndClearSession } from '../auth/authSlice';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -14,7 +14,9 @@ const MENU = [
   { key: 'orders', label: 'My Orders', icon: '📦' },
   { key: 'addresses', label: 'Addresses', icon: '📍' },
   { key: 'notifications', label: 'Notifications', icon: '🔔' },
-  { key: 'settings', label: 'Settings', icon: '⚙️' },
+  { key: 'password', label: 'Change password', icon: '🔑' },
+  { key: 'sessions', label: 'Devices & sessions', icon: '📱' },
+  { key: 'verify', label: 'Verify email', icon: '✉' },
   { key: 'support', label: 'Support', icon: '💬' },
 ] as const;
 
@@ -92,7 +94,33 @@ export function ProfileScreen() {
                   openEditProfile();
                   return;
                 }
-                if (item.key === 'orders') navigation.navigate('Orders');
+                if (item.key === 'orders') {
+                  navigation.navigate('Orders');
+                  return;
+                }
+                if (item.key === 'addresses') {
+                  navigation.navigate('Addresses');
+                  return;
+                }
+                if (item.key === 'notifications') {
+                  navigation.navigate('Notifications');
+                  return;
+                }
+                if (item.key === 'password') {
+                  navigation.navigate('ChangePassword');
+                  return;
+                }
+                if (item.key === 'sessions') {
+                  navigation.navigate('Sessions');
+                  return;
+                }
+                if (item.key === 'verify') {
+                  navigation.navigate('VerifyEmail');
+                  return;
+                }
+                if (item.key === 'support') {
+                  navigation.navigate('Support');
+                }
               }}
             >
               <Text style={styles.menuIcon}>{item.icon}</Text>
@@ -103,8 +131,12 @@ export function ProfileScreen() {
         </View>
 
         <Pressable
-          style={({ pressed }) => [styles.logout, pressed && styles.logoutPressed]}
-          onPress={() => dispatch(user?.isGuest ? openLogin() : signOut())}
+          style={({ pressed }) => [
+            styles.logout,
+            user?.isGuest && styles.loginBtn,
+            pressed && (user?.isGuest ? styles.loginBtnPressed : styles.logoutPressed),
+          ]}
+          onPress={() => dispatch(user?.isGuest ? openLogin() : signOutAndClearSession())}
         >
           <Text style={user?.isGuest ? styles.loginText : styles.logoutText}>
             {user?.isGuest ? 'Login / Signup' : 'Log out'}
@@ -150,7 +182,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   editChipText: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '800',
   },
@@ -182,6 +214,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     paddingVertical: 14,
   },
+  loginBtn: {
+    backgroundColor: colors.text,
+    borderColor: colors.text,
+  },
+  loginBtnPressed: {
+    opacity: 0.85,
+  },
   logoutPressed: {
     backgroundColor: colors.accentSoft,
   },
@@ -191,7 +230,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   loginText: {
-    color: colors.accent,
+    color: colors.onAccent,
     fontSize: 15,
     fontWeight: '800',
   },
@@ -280,7 +319,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   xpTitle: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 14,
     fontWeight: '800',
   },

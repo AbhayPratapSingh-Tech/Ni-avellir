@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { store } from '../store';
 import { ToastProvider } from '../../components/ui/Toast';
+import { AppBootstrap } from './AppBootstrap';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,7 +22,9 @@ export function AppProviders({ children }: PropsWithChildren) {
 <SafeAreaProvider>
         <ReduxProvider store={store}>
           <QueryClientProvider client={queryClient}>
-            <ToastProvider>{children}</ToastProvider>
+            <ToastProvider>
+              <AppBootstrap>{children}</AppBootstrap>
+            </ToastProvider>
           </QueryClientProvider>
         </ReduxProvider>
       </SafeAreaProvider>

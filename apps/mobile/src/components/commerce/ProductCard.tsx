@@ -4,8 +4,8 @@ import type { Product } from '@nidavellir/shared';
 import { colors, spacing } from '../../theme/tokens';
 import { getProductImages } from '../../lib/productMedia';
 import { useAppDispatch, useAppSelector } from '../../app/store';
-import { toggleItem } from '../../features/wishlist/wishlistSlice';
-import { addItem } from '../../features/cart/cartSlice';
+import { addProductToCart } from '../../lib/cartActions';
+import { toggleWishlistForUser } from '../../lib/wishlistActions';
 import { StarRating } from '../ui/StarRating';
 import { useToast } from '../ui/Toast';
 import { ImagePager } from './ImagePager';
@@ -26,12 +26,18 @@ export function ProductCard({ product, compact, large, onPress, onAddToCart }: P
   const imageHeight = compact ? 118 : large ? 210 : 150;
   const dispatch = useAppDispatch();
   const toast = useToast();
+  const user = useAppSelector((state) => state.auth.user);
   const wishlisted = useAppSelector((state) => state.wishlist.items.some((item) => item.id === product.id));
   const inStock = product.stock > 0;
 
   const handleWish = () => {
-    dispatch(toggleItem(product));
-    toast.show(wishlisted ? 'Removed from wishlist' : 'Added to wishlist');
+    void toggleWishlistForUser({
+      product,
+      user,
+      dispatch,
+      toast,
+      currentlyWishlisted: wishlisted,
+    });
   };
 
   const handleAdd = () => {
@@ -43,8 +49,9 @@ export function ProductCard({ product, compact, large, onPress, onAddToCart }: P
       onAddToCart(product);
       return;
     }
-    dispatch(addItem({ product, quantity: 1 }));
-    toast.show('Struck the cart ⚡');
+    void addProductToCart({ product, dispatch, toast }).then((ok) => {
+      if (ok) toast.show('Struck the cart ⚡');
+    });
   };
 
   return (
@@ -136,7 +143,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   brand: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.6,

@@ -16,7 +16,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Product } from '@nidavellir/shared';
 import { colors, spacing } from '../../theme/tokens';
@@ -183,11 +183,17 @@ export function HomeScreen() {
   const [alsoLike, setAlsoLike] = useState<Product[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
-    productRepository.getDeals().then(setDeals);
-    productRepository.getBestSellers().then(setBestSellers);
-    productRepository.getAlsoLike(6).then(setAlsoLike);
+  const loadShelves = useCallback(() => {
+    void productRepository.getDeals().then(setDeals);
+    void productRepository.getBestSellers().then(setBestSellers);
+    void productRepository.getAlsoLike(6).then(setAlsoLike);
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadShelves();
+    }, [loadShelves]),
+  );
 
   const openPlp = useCallback(() => {
     navigation.navigate('Products', { title: 'All products' });
@@ -550,7 +556,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   seeAll: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '700',
     marginBottom: spacing.sm,

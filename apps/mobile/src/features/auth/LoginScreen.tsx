@@ -1,12 +1,14 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useCallback, useState } from 'react';
+import { BackHandler, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
-import { useAppDispatch } from '../../app/store';
-import { signIn } from './authSlice';
+import { useAppDispatch, useAppSelector } from '../../app/store';
+import { enterGuest } from './authSlice';
 import { useToast } from '../../components/ui/Toast';
+import { appConfig } from '../../config/appConfig';
+import { authRepository } from '../../services/data/authRepository';
 import type { AuthStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList>;
@@ -20,15 +22,62 @@ export function LoginScreen() {
   const navigation = useNavigation<Navigation>();
   const dispatch = useAppDispatch();
   const toast = useToast();
+  const startOnLogin = useAppSelector((state) => state.auth.startOnLogin);
   const [mode, setMode] = useState<Mode>('phone');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const submitPhone = () => {
+  /** Profile → Login clears guest; Back must restore shop instead of leaving the app. */
+  const returnToShopAsGuest = useCallback(() => {
+    dispatch(enterGuest());
+  }, [dispatch]);
+
+  const handleBack = useCallback(() => {
+    // Profile → Login always restores guest shop; don't get stuck under Signup/OTP quirks.
+    if (startOnLogin) {
+      returnToShopAsGuest();
+      return;
+    }
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
+  }, [navigation, returnToShopAsGuest, startOnLogin]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!startOnLogin) {
+        return undefined;
+      }
+      const onHardwareBack = () => {
+        returnToShopAsGuest();
+        return true;
+      };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onHardwareBack);
+      return () => sub.remove();
+    }, [returnToShopAsGuest, startOnLogin]),
+  );
+
+  const submitPhone = async () => {
     const mobile = digitsOnly(phone);
     if (mobile.length < 10) {
       toast.show('Enter a valid mobile number');
+      return;
+    }
+    if (appConfig.dataSource === 'api') {
+      setLoading(true);
+      try {
+        const result = await authRepository.sendOtp(mobile, 'login');
+        if (result.demoCode) {
+          toast.show(`Dev OTP: ${result.demoCode}`);
+        }
+        navigation.navigate('Otp', { name: `User ${mobile.slice(-4)}`, email: '', phone: mobile });
+      } catch (error) {
+        toast.show(authRepository.getApiErrorMessage(error));
+      } finally {
+        setLoading(false);
+      }
       return;
     }
     navigation.navigate('Otp', {
@@ -38,24 +87,41 @@ export function LoginScreen() {
     });
   };
 
-  const submitEmail = () => {
+  const submitEmail = async () => {
     if (!email.trim() || !password.trim()) {
       toast.show('Enter email and password');
       return;
     }
-    dispatch(
-      signIn({
-        name: email.split('@')[0] || 'Forgehand',
-        email: email.trim(),
-        phone: '',
-      }),
-    );
+    if (appConfig.dataSource === 'api') {
+      setLoading(true);
+      try {
+        const user = await authRepository.login(email.trim(), password);
+        navigation.navigate('AuthSuccess', {
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          avatarUri: user.avatarUrl,
+        });
+      } catch (error) {
+        toast.show(authRepository.getApiErrorMessage(error));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    navigation.navigate('AuthSuccess', {
+      name: email.split('@')[0] || 'Forgehand',
+      email: email.trim(),
+      phone: '',
+    });
   };
+
+  const showBack = navigation.canGoBack() || startOnLogin;
 
   return (
     <Screen style={styles.screen}>
-      {navigation.canGoBack() ? (
-        <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+      {showBack ? (
+        <Pressable onPress={handleBack} hitSlop={12}>
           <Text style={styles.back}>‹ Back</Text>
         </Pressable>
       ) : null}
@@ -114,7 +180,7 @@ export function LoginScreen() {
           </Text>
         </Pressable>
         {mode === 'email' ? (
-          <Pressable onPress={() => toast.show('Reset link sent to your email')} hitSlop={8}>
+          <Pressable onPress={() => navigation.navigate('ForgotPassword')} hitSlop={8}>
             <Text style={styles.altLink}>Forgot password?</Text>
           </Pressable>
         ) : (
@@ -128,7 +194,7 @@ export function LoginScreen() {
       >
         {({ pressed }) => (
           <Text style={[styles.ctaText, pressed && styles.ctaTextPressed]}>
-            {mode === 'phone' ? 'Send OTP' : 'Login'}
+            {loading ? 'Please wait…' : mode === 'phone' ? 'Send OTP' : 'Login'}
           </Text>
         )}
       </Pressable>
@@ -144,7 +210,7 @@ export function LoginScreen() {
 
 const styles = StyleSheet.create({
   altLink: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -188,7 +254,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   kicker: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1.6,
@@ -200,7 +266,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   linkStrong: {
-    color: colors.accent,
+    color: colors.text,
     fontWeight: '800',
   },
   linkWrap: {

@@ -13,6 +13,10 @@ export class CashOnDeliveryProvider implements PaymentProvider {
     return {
       provider: this.code,
       providerIntentId: `cod_${input.checkoutId}`,
+      keyId: 'cod',
+      amountMinor: input.amount.amountMinor,
+      currency: input.amount.currency,
+      demoMode: true,
     };
   }
 

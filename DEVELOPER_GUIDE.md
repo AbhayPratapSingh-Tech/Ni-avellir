@@ -8,35 +8,40 @@ A complete map of the Niðavellir codebase for the College Final Semester Projec
 
 ```bash
 # 1. Prerequisites (install once)
-brew install node@22 npm   # then: npm install -g pnpm@9
+brew install node@22 npm
 xcode-select --install      # iOS
 sudo gem install cocoapods  # iOS
 
 # 2. Clone + install
 git clone <your-repo-url> Nidavellir
 cd Nidavellir
-pnpm install
+npm install
+npm run setup
 cd apps/mobile/ios && pod install && cd ../../../
 
-# 3. Set offline demo mode (recommended — no server needed)
-#    In apps/mobile/src/config/appConfig.ts set: dataSource: 'mock'
-
-# 4. Run — two terminals
-pnpm --filter mobile start   # terminal 1: Metro
-pnpm --filter mobile ios     # terminal 2: iOS simulator (or: mobile android)
+# 3. Live API path (current appConfig default: dataSource 'api')
+#    Put Atlas/local MONGODB_URI in apps/api/.env.development
+npm run dev:api
+npm run seed --workspace apps/api
+npm run dev
+npm run ios   # or: npm run android
 ```
 
-The app then opens in the iOS Simulator / Android emulator and works fully offline with bundled demo data.
+**Know it works:** `curl -s http://localhost:4000/health` → `status":"ok"`. Regenerate local JWT/cURL cheat sheet: `python3 scripts/generate-api-details-local.py` → `API_DETAILS.local.md` (gitignored).
+
+Mock-only (no Mongo): set `appConfig.dataSource` to `'mock'`, then `npm run dev` + device.
 
 ## How to Run
 
 ### 1. Install dependencies (from repo root)
 
 ```bash
-pnpm install
-# or
 npm install
+npm run setup
+# or: pnpm install && npm run setup
 ```
+
+`npm install` builds `@nidavellir/shared`. `npm run setup` copies `apps/api/.env.development` from the example (if missing) and restores mobile RN symlinks.
 
 ### 2. iOS — CocoaPods + run (macOS + Xcode)
 
@@ -77,7 +82,9 @@ The app works in **two data modes** controlled by `apps/mobile/src/config/appCon
 Start Metro:
 
 ```bash
-pnpm --filter mobile start
+npm run dev
+# or: npm run start --workspace apps/mobile
+# or: pnpm --filter mobile start
 ```
 
 Then run on a device/emulator:
@@ -108,21 +115,24 @@ Do **not** use `/gradlew` (root path). Use `./gradlew` from `apps/mobile/android
 APK: `apps/mobile/android/app/build/outputs/apk/release/app-release.apk`  
 Details: `INSTALLATION.md` → *Build a release APK (Android)*.
 
-### 4. Run the backend API (optional, for `api` mode)
+### 4. Run the backend API (required when `dataSource: 'api'`)
 
 ```bash
-# From repo root
-pnpm --filter api dev
+# From repo root — three commands that prove the live stack
+npm run dev:api
+npm run seed --workspace apps/api
+npm run dev
 ```
 
-Seed the database with demo products:
+- `dev:api` — Express + Mongo on `http://localhost:4000` (`/api/v1/...`)
+- `seed` — products, coupons (`FORGE10`, `WELCOME100`), serviceability rules
+- `dev` — Metro for the mobile app
 
-```bash
-pnpm --filter api seed
-```
+Health check: `curl -s http://localhost:4000/health`
 
-Requires a local MongoDB (default `mongodb://localhost:27017/nidavellir_dev`).
+Local JWT + full cURL list (gitignored): `python3 scripts/generate-api-details-local.py` → `API_DETAILS.local.md`
 
+Copy env from `apps/api/.env.development.example` if needed (`npm run setup`). Atlas URI or local Mongo both work.
 ---
 
 ## Project Structure

@@ -8,6 +8,7 @@ export interface ProductDocument {
   franchise: string;
   description: string;
   price: number;
+  compareAtPrice?: number;
   currency: CurrencyCode;
   rating: number;
   reviewCount: number;
@@ -34,6 +35,7 @@ const productSchema = new Schema<ProductDocument>(
     franchise: { type: String, required: true, trim: true },
     description: { type: String, required: true },
     price: { type: Number, required: true, min: 0 },
+    compareAtPrice: { type: Number, min: 0 },
     currency: { type: String, enum: ['INR', 'USD'], default: 'INR' },
     rating: { type: Number, default: 0, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0 },

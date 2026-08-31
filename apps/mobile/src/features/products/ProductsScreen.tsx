@@ -10,7 +10,7 @@ import { FloatingCartButton } from '../../components/commerce/FloatingCartButton
 import { Screen } from '../../components/ui/Screen';
 import { productRepository } from '../../services/data/productRepository';
 import { useAppDispatch } from '../../app/store';
-import { addItem } from '../cart/cartSlice';
+import { addProductToCart } from '../../lib/cartActions';
 import { useToast } from '../../components/ui/Toast';
 import type { RootStackParamList } from '../../app/navigation/types';
 
@@ -80,8 +80,9 @@ export function ProductsScreen() {
 
   const handleAdd = useCallback(
     (product: Product) => {
-      dispatch(addItem({ product, quantity: 1 }));
-      toast.show('Struck the cart ⚡');
+      void addProductToCart({ product, dispatch, toast }).then((ok) => {
+        if (ok) toast.show('Struck the cart ⚡');
+      });
     },
     [dispatch, toast],
   );
@@ -241,7 +242,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   clearFilter: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '800',
   },
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   sortToggleValue: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 13,
     fontWeight: '800',
     marginLeft: spacing.sm,
@@ -361,7 +362,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   sortChipTextActive: {
-    color: colors.accent,
+    color: colors.text,
     fontWeight: '700',
   },
   sortLabel: {

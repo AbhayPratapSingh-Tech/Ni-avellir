@@ -3,8 +3,8 @@ import type { Product } from '@nidavellir/shared';
 import { colors } from '../../theme/tokens';
 import { getProductImages } from '../../lib/productMedia';
 import { useAppDispatch, useAppSelector } from '../../app/store';
-import { toggleItem } from '../../features/wishlist/wishlistSlice';
-import { addItem } from '../../features/cart/cartSlice';
+import { addProductToCart } from '../../lib/cartActions';
+import { toggleWishlistForUser } from '../../lib/wishlistActions';
 import { useToast } from '../ui/Toast';
 import { StarRating } from '../ui/StarRating';
 import { PriceRow } from './PriceRow';
@@ -17,6 +17,7 @@ type Props = {
 export function SquareProductCard({ product, onPress }: Props) {
   const dispatch = useAppDispatch();
   const toast = useToast();
+  const user = useAppSelector((state) => state.auth.user);
   const wishlisted = useAppSelector((state) => state.wishlist.items.some((item) => item.id === product.id));
   const image = getProductImages(product)[0];
   const inStock = product.stock > 0;
@@ -31,8 +32,13 @@ export function SquareProductCard({ product, onPress }: Props) {
           <Pressable
             style={styles.chip}
             onPress={() => {
-              dispatch(toggleItem(product));
-              toast.show(wishlisted ? 'Removed from wishlist' : 'Added to wishlist');
+              void toggleWishlistForUser({
+                product,
+                user,
+                dispatch,
+                toast,
+                currentlyWishlisted: wishlisted,
+              });
             }}
             hitSlop={8}
           >
@@ -43,8 +49,9 @@ export function SquareProductCard({ product, onPress }: Props) {
             disabled={!inStock}
             onPress={() => {
               if (!inStock) return;
-              dispatch(addItem({ product, quantity: 1 }));
-              toast.show('Struck the cart ⚡');
+              void addProductToCart({ product, dispatch, toast }).then((ok) => {
+                if (ok) toast.show('Struck the cart ⚡');
+              });
             }}
             hitSlop={8}
           >

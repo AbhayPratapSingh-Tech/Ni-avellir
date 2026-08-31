@@ -1,0 +1,23 @@
+---
+description: Keep Nidavellir mock/live API, payments, navigation, and docs aligned on every change.
+alwaysApply: true
+---
+
+# Nidavellir agent alignment
+
+Before implementing features or refactors, follow **`AI_AGENT_GUIDE.md`** at the repo root.
+
+## Always
+
+1. Read `AI_AGENT_GUIDE.md` alignment checklist for the kind of change (screen / data / API / payments / native).
+2. Respect live switch in `apps/mobile/src/config/appConfig.ts` (`dataSource`, `allowMockFallback`, `apiBaseUrl`).
+3. No Expo. No committed secrets. New Architecture stays off unless the user explicitly re-enables it.
+4. Razorpay: branch on `intent.demoMode` (demo sheet + `/demo-complete` vs native SDK + `/confirm`).
+5. Orders/payments in API mode must use repository `critical` paths (no silent fake paid orders).
+6. New screens → `navigation/types.ts` + `RootNavigator.tsx` + entry points.
+7. Forms → shared validation patterns (`lib/addressValidation.ts` for addresses).
+8. Update `PROJECT_INSIGHTS.md` / `AI_AGENT_GUIDE.md` when live-switch or payment behavior changes.
+
+## Live flip reminder
+
+College demo: `dataSource: 'mock'`. Live: `'api'` + `allowMockFallback: false` + real API/Mongo/Razorpay Test keys first.

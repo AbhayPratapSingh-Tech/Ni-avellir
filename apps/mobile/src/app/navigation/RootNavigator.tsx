@@ -13,15 +13,25 @@ import { ProfileScreen } from '../../features/profile/ProfileScreen';
 import { CheckoutScreen } from '../../features/checkout/CheckoutScreen';
 import { OrderConfirmationScreen } from '../../features/orders/OrderConfirmationScreen';
 import { OrdersScreen } from '../../features/orders/OrdersScreen';
+import { OrderDetailsScreen } from '../../features/orders/OrderDetailsScreen';
 import { EditProfileScreen } from '../../features/profile/EditProfileScreen';
+import { AddressesScreen } from '../../features/addresses/AddressesScreen';
 import { FaqScreen } from '../../features/info/FaqScreen';
 import { ReturnsScreen } from '../../features/info/ReturnsScreen';
 import { ContactScreen } from '../../features/info/ContactScreen';
+import { SupportScreen } from '../../features/info/SupportScreen';
 import { WishlistScreen } from '../../features/wishlist/WishlistScreen';
 import { OnboardingScreen } from '../../features/auth/OnboardingScreen';
 import { LoginScreen } from '../../features/auth/LoginScreen';
 import { SignupScreen } from '../../features/auth/SignupScreen';
 import { OtpScreen } from '../../features/auth/OtpScreen';
+import { AuthSuccessScreen } from '../../features/auth/AuthSuccessScreen';
+import { ForgotPasswordScreen } from '../../features/auth/ForgotPasswordScreen';
+import { ResetPasswordScreen } from '../../features/auth/ResetPasswordScreen';
+import { ChangePasswordScreen } from '../../features/profile/ChangePasswordScreen';
+import { SessionsScreen } from '../../features/profile/SessionsScreen';
+import { VerifyEmailScreen } from '../../features/profile/VerifyEmailScreen';
+import { NotificationsScreen } from '../../features/profile/NotificationsScreen';
 import { useAppSelector } from '../store';
 import type { AuthStackParamList, MainTabParamList, RootStackParamList } from './types';
 
@@ -36,14 +46,14 @@ const theme = {
     background: colors.background,
     border: colors.border,
     card: colors.surface,
-    primary: colors.accent,
+    primary: colors.text,
     text: colors.text,
   },
 };
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   return (
-    <Text style={{ color: focused ? colors.accent : colors.textMuted, fontSize: 18 }}>{label}</Text>
+    <Text style={{ color: focused ? colors.text : colors.textMuted, fontSize: 18 }}>{label}</Text>
   );
 }
 
@@ -52,7 +62,7 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accent,
+        tabBarActiveTintColor: colors.text,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
           backgroundColor: colors.surface,
@@ -133,9 +143,24 @@ function AuthNavigator({ initialRouteName }: { initialRouteName: keyof AuthStack
         options={{ headerShown: true, title: 'Sign up' }}
       />
       <AuthStack.Screen
+        name="ForgotPassword"
+        component={ForgotPasswordScreen}
+        options={{ headerShown: true, title: 'Forgot password' }}
+      />
+      <AuthStack.Screen
+        name="ResetPassword"
+        component={ResetPasswordScreen}
+        options={{ headerShown: true, title: 'Reset password' }}
+      />
+      <AuthStack.Screen
         name="Otp"
         component={OtpScreen}
-        options={{ headerShown: true, title: 'Verify OTP' }}
+        options={{ headerShown: true, title: 'Verify code' }}
+      />
+      <AuthStack.Screen
+        name="AuthSuccess"
+        component={AuthSuccessScreen}
+        options={{ headerShown: false, gestureEnabled: false }}
       />
     </AuthStack.Navigator>
   );
@@ -160,14 +185,40 @@ function ShopNavigator() {
       <RootStack.Screen
         name="OrderConfirmation"
         component={OrderConfirmationScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, gestureEnabled: false }}
       />
       <RootStack.Screen name="Orders" component={OrdersScreen} options={{ title: 'My Orders' }} />
+      <RootStack.Screen
+        name="OrderDetails"
+        component={OrderDetailsScreen}
+        options={{ title: 'Order details' }}
+      />
       <RootStack.Screen name="Wishlist" component={WishlistScreen} options={{ title: 'Wishlist' }} />
       <RootStack.Screen
         name="EditProfile"
         component={EditProfileScreen}
         options={{ title: 'Edit profile' }}
+      />
+      <RootStack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
+        options={{ title: 'Change password' }}
+      />
+      <RootStack.Screen name="Sessions" component={SessionsScreen} options={{ title: 'Sessions' }} />
+      <RootStack.Screen
+        name="VerifyEmail"
+        component={VerifyEmailScreen}
+        options={{ title: 'Verify email' }}
+      />
+      <RootStack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ title: 'Notifications' }}
+      />
+      <RootStack.Screen
+        name="Addresses"
+        component={AddressesScreen}
+        options={{ title: 'Addresses' }}
       />
       <RootStack.Screen name="Faq" component={FaqScreen} options={{ title: 'FAQs' }} />
       <RootStack.Screen
@@ -175,7 +226,8 @@ function ShopNavigator() {
         component={ReturnsScreen}
         options={{ title: 'Return & exchange' }}
       />
-      <RootStack.Screen name="Contact" component={ContactScreen} options={{ title: 'Contact' }} />
+      <RootStack.Screen name="Contact" component={ContactScreen} options={{ title: 'Support' }} />
+      <RootStack.Screen name="Support" component={SupportScreen} options={{ title: 'Support' }} />
     </RootStack.Navigator>
   );
 }
