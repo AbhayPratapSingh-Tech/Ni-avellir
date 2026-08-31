@@ -5,8 +5,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
 import { useAppDispatch, useAppSelector } from '../../app/store';
-import { enterGuest, signIn } from './authSlice';
+import { enterGuest } from './authSlice';
 import { useToast } from '../../components/ui/Toast';
+import { appConfig } from '../../config/appConfig';
+import { authRepository } from '../../services/data/authRepository';
 import type { AuthStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList>;
@@ -25,6 +27,7 @@ export function LoginScreen() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   /** Profile → Login clears guest; Back must restore shop instead of leaving the app. */
   const returnToShopAsGuest = useCallback(() => {
@@ -56,10 +59,25 @@ export function LoginScreen() {
     }, [returnToShopAsGuest, startOnLogin]),
   );
 
-  const submitPhone = () => {
+  const submitPhone = async () => {
     const mobile = digitsOnly(phone);
     if (mobile.length < 10) {
       toast.show('Enter a valid mobile number');
+      return;
+    }
+    if (appConfig.dataSource === 'api') {
+      setLoading(true);
+      try {
+        const result = await authRepository.sendOtp(mobile, 'login');
+        if (result.demoCode) {
+          toast.show(`Dev OTP: ${result.demoCode}`);
+        }
+        navigation.navigate('Otp', { name: `User ${mobile.slice(-4)}`, email: '', phone: mobile });
+      } catch (error) {
+        toast.show(authRepository.getApiErrorMessage(error));
+      } finally {
+        setLoading(false);
+      }
       return;
     }
     navigation.navigate('Otp', {
@@ -69,18 +87,33 @@ export function LoginScreen() {
     });
   };
 
-  const submitEmail = () => {
+  const submitEmail = async () => {
     if (!email.trim() || !password.trim()) {
       toast.show('Enter email and password');
       return;
     }
-    dispatch(
-      signIn({
-        name: email.split('@')[0] || 'Forgehand',
-        email: email.trim(),
-        phone: '',
-      }),
-    );
+    if (appConfig.dataSource === 'api') {
+      setLoading(true);
+      try {
+        const user = await authRepository.login(email.trim(), password);
+        navigation.navigate('AuthSuccess', {
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          avatarUri: user.avatarUrl,
+        });
+      } catch (error) {
+        toast.show(authRepository.getApiErrorMessage(error));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    navigation.navigate('AuthSuccess', {
+      name: email.split('@')[0] || 'Forgehand',
+      email: email.trim(),
+      phone: '',
+    });
   };
 
   const showBack = navigation.canGoBack() || startOnLogin;
@@ -147,7 +180,7 @@ export function LoginScreen() {
           </Text>
         </Pressable>
         {mode === 'email' ? (
-          <Pressable onPress={() => toast.show('Reset link sent to your email')} hitSlop={8}>
+          <Pressable onPress={() => navigation.navigate('ForgotPassword')} hitSlop={8}>
             <Text style={styles.altLink}>Forgot password?</Text>
           </Pressable>
         ) : (
@@ -161,7 +194,7 @@ export function LoginScreen() {
       >
         {({ pressed }) => (
           <Text style={[styles.ctaText, pressed && styles.ctaTextPressed]}>
-            {mode === 'phone' ? 'Send OTP' : 'Login'}
+            {loading ? 'Please wait…' : mode === 'phone' ? 'Send OTP' : 'Login'}
           </Text>
         )}
       </Pressable>

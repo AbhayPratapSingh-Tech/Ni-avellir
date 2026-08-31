@@ -10,8 +10,9 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useCallback } from 'react';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { clearCart } from '../cart/cartSlice';
@@ -26,6 +27,9 @@ import {
   hasAddressErrors,
   validateAddressFields,
 } from '../../lib/addressValidation';
+import { isLoggedInUser, requireLogin } from '../../lib/authGates';
+import { goBackOrHome } from '../../lib/navigation';
+import { useToast } from '../../components/ui/Toast';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -65,6 +69,7 @@ export function CheckoutScreen() {
   const navigation = useNavigation<Navigation>();
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
+  const toast = useToast();
   const cart = useAppSelector((state) => state.cart);
   const user = useAppSelector((state) => state.auth.user);
   const defaultAddress = useAppSelector(
@@ -83,6 +88,15 @@ export function CheckoutScreen() {
   const [stateName, setStateName] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [payment, setPayment] = useState<string>('cash_on_delivery');
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isLoggedInUser(user)) {
+        requireLogin({ user, dispatch, toast, reason: 'checkout' });
+        goBackOrHome(navigation);
+      }
+    }, [dispatch, navigation, toast, user]),
+  );
 
   useEffect(() => {
     if (defaultAddress) {

@@ -14,7 +14,9 @@ const MENU = [
   { key: 'orders', label: 'My Orders', icon: '📦' },
   { key: 'addresses', label: 'Addresses', icon: '📍' },
   { key: 'notifications', label: 'Notifications', icon: '🔔' },
-  { key: 'settings', label: 'Settings', icon: '⚙️' },
+  { key: 'password', label: 'Change password', icon: '🔑' },
+  { key: 'sessions', label: 'Devices & sessions', icon: '📱' },
+  { key: 'verify', label: 'Verify email', icon: '✉' },
   { key: 'support', label: 'Support', icon: '💬' },
 ] as const;
 
@@ -98,6 +100,22 @@ export function ProfileScreen() {
                 }
                 if (item.key === 'addresses') {
                   navigation.navigate('Addresses');
+                  return;
+                }
+                if (item.key === 'notifications') {
+                  navigation.navigate('Notifications');
+                  return;
+                }
+                if (item.key === 'password') {
+                  navigation.navigate('ChangePassword');
+                  return;
+                }
+                if (item.key === 'sessions') {
+                  navigation.navigate('Sessions');
+                  return;
+                }
+                if (item.key === 'verify') {
+                  navigation.navigate('VerifyEmail');
                   return;
                 }
                 if (item.key === 'support') {

@@ -25,6 +25,13 @@ import { OnboardingScreen } from '../../features/auth/OnboardingScreen';
 import { LoginScreen } from '../../features/auth/LoginScreen';
 import { SignupScreen } from '../../features/auth/SignupScreen';
 import { OtpScreen } from '../../features/auth/OtpScreen';
+import { AuthSuccessScreen } from '../../features/auth/AuthSuccessScreen';
+import { ForgotPasswordScreen } from '../../features/auth/ForgotPasswordScreen';
+import { ResetPasswordScreen } from '../../features/auth/ResetPasswordScreen';
+import { ChangePasswordScreen } from '../../features/profile/ChangePasswordScreen';
+import { SessionsScreen } from '../../features/profile/SessionsScreen';
+import { VerifyEmailScreen } from '../../features/profile/VerifyEmailScreen';
+import { NotificationsScreen } from '../../features/profile/NotificationsScreen';
 import { useAppSelector } from '../store';
 import type { AuthStackParamList, MainTabParamList, RootStackParamList } from './types';
 
@@ -136,9 +143,24 @@ function AuthNavigator({ initialRouteName }: { initialRouteName: keyof AuthStack
         options={{ headerShown: true, title: 'Sign up' }}
       />
       <AuthStack.Screen
+        name="ForgotPassword"
+        component={ForgotPasswordScreen}
+        options={{ headerShown: true, title: 'Forgot password' }}
+      />
+      <AuthStack.Screen
+        name="ResetPassword"
+        component={ResetPasswordScreen}
+        options={{ headerShown: true, title: 'Reset password' }}
+      />
+      <AuthStack.Screen
         name="Otp"
         component={OtpScreen}
-        options={{ headerShown: true, title: 'Verify OTP' }}
+        options={{ headerShown: true, title: 'Verify code' }}
+      />
+      <AuthStack.Screen
+        name="AuthSuccess"
+        component={AuthSuccessScreen}
+        options={{ headerShown: false, gestureEnabled: false }}
       />
     </AuthStack.Navigator>
   );
@@ -176,6 +198,22 @@ function ShopNavigator() {
         name="EditProfile"
         component={EditProfileScreen}
         options={{ title: 'Edit profile' }}
+      />
+      <RootStack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
+        options={{ title: 'Change password' }}
+      />
+      <RootStack.Screen name="Sessions" component={SessionsScreen} options={{ title: 'Sessions' }} />
+      <RootStack.Screen
+        name="VerifyEmail"
+        component={VerifyEmailScreen}
+        options={{ title: 'Verify email' }}
+      />
+      <RootStack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ title: 'Notifications' }}
       />
       <RootStack.Screen
         name="Addresses"

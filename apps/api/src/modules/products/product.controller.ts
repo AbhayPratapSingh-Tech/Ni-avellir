@@ -6,10 +6,11 @@ export class ProductController {
   constructor(private readonly service: ProductService) {}
 
   list = async (request: Request, response: Response) => {
-const query: {
+    const query: {
       category?: string;
       search?: string;
       franchise?: string;
+      collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking';
       inStockOnly?: boolean;
       sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
       page?: number;
@@ -20,6 +21,12 @@ const query: {
       category: request.query.category as string | undefined,
       search: request.query.search as string | undefined,
       franchise: request.query.franchise as string | undefined,
+      collection: request.query.collection as
+        | 'bestsellers'
+        | 'deals'
+        | 'also-like'
+        | 'restocking'
+        | undefined,
       inStockOnly: request.query.inStockOnly === 'true' ? true : undefined,
       sort: request.query.sort as 'price_asc' | 'price_desc' | 'rating' | 'newest' | undefined,
       page: request.query.page ? Number(request.query.page) : undefined,
@@ -37,7 +44,7 @@ const query: {
     response.json({ data: result });
   };
 
-getBySlug = async (request: Request, response: Response) => {
+  getBySlug = async (request: Request, response: Response) => {
     const slug = request.params.slug as string;
     const product = await this.service.getBySlug(slug);
     if (!product) {
@@ -64,5 +71,29 @@ getBySlug = async (request: Request, response: Response) => {
   getLimitedDrops = async (_request: Request, response: Response) => {
     const products = await this.service.getLimitedDrops();
     response.json({ data: { products } });
+  };
+
+  getDeals = async (request: Request, response: Response) => {
+    const limit = request.query.limit ? Number(request.query.limit) : 6;
+    const products = await this.service.getDeals(limit);
+    response.json({ data: { products } });
+  };
+
+  getBestSellers = async (request: Request, response: Response) => {
+    const limit = request.query.limit ? Number(request.query.limit) : 6;
+    const products = await this.service.getBestSellers(limit);
+    response.json({ data: { products } });
+  };
+
+  getSuggestions = async (request: Request, response: Response) => {
+    const q = request.query.q as string | undefined;
+    const suggestions = await this.service.getSuggestions(q);
+    response.json({ data: suggestions });
+  };
+
+  getRelated = async (request: Request, response: Response) => {
+    const slug = request.params.slug as string;
+    const related = await this.service.getRelated(slug);
+    response.json({ data: related });
   };
 }

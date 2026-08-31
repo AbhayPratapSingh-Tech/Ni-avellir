@@ -20,14 +20,18 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Product } from '@nidavellir/shared';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
-import { addItem, updateQuantity } from '../cart/cartSlice';
-import { toggleItem } from '../wishlist/wishlistSlice';
+import { addProductToCart, setCartLineQuantity } from '../../lib/cartActions';
 import { viewProduct } from '../recent/recentSlice';
 import type { RootStackParamList } from '../../app/navigation/types';
 import { getProductImages } from '../../lib/productMedia';
 import { goBackOrHome } from '../../lib/navigation';
+import { requireLogin } from '../../lib/authGates';
+import { toggleWishlistForUser } from '../../lib/wishlistActions';
 import { productRepository } from '../../services/data/productRepository';
-import { demoReviews, type ProductReview } from '../../services/data/reviews';
+import { reviewRepository } from '../../services/data/reviewRepository';
+import { appConfig } from '../../config/appConfig';
+import type { ProductReview } from '../../services/data/reviews';
+import { getApiErrorMessage } from '../../services/api/apiClient';
 import { Accordion } from '../../components/commerce/Accordion';
 import { ImageGalleryModal } from '../../components/commerce/ImageGalleryModal';
 import { ImagePager } from '../../components/commerce/ImagePager';
@@ -56,12 +60,14 @@ export function ProductDetailScreen() {
   const toast = useToast();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { product } = route.params;
+  const { product: routeProduct } = route.params;
+  const [product, setProduct] = useState(routeProduct);
   const images = getProductImages(product);
 
   const cartQty =
     useAppSelector((state) => state.cart.items.find((item) => item.product.id === product.id)?.quantity) ?? 0;
   const wishlisted = useAppSelector((state) => state.wishlist.items.some((item) => item.id === product.id));
+  const user = useAppSelector((state) => state.auth.user);
   const recentItems = useAppSelector((state) => state.recent.items);
   const recentlyViewed = useMemo(
     () => recentItems.filter((item) => item.id !== product.id).slice(0, 8),
@@ -73,10 +79,8 @@ export function ProductDetailScreen() {
   const [reviewName, setReviewName] = useState('');
   const [reviewBody, setReviewBody] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
-  const [reviews, setReviews] = useState<ProductReview[]>(() => {
-    const own = demoReviews.filter((item) => item.productId === product.id);
-    return own.length ? own : demoReviews.slice(0, 3);
-  });
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [similar, setSimilar] = useState<Product[]>([]);
   const [alsoLike, setAlsoLike] = useState<Product[]>([]);
 
@@ -87,6 +91,23 @@ export function ProductDetailScreen() {
       setAlsoLike(result.alsoLike);
     });
   }, [dispatch, product]);
+
+  useEffect(() => {
+    const slug = (routeProduct as Product & { slug?: string }).slug ?? routeProduct.id;
+    productRepository.getBySlug(slug).then((live) => {
+      if (live) setProduct(live);
+    });
+  }, [routeProduct]);
+
+  useEffect(() => {
+    let cancelled = false;
+    reviewRepository.listByProduct(product.id).then((items) => {
+      if (!cancelled) setReviews(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [product.id]);
 
   const brands = useMemo(
     () =>
@@ -107,29 +128,36 @@ export function ProductDetailScreen() {
     navigation.push('ProductDetail', { product: next });
   };
 
-  const submitReview = () => {
+  const submitReview = async () => {
     if (!reviewName.trim() || !reviewBody.trim()) {
       Alert.alert('Add a name and review');
       return;
     }
-    setReviews((current) => [
-      {
-        id: `rev-local-${Date.now()}`,
+    if (
+      appConfig.dataSource === 'api' &&
+      !requireLogin({ user, dispatch, toast, reason: 'review' })
+    ) {
+      return;
+    }
+    setReviewBusy(true);
+    try {
+      const created = await reviewRepository.create({
         productId: product.id,
         name: reviewName.trim(),
-        avatarUrl: `https://i.pravatar.cc/80?u=${encodeURIComponent(reviewName.trim())}`,
         rating: reviewRating,
-        verified: false,
         body: reviewBody.trim(),
-        helpful: 0,
-      },
-      ...current,
-    ]);
-    setReviewName('');
-    setReviewBody('');
-    setReviewRating(5);
-    setReviewOpen(false);
-    toast.show('Review submitted');
+      });
+      setReviews((current) => [created, ...current.filter((item) => item.id !== created.id)]);
+      setReviewName('');
+      setReviewBody('');
+      setReviewRating(5);
+      setReviewOpen(false);
+      toast.show('Review submitted');
+    } catch (error) {
+      toast.show(getApiErrorMessage(error));
+    } finally {
+      setReviewBusy(false);
+    }
   };
 
   return (
@@ -158,8 +186,13 @@ export function ProductDetailScreen() {
           <Pressable
             style={styles.heartOnImage}
             onPress={() => {
-              dispatch(toggleItem(product));
-              toast.show(wishlisted ? 'Removed from wishlist' : 'Added to wishlist');
+              void toggleWishlistForUser({
+                product,
+                user,
+                dispatch,
+                toast,
+                currentlyWishlisted: wishlisted,
+              });
             }}
           >
             <Text style={[styles.heartOnImageText, wishlisted && styles.wishActive]}>
@@ -305,8 +338,10 @@ export function ProductDetailScreen() {
             <Pressable
               style={styles.qtyBtn}
               onPress={() => {
-                dispatch(updateQuantity({ productId: product.id, quantity: cartQty - 1 }));
-                toast.show(cartQty === 1 ? 'Removed from cart' : 'Updated cart');
+                const nextQty = cartQty - 1;
+                void setCartLineQuantity({ product, quantity: nextQty, dispatch, toast }).then((ok) => {
+                  if (ok) toast.show(nextQty === 0 ? 'Removed from cart' : 'Updated cart');
+                });
               }}
             >
               <Text style={styles.qtyBtnText}>−</Text>
@@ -315,8 +350,14 @@ export function ProductDetailScreen() {
             <Pressable
               style={styles.qtyBtn}
               onPress={() => {
-                dispatch(updateQuantity({ productId: product.id, quantity: cartQty + 1 }));
-                toast.show('Updated cart');
+                void setCartLineQuantity({
+                  product,
+                  quantity: cartQty + 1,
+                  dispatch,
+                  toast,
+                }).then((ok) => {
+                  if (ok) toast.show('Updated cart');
+                });
               }}
             >
               <Text style={styles.qtyBtnText}>+</Text>
@@ -327,8 +368,9 @@ export function ProductDetailScreen() {
             style={[styles.addBtn, product.stock === 0 && styles.addBtnDisabled]}
             disabled={product.stock === 0}
             onPress={() => {
-              dispatch(addItem({ product, quantity: 1 }));
-              toast.show('Struck the cart ⚡');
+              void addProductToCart({ product, dispatch, toast }).then((ok) => {
+                if (ok) toast.show('Struck the cart ⚡');
+              });
             }}
           >
             <Text style={styles.addBtnText}>{product.stock > 0 ? 'Add to cart' : 'Out of stock'}</Text>
@@ -339,8 +381,12 @@ export function ProductDetailScreen() {
           disabled={product.stock === 0}
           onPress={() => {
             if (cartQty === 0) {
-              dispatch(addItem({ product, quantity: 1 }));
-              toast.show('Struck the cart ⚡');
+              void addProductToCart({ product, dispatch, toast }).then((ok) => {
+                if (ok) toast.show('Struck the cart ⚡');
+              });
+            }
+            if (!requireLogin({ user, dispatch, toast, reason: 'checkout' })) {
+              return;
             }
             navigation.navigate('Checkout');
           }}
@@ -389,8 +435,8 @@ export function ProductDetailScreen() {
                 onChangeText={setReviewBody}
                 multiline
               />
-              <Pressable style={styles.submitReviewBtn} onPress={submitReview}>
-                <Text style={styles.addBtnText}>Submit review</Text>
+              <Pressable style={styles.submitReviewBtn} onPress={() => void submitReview()} disabled={reviewBusy}>
+                <Text style={styles.addBtnText}>{reviewBusy ? 'Submitting…' : 'Submit review'}</Text>
               </Pressable>
               <Pressable onPress={() => setReviewOpen(false)} hitSlop={8}>
                 <Text style={styles.cancel}>Cancel</Text>

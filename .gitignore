@@ -12,6 +12,9 @@ onlyme.md
 
 # Local-only project notes
 LOCAL_COMMANDS.md
+API_DETAILS.local.md
+API_DETAILS.md
+**/API_DETAILS.local.md
 
 # Signing credentials - never commit
 *.jks

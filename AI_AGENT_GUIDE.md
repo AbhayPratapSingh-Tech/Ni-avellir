@@ -34,9 +34,21 @@ Also required on the server: Mongo, JWT secrets, Razorpay Test then Live keys (`
 ```bash
 npm install
 npm run setup
-npm run dev          # Metro (mock) — root script
+```
+
+**Live stack (current default — `appConfig.dataSource: 'api'`):**
+
+```bash
+npm run dev:api
+npm run seed --workspace apps/api
+npm run dev          # Metro
 npm run android      # or ios (+ pod install first time)
 ```
+
+Confirm API: `curl -s http://localhost:4000/health`  
+Local JWT/cURLs (gitignored): `python3 scripts/generate-api-details-local.py`
+
+**College mock (no Mongo):** set `dataSource: 'mock'`, then `npm run dev` + device only.
 
 Do not invent alternate entrypoints. Root `dev` = mobile Metro. Root `dev:api` = Express (needs Mongo).
 
@@ -46,14 +58,17 @@ Do not invent alternate entrypoints. Root `dev` = mobile Metro. Root `dev:api` =
 - Guest “Login / Signup” uses `openLogin`; signed-out users return via Login back → `enterGuest` (do not leave the app).
 - Logout uses `signOutAndClearSession` → guest shop (not Onboarding).
 - Order confirmation must reset the stack (no back into Checkout/PDP).
+- **Guest may browse + cart.** Checkout and wishlist require login (`lib/authGates.ts` / `lib/wishlistActions.ts` → `openLogin`).
 
 Checklist when flipping live:
 
-1. API running + seeded products.
+1. API running + seeded products (serviceability + coupons via seed).
 2. Mobile `dataSource: 'api'`, `allowMockFallback: false`.
-3. Auth tokens via `sessionTokens` + `apiClient` Bearer (Keychain hydrate later).
-4. Razorpay: real keys → `demoMode: false` → native Checkout → `POST /payments/razorpay/confirm`.
-5. Rebuild native app after native dependency changes; run `ensure-mobile-node-modules.js` + `pod install` when needed.
+3. Auth tokens via `sessionTokens` + Keychain hydrate in `AppBootstrap`.
+4. Guest cart: `X-Guest-Session` header; `POST /cart/merge` after login.
+5. SMS: `SMS_PROVIDER` + MSG91/Twilio keys, or `SMS_DEMO_MODE=true` for dev.
+6. Razorpay: real keys → `demoMode: false` → native Checkout → `/confirm`.
+7. Rebuild native app after native dependency changes; run `ensure-mobile-node-modules.js` + `pod install` when needed.
 
 ---
 
@@ -116,6 +131,11 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 | HTTP client + Bearer | `apps/mobile/src/services/api/apiClient.ts` |
 | Token stubs / Keychain hook | `apps/mobile/src/services/api/sessionTokens.ts` |
 | Catalog / orders / payments repository | `apps/mobile/src/services/data/productRepository.ts` |
+| Auth / cart / addresses / orders / reviews repos | `apps/mobile/src/services/data/*Repository.ts` |
+| Auth API | `apps/api/src/modules/auth/*` |
+| Cart + coupons + serviceability | `cart/*`, `coupons/*`, `serviceability/*` |
+| Reviews / notifications | `reviews/*`, `notifications/*` |
+| Order emails (Resend / console) | `orders/order-email.ts`, `integrations/email/*` |
 | Razorpay native open | `apps/mobile/src/services/payments/openRazorpayCheckout.ts` |
 | Orders list / details | `features/orders/*` |
 | Addresses | `features/addresses/*` |
@@ -147,9 +167,10 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 
 ## Quick “future live” backlog (do not block college demo)
 
-- JWT auth module on API + login → `setSessionTokens` + Keychain hydrate.
-- Persist Redux (orders/addresses) or refetch from API when logged in.
-- Addresses CRUD API mirrored to `addressesSlice`.
-- Orders list from `GET /orders` instead of local-only history.
-- Razorpay webhooks (idempotent) beside client confirm.
-- Strict `allowMockFallback: false` on staging/prod builds.
+Most auth/cart/orders live paths are implemented. Still deferred (see `TODO.md`):
+
+- Razorpay **webhooks** (idempotent) beside client confirm.
+- **FCM / APNs** push (in-app notifications inbox already works).
+- Shipment tracking, invoice PDF, automated tests.
+- **HTTPS / production deploy** (Railway/Render/AWS + store builds) with real secrets.
+- Strict `allowMockFallback: false` on staging/prod store builds.

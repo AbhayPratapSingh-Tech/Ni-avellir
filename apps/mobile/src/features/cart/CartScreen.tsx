@@ -1,6 +1,7 @@
-import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useCallback, useState } from 'react';
 import type { Product } from '@nidavellir/shared';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
@@ -8,7 +9,13 @@ import { removeItem, updateQuantity, type CartItem } from './cartSlice';
 import { toggleItem } from '../wishlist/wishlistSlice';
 import { Screen } from '../../components/ui/Screen';
 import { useToast } from '../../components/ui/Toast';
+import { appConfig } from '../../config/appConfig';
+import { cartRepository } from '../../services/data/cartRepository';
+import { wishlistRepository } from '../../services/data/wishlistRepository';
+import { requireLogin } from '../../lib/authGates';
+import { toggleWishlistForUser } from '../../lib/wishlistActions';
 import { discountPercent, formatInr, getProductImages } from '../../lib/productMedia';
+import { getApiErrorMessage } from '../../services/api/apiClient';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -17,11 +24,22 @@ export function CartScreen() {
   const navigation = useNavigation<Navigation>();
   const dispatch = useAppDispatch();
   const toast = useToast();
-  const { items, total } = useAppSelector((state) => state.cart);
+  const { items, total, discount, couponCode, subtotal, shipping, tax, couponDiscountType, couponDiscountValue, totalBeforeDiscount } =
+    useAppSelector((state) => state.cart);
   const user = useAppSelector((state) => state.auth.user);
   const wishlistItems = useAppSelector((state) => state.wishlist.items);
   const defaultAddress = useAppSelector(
     (state) => state.addresses.items.find((item) => item.isDefault) ?? state.addresses.items[0],
+  );
+  const [couponInput, setCouponInput] = useState('');
+  const [couponBusy, setCouponBusy] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (appConfig.dataSource === 'api') {
+        void cartRepository.refresh(defaultAddress?.postalCode);
+      }
+    }, [defaultAddress?.postalCode]),
   );
   const recipient = user?.isGuest
     ? defaultAddress?.fullName || 'Guest'
@@ -29,6 +47,16 @@ export function CartScreen() {
   const addressLine = defaultAddress
     ? `${defaultAddress.line1}, ${defaultAddress.city} ${defaultAddress.postalCode}`
     : 'Add a delivery address';
+
+  const originalTotal = totalBeforeDiscount ?? subtotal + shipping + tax + discount;
+  const couponOfferLabel =
+    couponDiscountType === 'percent' && couponDiscountValue != null
+      ? `${couponDiscountValue}% off`
+      : couponDiscountType === 'flat' && couponDiscountValue != null
+        ? `${formatInr(couponDiscountValue)} off`
+        : discount > 0
+          ? 'coupon discount'
+          : undefined;
 
   const canPop = navigation.canGoBack();
 
@@ -79,18 +107,83 @@ export function CartScreen() {
         style={styles.listFlex}
         contentContainerStyle={styles.list}
         ListHeaderComponent={
-          <View style={styles.addressCard}>
-            <View style={styles.addressCopy}>
-              <Text style={styles.deliverTo} numberOfLines={1}>
-                Deliver to {recipient}
-              </Text>
-              <Text style={styles.addressLine} numberOfLines={1}>
-                {addressLine}
-              </Text>
+          <View>
+            <View style={styles.addressCard}>
+              <View style={styles.addressCopy}>
+                <Text style={styles.deliverTo} numberOfLines={1}>
+                  Deliver to {recipient}
+                </Text>
+                <Text style={styles.addressLine} numberOfLines={1}>
+                  {addressLine}
+                </Text>
+              </View>
+              <Pressable onPress={() => navigation.navigate('Addresses')} hitSlop={8}>
+                <Text style={styles.change}>{defaultAddress ? 'Change' : 'Add'}</Text>
+              </Pressable>
             </View>
-            <Pressable onPress={() => navigation.navigate('Addresses')} hitSlop={8}>
-              <Text style={styles.change}>{defaultAddress ? 'Change' : 'Add'}</Text>
-            </Pressable>
+            <View style={styles.couponCard}>
+              <Text style={styles.couponTitle}>Coupon</Text>
+              {couponCode ? (
+                <View style={styles.couponApplied}>
+                  <Text style={styles.couponAppliedText}>{couponCode} applied</Text>
+                  <Pressable
+                    onPress={async () => {
+                      setCouponBusy(true);
+                      try {
+                        await cartRepository.removeCoupon(defaultAddress?.postalCode);
+                        toast.show('Coupon removed');
+                      } catch (error) {
+                        toast.show(getApiErrorMessage(error));
+                      } finally {
+                        setCouponBusy(false);
+                      }
+                    }}
+                    disabled={couponBusy}
+                  >
+                    <Text style={styles.couponRemove}>Remove</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <View style={styles.couponRow}>
+                  <TextInput
+                    style={styles.couponInput}
+                    placeholder="FORGE10 / WELCOME100"
+                    placeholderTextColor={colors.textMuted}
+                    autoCapitalize="characters"
+                    value={couponInput}
+                    onChangeText={setCouponInput}
+                  />
+                  <Pressable
+                    style={styles.couponBtn}
+                    disabled={couponBusy}
+                    onPress={async () => {
+                      if (!couponInput.trim()) {
+                        toast.show('Enter a coupon code');
+                        return;
+                      }
+                      setCouponBusy(true);
+                      try {
+                        await cartRepository.applyCoupon(
+                          couponInput.trim(),
+                          defaultAddress?.postalCode,
+                        );
+                        toast.show('Coupon applied');
+                        setCouponInput('');
+                      } catch (error) {
+                        toast.show(getApiErrorMessage(error));
+                      } finally {
+                        setCouponBusy(false);
+                      }
+                    }}
+                  >
+                    <Text style={styles.couponBtnText}>Apply</Text>
+                  </Pressable>
+                </View>
+              )}
+              {discount > 0 ? (
+                <Text style={styles.couponSavings}>You save {formatInr(discount)}</Text>
+              ) : null}
+            </View>
           </View>
         }
         renderItem={({ item }) => (
@@ -99,22 +192,57 @@ export function CartScreen() {
             wishlisted={wishlistItems.some((wish) => wish.id === item.product.id)}
             onOpen={() => navigation.navigate('ProductDetail', { product: item.product })}
             onQty={(quantity) => {
-              dispatch(updateQuantity({ productId: item.product.id, quantity }));
+              if (appConfig.dataSource === 'api') {
+                void cartRepository.updateItem(item.product.id, quantity, defaultAddress?.postalCode);
+              } else {
+                dispatch(updateQuantity({ productId: item.product.id, quantity }));
+              }
               toast.show(quantity <= 0 ? 'Removed from cart' : 'Updated cart');
             }}
             onWish={() => {
               const already = wishlistItems.some((wish) => wish.id === item.product.id);
-              if (already) {
-                dispatch(toggleItem(item.product));
-                toast.show('Removed from wishlist');
+              if (
+                !requireLogin({
+                  user,
+                  dispatch,
+                  toast,
+                  reason: 'wishlist',
+                })
+              ) {
                 return;
               }
-              dispatch(toggleItem(item.product));
-              dispatch(removeItem(item.product.id));
-              toast.show('Moved to wishlist');
+              void (async () => {
+                if (already) {
+                  await toggleWishlistForUser({
+                    product: item.product,
+                    user,
+                    dispatch,
+                    toast,
+                    currentlyWishlisted: true,
+                  });
+                  return;
+                }
+                // Move to wishlist: add wish + remove cart line
+                dispatch(toggleItem(item.product));
+                if (appConfig.dataSource === 'api') {
+                  try {
+                    await wishlistRepository.toggle(item.product.id);
+                  } catch {
+                    // ignore sync error
+                  }
+                  void cartRepository.removeItem(item.product.id, defaultAddress?.postalCode);
+                } else {
+                  dispatch(removeItem(item.product.id));
+                }
+                toast.show('Moved to wishlist');
+              })();
             }}
             onRemove={() => {
-              dispatch(removeItem(item.product.id));
+              if (appConfig.dataSource === 'api') {
+                void cartRepository.removeItem(item.product.id, defaultAddress?.postalCode);
+              } else {
+                dispatch(removeItem(item.product.id));
+              }
               toast.show('Removed from cart');
             }}
           />
@@ -124,11 +252,31 @@ export function CartScreen() {
       <View style={styles.stickyBar}>
         <View style={styles.totalBlock}>
           <Text style={styles.totalLabel}>Your Total</Text>
-          <Text style={styles.totalValue}>{formatInr(total)}</Text>
+          {couponCode && discount > 0 ? (
+            <>
+              <Text style={styles.couponOffer}>
+                {couponCode} · {couponOfferLabel} · save {formatInr(discount)}
+              </Text>
+              <View style={styles.totalPriceRow}>
+                <Text style={styles.totalWas}>{formatInr(originalTotal)}</Text>
+                <Text style={styles.totalValue}>{formatInr(total)}</Text>
+              </View>
+            </>
+          ) : couponCode && discount === 0 ? (
+            <Text style={styles.couponOfferMuted}>{couponCode} applied — min order not met</Text>
+          ) : null}
+          {!(couponCode && discount > 0) ? (
+            <Text style={styles.totalValue}>{formatInr(total)}</Text>
+          ) : null}
         </View>
         <Pressable
           style={styles.anvilBtn}
-          onPress={() => navigation.navigate('Checkout')}
+          onPress={() => {
+            if (!requireLogin({ user, dispatch, toast, reason: 'checkout' })) {
+              return;
+            }
+            navigation.navigate('Checkout');
+          }}
         >
           <Text style={styles.anvilBtnText}>Hit the Anvil</Text>
         </Pressable>
@@ -227,6 +375,52 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: spacing.md,
     padding: spacing.md,
+  },
+  couponApplied: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  couponAppliedText: { color: colors.text, fontWeight: '800' },
+  couponBtn: {
+    backgroundColor: colors.text,
+    borderRadius: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  couponBtnText: { color: colors.onAccent, fontWeight: '800' },
+  couponCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+  },
+  couponInput: {
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    color: colors.text,
+    flex: 1,
+    marginRight: spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  couponRemove: { color: colors.danger, fontWeight: '800' },
+  couponRow: { flexDirection: 'row' },
+  couponSavings: { color: colors.textMuted, fontSize: 12, marginTop: 8 },
+  couponTitle: { color: colors.text, fontWeight: '800', marginBottom: 8 },
+  couponOffer: {
+    color: '#047857',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  couponOfferMuted: {
+    color: colors.textMuted,
+    fontSize: 11,
+    marginTop: 2,
   },
   addressCopy: {
     flex: 1,
@@ -341,7 +535,7 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: spacing.md,
-    paddingBottom: 96,
+    paddingBottom: 140,
   },
   listFlex: {
     flex: 1,
@@ -415,7 +609,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stickyBar: {
-    alignItems: 'center',
+    alignItems: 'flex-end',
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
     borderTopWidth: 1,
@@ -492,6 +686,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     marginTop: 2,
+  },
+  totalPriceRow: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 2,
+  },
+  totalWas: {
+    color: colors.textMuted,
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'line-through',
   },
   trash: {
     fontSize: 16,

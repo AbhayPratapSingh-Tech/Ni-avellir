@@ -1,11 +1,7 @@
-/**
- * Session token store for live API auth.
- *
- * Today: in-memory (college demo auth is local Redux).
- * Live: wire `react-native-keychain` in set/clear so tokens survive restarts.
- *
- * `apiClient` reads `getAccessToken()` on every request when present.
- */
+import * as Keychain from 'react-native-keychain';
+import { appConfig } from '../../config/appConfig';
+
+const SERVICE = 'nidavellir.session';
 
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
@@ -18,20 +14,46 @@ export function getRefreshToken() {
   return refreshToken;
 }
 
-export function setSessionTokens(next: { accessToken: string; refreshToken?: string }) {
+export async function setSessionTokens(next: { accessToken: string; refreshToken?: string }) {
   accessToken = next.accessToken;
   if (next.refreshToken !== undefined) {
     refreshToken = next.refreshToken;
   }
-  // Live follow-up: Keychain.setGenericPassword('nidavellir', JSON.stringify({...}))
+  if (appConfig.dataSource === 'api') {
+    await Keychain.setGenericPassword(
+      SERVICE,
+      JSON.stringify({ accessToken, refreshToken }),
+      { service: SERVICE },
+    );
+  }
 }
 
-export function clearSessionTokens() {
+export async function clearSessionTokens() {
   accessToken = null;
   refreshToken = null;
-  // Live follow-up: Keychain.resetGenericPassword()
+  try {
+    await Keychain.resetGenericPassword({ service: SERVICE });
+  } catch {
+    // ignore keychain errors on simulators
+  }
 }
 
-export async function hydrateSessionTokensFromSecureStore(): Promise<void> {
-  // Live follow-up: read Keychain on app launch before RootNavigator mounts.
+export async function hydrateSessionTokensFromSecureStore(): Promise<boolean> {
+  if (appConfig.dataSource !== 'api') return false;
+  try {
+    const creds = await Keychain.getGenericPassword({ service: SERVICE });
+    if (!creds) return false;
+    const parsed = JSON.parse(creds.password) as {
+      accessToken?: string;
+      refreshToken?: string;
+    };
+    if (parsed.accessToken) {
+      accessToken = parsed.accessToken;
+      refreshToken = parsed.refreshToken ?? null;
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
 }

@@ -1,9 +1,12 @@
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useCallback } from 'react';
 import { colors, spacing } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
 import { useAppSelector } from '../../app/store';
+import { appConfig } from '../../config/appConfig';
+import { orderRepository } from '../../services/data/orderRepository';
 import { formatInr } from '../../lib/productMedia';
 import type { OrderHistoryItem } from './ordersSlice';
 import type { RootStackParamList } from '../../app/navigation/types';
@@ -71,6 +74,14 @@ function OrderCard({
 export function OrdersScreen() {
   const navigation = useNavigation<Navigation>();
   const orders = useAppSelector((state) => state.orders.items);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (appConfig.dataSource === 'api') {
+        void orderRepository.syncToStore();
+      }
+    }, []),
+  );
 
   return (
     <Screen edges={[]} style={styles.screen}>

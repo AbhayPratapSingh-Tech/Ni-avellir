@@ -10,7 +10,7 @@ import { FloatingCartButton } from '../../components/commerce/FloatingCartButton
 import { Screen } from '../../components/ui/Screen';
 import { productRepository, type SearchSuggestions } from '../../services/data/productRepository';
 import { useAppDispatch } from '../../app/store';
-import { addItem } from '../cart/cartSlice';
+import { addProductToCart } from '../../lib/cartActions';
 import { useToast } from '../../components/ui/Toast';
 import { goBackOrHome } from '../../lib/navigation';
 import type { RootStackParamList } from '../../app/navigation/types';
@@ -47,8 +47,9 @@ export function SearchScreen() {
 
   const handleAdd = useCallback(
     (product: Product) => {
-      dispatch(addItem({ product, quantity: 1 }));
-      toast.show('Struck the cart ⚡');
+      void addProductToCart({ product, dispatch, toast }).then((ok) => {
+        if (ok) toast.show('Struck the cart ⚡');
+      });
     },
     [dispatch, toast],
   );

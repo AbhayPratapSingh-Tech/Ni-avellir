@@ -21,7 +21,7 @@ export const appConfig = {
    * `mock` — bundled demo data (college demo, no server).
    * `api`  — Express `/api/v1` (requires API + Mongo running).
    */
-  dataSource: 'mock' as DataSourceMode,
+  dataSource: 'api' as DataSourceMode,
 
   /**
    * When `dataSource === 'api'` and a request fails:
@@ -30,7 +30,7 @@ export const appConfig = {
    *
    * Money paths (orders + payments) never soft-fallback in `api` mode.
    */
-  allowMockFallback: true,
+  allowMockFallback: false,
 
   /** Base URL of the API server (used only when dataSource === 'api'). */
   apiBaseUrl: `http://${apiHost}:4000/api/v1`,

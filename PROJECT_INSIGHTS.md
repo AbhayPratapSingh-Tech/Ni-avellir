@@ -28,7 +28,7 @@ Nidavellir is intended to become a real premium gaming merchandise marketplace, 
 - Auth: JWT access tokens, rotating refresh tokens, RBAC.
 - Secure mobile token storage: `react-native-keychain`.
 - Media: Cloudinary.
-- Push notifications: FCM for Android and APNs for iOS, routed through the backend notifications module.
+- Push notifications: **planned** FCM (Android) + APNs (iOS) via backend; **today** in-app Notifications inbox only (`/api/v1/notifications`). See `TODO.md`.
 - CI/CD: GitHub Actions plus Fastlane for native builds.
 - Monorepo tooling: Turborepo.
 - Documentation: Swagger/OpenAPI plus repository markdown docs.
@@ -125,18 +125,29 @@ Mobile defaults to **mock** via `apps/mobile/src/config/appConfig.ts`.
 
 **Core collections (Mongoose)**
 
-- Users (auth/RBAC — pending), Products (stock), Orders (line snapshots + status), Payments (provider intent + HMAC verify), plus cart/wishlist as product evolves.
+- Users, OtpChallenges (TTL), RefreshTokens, Products, Carts, Addresses, Orders, Payments, Wishlists, Coupons, Reviews, Notifications, ServiceabilityRules.
+
+**Auth + cart (live)**
+
+- `POST /api/v1/auth/*` — register, login, OTP, refresh, profile, sessions, forgot/reset/change password, email verify.
+- `GET/POST/PATCH/DELETE /api/v1/cart/*` — persisted cart, guest `X-Guest-Session`, merge on login, coupons (`FORGE10` / `WELCOME100`).
+- `GET /api/v1/serviceability?pincode=` — COD, shipping, ETA by pincode prefix.
+- `GET/POST /api/v1/reviews`, `GET /api/v1/notifications` — PDP reviews + in-app inbox (FCM still deferred).
+- Order status emails via Resend (`EMAIL_DEMO_MODE` / console fallback).
+- Mobile: `dataSource: 'api'`, `allowMockFallback: false`; repositories in `services/data/*`.
+- Guest may browse + cart; checkout / wishlist / write-review require login.
 
 **Orders + payments flow**
 
 - `POST /api/v1/orders` — COD → `confirmed` + stock decrement; Razorpay (`razorpay_demo`) → `pending_payment` (stock held until pay).
+- `POST /api/v1/orders/:id/cancel|return|exchange` — authenticated post-purchase actions.
 - `POST /api/v1/payments/intents` — creates Razorpay order (or demo intent).
 - `POST /api/v1/payments/razorpay/confirm` — HMAC verify → mark payment + order `paid` + decrement stock.
 - `POST /api/v1/payments/razorpay/demo-complete` — college/test path without charging (blocked in production when real keys are set).
 
-**Mobile local state (until API sync)**
+**Mobile sync**
 
-- Orders history + addresses live in Redux (`orders`, `addresses`). Checkout prefills default address and signed-in email; placing an order upserts the address book.
+- Orders / addresses / cart / wishlist sync from API in live mode. Checkout prefills default address + profile.
 
 ## Razorpay test / dummy checkout
 

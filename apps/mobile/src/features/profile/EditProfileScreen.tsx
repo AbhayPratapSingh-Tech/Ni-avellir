@@ -21,6 +21,8 @@ import { Screen } from '../../components/ui/Screen';
 import { useToast } from '../../components/ui/Toast';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { updateProfile } from '../auth/authSlice';
+import { appConfig } from '../../config/appConfig';
+import { authRepository } from '../../services/data/authRepository';
 import { digitsOnly } from '../../lib/addressValidation';
 import type { RootStackParamList } from '../../app/navigation/types';
 
@@ -168,7 +170,7 @@ export function EditProfileScreen() {
     ]);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!user) {
       goBackToAccount();
       return;
@@ -179,14 +181,34 @@ export function EditProfileScreen() {
       return;
     }
 
-    dispatch(
-      updateProfile({
-        name: name.trim(),
-        email: email.trim(),
-        phone: digitsOnly(phone),
-        avatarUri: avatarUri ?? null,
-      }),
-    );
+    if (appConfig.dataSource === 'api') {
+      try {
+        const updated = await authRepository.updateProfile({
+          name: name.trim(),
+          email: email.trim(),
+          avatarUrl: avatarUri,
+        });
+        dispatch(
+          updateProfile({
+            name: updated.name,
+            email: updated.email,
+            phone: updated.phone,
+            avatarUri: updated.avatarUrl ?? null,
+          }),
+        );
+      } catch (error) {
+        toast.show(authRepository.getApiErrorMessage(error));
+        return;
+      }
+    } else {
+      dispatch(
+        updateProfile({
+          name: name.trim(),
+          email: email.trim(),
+          avatarUri: avatarUri ?? null,
+        }),
+      );
+    }
     toast.show('Profile updated');
     goBackToAccount();
   };
@@ -249,16 +271,14 @@ export function EditProfileScreen() {
 
           <Text style={styles.label}>Phone</Text>
           <TextInput
-            style={[styles.input, showError('phone') ? styles.inputError : null]}
+            style={[styles.input, styles.inputDisabled]}
             placeholder="10-digit mobile"
             placeholderTextColor={colors.textMuted}
             value={phone}
-            onChangeText={(value) => setPhone(digitsOnly(value).slice(0, 10))}
-            onBlur={() => setTouched((prev) => ({ ...prev, phone: true }))}
+            editable={false}
             keyboardType="phone-pad"
-            maxLength={10}
           />
-          {showError('phone') ? <Text style={styles.error}>{showError('phone')}</Text> : null}
+          <Text style={styles.fieldHint}>Phone number cannot be changed after signup.</Text>
 
           <Pressable style={styles.saveBtn} onPress={save}>
             <Text style={styles.saveText}>Save changes</Text>
@@ -387,6 +407,17 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: colors.danger,
     marginBottom: 6,
+  },
+  inputDisabled: {
+    backgroundColor: colors.background,
+    color: colors.textMuted,
+    opacity: 0.85,
+  },
+  fieldHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginBottom: spacing.md,
+    marginTop: -8,
   },
   label: {
     color: colors.text,

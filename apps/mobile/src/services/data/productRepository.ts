@@ -114,8 +114,23 @@ function listFromMock(query: ProductListQuery = {}): ProductListResult {
   };
 }
 
-function mapProducts(items: Product[] = []): Product[] {
-  return items.map(normalizeProduct);
+function mapApiProduct(raw: Record<string, unknown>): Product {
+  const id = String(raw._id ?? raw.id ?? '');
+  const franchise = String(raw.franchise ?? '');
+  const mapped: Product = {
+    ...(raw as Product),
+    id,
+    brand: String(raw.brand ?? franchise),
+    franchise,
+  };
+  if (raw.compareAtPrice !== undefined) {
+    mapped.compareAtPrice = Number(raw.compareAtPrice);
+  }
+  return normalizeProduct(mapped);
+}
+
+function mapProducts(items: unknown[] = []): Product[] {
+  return items.map((item) => mapApiProduct(item as Record<string, unknown>));
 }
 
 function categoriesFromMock(): string[] {
@@ -159,7 +174,7 @@ export class ProductRepository {
       return await apiCall();
     } catch (error) {
       const allowSoft =
-        !options?.critical && appConfig.allowMockFallback === true;
+        !options?.critical && (appConfig.allowMockFallback as boolean) === true;
       if (!allowSoft) {
         throw error;
       }
@@ -174,17 +189,33 @@ export class ProductRepository {
   async list(query: ProductListQuery = {}): Promise<ProductListResult> {
     return this.withFallback(async () => {
       const { data } = await apiClient.get('/products', { params: query });
-      const result = data.data as ProductListResult;
-      return { ...result, items: mapProducts(result.items) };
+      const payload = data.data as {
+        items: unknown[];
+        pagination?: { page: number; limit: number; total: number; pages: number };
+        page?: number;
+        limit?: number;
+        total?: number;
+        pages?: number;
+      };
+      const pagination = payload.pagination ?? payload;
+      return {
+        items: mapProducts(payload.items),
+        page: pagination.page ?? 1,
+        limit: pagination.limit ?? 20,
+        total: pagination.total ?? payload.items.length,
+        pages: pagination.pages ?? 1,
+      };
     }, () => listFromMock(query));
   }
 
   async getBySlug(slug: string): Promise<Product | undefined> {
     return this.withFallback(async () => {
       const { data } = await apiClient.get(`/products/${slug}`);
-      return data.data.product ? normalizeProduct(data.data.product) : undefined;
+      return data.data.product ? mapApiProduct(data.data.product) : undefined;
     }, () => {
-      const found = demoProducts.find((p) => p.id === slug);
+      const found =
+        demoProducts.find((p) => p.id === slug) ??
+        demoProducts.find((p) => (p as Product & { slug?: string }).slug === slug);
       return found ? normalizeProduct(found) : undefined;
     });
   }
@@ -207,8 +238,9 @@ export class ProductRepository {
 
   async getDeals(): Promise<Product[]> {
     return this.withFallback(async () => {
-      const { data } = await apiClient.get('/products/deals');
-      return mapProducts(data.data.products);
+      const { data } = await apiClient.get('/products', { params: { collection: 'deals', limit: 6 } });
+      const payload = data.data as { items?: unknown[]; products?: unknown[] };
+      return mapProducts(payload.items ?? payload.products ?? []);
     }, () =>
       mapProducts(
         [...demoProducts]
@@ -220,8 +252,11 @@ export class ProductRepository {
 
   async getBestSellers(): Promise<Product[]> {
     return this.withFallback(async () => {
-      const { data } = await apiClient.get('/products/best-sellers');
-      return mapProducts(data.data.products);
+      const { data } = await apiClient.get('/products', {
+        params: { collection: 'bestsellers', limit: 6 },
+      });
+      const payload = data.data as { items?: unknown[]; products?: unknown[] };
+      return mapProducts(payload.items ?? payload.products ?? []);
     }, () => mapProducts([...demoProducts].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 6)));
   }
 
@@ -233,13 +268,22 @@ export class ProductRepository {
   }
 
   async getRelated(product: Product): Promise<{ similar: Product[]; alsoLike: Product[] }> {
-    const similar = mapProducts(
-      demoProducts.filter((item) => item.id !== product.id && item.category === product.category).slice(0, 8),
-    );
-    const alsoLike = mapProducts(
-      demoProducts.filter((item) => item.id !== product.id && item.franchise !== product.franchise).slice(0, 8),
-    );
-    return { similar, alsoLike };
+    const slug = (product as Product & { slug?: string }).slug ?? product.id;
+    return this.withFallback(async () => {
+      const { data } = await apiClient.get(`/products/${slug}/related`);
+      return {
+        similar: mapProducts(data.data.similar ?? []),
+        alsoLike: mapProducts(data.data.alsoLike ?? []),
+      };
+    }, () => {
+      const similar = mapProducts(
+        demoProducts.filter((item) => item.id !== product.id && item.category === product.category).slice(0, 8) as unknown[],
+      );
+      const alsoLike = mapProducts(
+        demoProducts.filter((item) => item.id !== product.id && item.franchise !== product.franchise).slice(0, 8) as unknown[],
+      );
+      return { similar, alsoLike };
+    });
   }
 
   async getCategories(): Promise<string[]> {

@@ -1,7 +1,10 @@
 import { nanoid } from 'nanoid';
-import { Order } from './order.model.js';
-import { Product } from '../products/product.model.js';
 import { AppError } from '../../common/errors/app-error.js';
+import { notificationService } from '../notifications/notification.service.js';
+import { Product } from '../products/product.model.js';
+import { serviceabilityService } from '../serviceability/serviceability.service.js';
+import { sendOrderStatusEmail } from './order-email.js';
+import { Order } from './order.model.js';
 
 export type CreateOrderInput = {
   customer: { name: string; email: string; phone: string };
@@ -15,11 +18,9 @@ export type CreateOrderInput = {
     postalCode: string;
   };
   paymentMethod: string;
+  discount?: number;
+  couponCode?: string;
 };
-
-const FREE_SHIPPING_THRESHOLD = 1499;
-const SHIPPING_CHARGE = 99;
-const TAX_RATE = 0.05;
 
 type LeanOrderProduct = {
   _id: unknown;
@@ -30,7 +31,7 @@ type LeanOrderProduct = {
 };
 
 export class OrderService {
-  async create(input: CreateOrderInput) {
+  async create(input: CreateOrderInput, userId?: string) {
     const productIds = input.items.map((item) => item.productId);
     const products = (await Product.find({ _id: { $in: productIds } }).lean()) as LeanOrderProduct[];
     const productMap = new Map(products.map((product) => [String(product._id), product]));
@@ -54,31 +55,50 @@ export class OrderService {
     });
 
     const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
-    const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_CHARGE;
-    const tax = Math.round(subtotal * TAX_RATE);
-    const total = subtotal + shipping + tax;
+    const discount = input.discount ?? 0;
+    const serviceability = await serviceabilityService.resolve(input.shippingAddress.postalCode);
+    const afterDiscount = Math.max(0, subtotal - discount);
+    const shipping =
+      afterDiscount >= serviceability.freeShippingThreshold ? 0 : serviceability.shippingCharge;
+    const tax = Math.round(afterDiscount * 0.05);
+    const total = afterDiscount + shipping + tax;
 
     const orderNumber = `ORD-${nanoid(8).toUpperCase()}`;
-    const estimatedDelivery = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
+    const estimatedDelivery = new Date(Date.now() + serviceability.etaDays * 86400000)
       .toISOString()
       .slice(0, 10);
 
     const isCod = input.paymentMethod === 'cash_on_delivery';
     const order = await Order.create({
+      userId,
       orderNumber,
       customer: input.customer,
       items,
       shippingAddress: input.shippingAddress,
       paymentMethod: input.paymentMethod,
       subtotal,
+      discount,
       shipping,
       tax,
       total,
       currency: 'INR',
-      // Online (Razorpay): wait for payment verify before stock decrement.
       status: isCod ? 'confirmed' : 'pending_payment',
       estimatedDelivery,
     });
+
+    if (userId) {
+      await notificationService.notifyOrderEvent(String(userId), 'order_placed', orderNumber);
+    }
+    try {
+      await sendOrderStatusEmail({
+        to: input.customer.email,
+        orderNumber,
+        status: order.status,
+        total,
+      });
+    } catch {
+      // email failure must not block checkout
+    }
 
     if (isCod) {
       await Promise.all(
@@ -91,16 +111,67 @@ export class OrderService {
     return order;
   }
 
-  async list(email?: string) {
-    const filter = email ? { 'customer.email': email } : {};
+  async list(userId?: string, email?: string) {
+    const filter: Record<string, unknown> = {};
+    if (userId) filter.userId = userId;
+    else if (email) filter['customer.email'] = email;
     return Order.find(filter).sort({ createdAt: -1 }).lean();
   }
 
-  async getById(id: string) {
+  async getById(id: string, userId?: string) {
     const order = await Order.findById(id).lean();
     if (!order) {
       throw new AppError('Order not found', 404);
     }
+    if (userId && order.userId && String(order.userId) !== userId) {
+      throw new AppError('Forbidden', 403);
+    }
+    return order;
+  }
+
+  async cancel(id: string, userId: string | undefined, reason?: string) {
+    const order = await Order.findById(id);
+    if (!order) throw new AppError('Order not found', 404);
+    if (userId && String(order.userId) !== userId) {
+      throw new AppError('Forbidden', 403);
+    }
+    if (['cancelled', 'delivered', 'shipped'].includes(order.status)) {
+      throw new AppError('Order cannot be cancelled', 422);
+    }
+    order.status = 'cancelled';
+    order.cancelReason = reason;
+    await order.save();
+    if (order.userId) {
+      await notificationService.notifyOrderEvent(String(order.userId), 'cancelled', order.orderNumber);
+    }
+    try {
+      await sendOrderStatusEmail({
+        to: order.customer.email,
+        orderNumber: order.orderNumber,
+        status: 'cancelled',
+        total: order.total,
+      });
+    } catch {
+      // ignore
+    }
+    return order;
+  }
+
+  async requestReturn(id: string, userId: string | undefined, reason: string) {
+    const order = await Order.findById(id);
+    if (!order) throw new AppError('Order not found', 404);
+    if (userId && String(order.userId) !== userId) throw new AppError('Forbidden', 403);
+    order.returnRequest = { reason, status: 'requested', requestedAt: new Date() };
+    await order.save();
+    return order;
+  }
+
+  async requestExchange(id: string, userId: string | undefined, reason: string) {
+    const order = await Order.findById(id);
+    if (!order) throw new AppError('Order not found', 404);
+    if (userId && String(order.userId) !== userId) throw new AppError('Forbidden', 403);
+    order.exchangeRequest = { reason, status: 'requested', requestedAt: new Date() };
+    await order.save();
     return order;
   }
 }

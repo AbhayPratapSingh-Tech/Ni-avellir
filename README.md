@@ -2,12 +2,12 @@
 
 Premium gaming merchandise marketplace — a full-stack mobile commerce app.
 
-**Status: Demo-ready.** The mobile app and backend are implemented, wired, and typecheck cleanly. Cold start is onboarding → login/signup, then the shop.
+**Status: Live-API ready locally.** Mobile defaults to `dataSource: 'api'`. Run API + seed + Metro (see Quick Start). Mock mode still available by flipping `appConfig`.
 
 ## What's Included
 
-- **Mobile app** (bare React Native CLI, no Expo): Onboarding, Login, Signup, OTP, Forge (Home), Categories, Search, Products, Product Detail, Cart, Checkout, Order Confirmation, Orders, Order Details, Addresses, Wishlist, Account, and Edit Profile.
-- **Backend API** (Node.js + Express + MongoDB): products, cart quotes, orders, Razorpay + COD payments, health, seed script.
+- **Mobile app** (bare React Native CLI, no Expo): Onboarding, Login, Signup, OTP, Forgot/Reset/Change password, Sessions, Email verify, Forge (Home), Categories, Search, Products, Product Detail (+ reviews), Cart (+ coupons), Checkout, Order Confirmation, Orders, Order Details (cancel/return/exchange), Addresses, Wishlist, Notifications, Account, Edit Profile.
+- **Backend API** (Node.js + Express + MongoDB): auth/JWT, products, server cart, addresses, wishlist, coupons, reviews, notifications, serviceability, orders, Razorpay + COD payments, health, seed script.
 - **Shared package** (`@nidavellir/shared`): contracts, types, constants, Zod validation, and expanded mock catalog (~28 products).
 - **Payments**: demo sheet + `react-native-razorpay` when live keys return `intent.demoMode === false`.
 - **Account**: addresses CRUD, edit profile, orders with product images and details.
@@ -25,7 +25,10 @@ npm install
 # 2. Copy API env example + link RN modules under apps/mobile
 npm run setup
 
-# 3. Start Metro (mock catalog — no Mongo/API required)
+# 3. Live stack (current default in appConfig: dataSource 'api')
+#    Needs MongoDB Atlas URI (or local) in apps/api/.env.development
+npm run dev:api
+npm run seed --workspace apps/api
 npm run dev
 
 # 4. In another terminal, launch a device/simulator
@@ -35,17 +38,29 @@ npm run android
 npm run ios
 ```
 
-`npm run dev` starts the **React Native Metro bundler** for the mobile app in **mock** mode (`apps/mobile/src/config/appConfig.ts` → `dataSource: 'mock'`). You do **not** need MongoDB for the college demo.
+### Know the project is working
 
-### Optional: live API
+With API + Mongo up:
 
 ```bash
-# Needs MongoDB on mongodb://localhost:27017
-npm run setup                 # creates apps/api/.env.development if missing
-npm run dev:api
-npm run seed --workspace apps/api
-# then set appConfig.dataSource to 'api' and restart Metro
+npm run dev:api                          # Terminal 1 — Express on :4000
+npm run seed --workspace apps/api        # once (products, coupons, serviceability)
+npm run dev                              # Terminal 2 — Metro (mobile)
+curl -s http://localhost:4000/health     # expect {"service":"nidavellir-api","status":"ok"}
 ```
+
+Mobile `apps/mobile/src/config/appConfig.ts` should have `dataSource: 'api'` and `allowMockFallback: false` for the live path. Android emulator uses `10.0.2.2:4000`; iOS simulator uses `localhost:4000`.
+
+**College mock-only demo** (no Mongo): set `dataSource: 'mock'`, then only `npm run dev` + `npm run android` / `ios`.
+
+### Local API cURLs + JWT
+
+```bash
+# API must be listening — writes gitignored API_DETAILS.local.md
+python3 scripts/generate-api-details-local.py
+```
+
+That file is **gitignored** (contains live JWT). See also `DEVELOPER_GUIDE.md` / `AI_AGENT_GUIDE.md`.
 
 > After `npm install`, root `postinstall` builds `@nidavellir/shared`, and mobile `ensure-mobile-node-modules.js` restores RN symlinks for Android Gradle / Metro.
 
@@ -54,6 +69,7 @@ npm run seed --workspace apps/api
 - `AI_AGENT_GUIDE.md` — **required for AI agents**: keep mock/live API, payments, nav, and docs aligned on every change.
 - `PROJECT_INSIGHTS.md` — operating rules + live API / Razorpay switch notes.
 - `DEVELOPER_GUIDE.md` — feature→file map and run instructions.
+- `API_DETAILS.example.md` — how to generate local JWT/cURL sheet (`API_DETAILS.local.md`, gitignored).
 - `ARCHITECTURE.md` — full architecture plan.
 - `INSTALLATION.md` — native tooling prerequisites.
 - `TODO.md` / `PROJECT_PROGRESS.md` — project status and roadmap.

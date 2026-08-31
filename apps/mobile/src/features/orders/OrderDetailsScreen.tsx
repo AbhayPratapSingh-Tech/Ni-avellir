@@ -1,10 +1,14 @@
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
 import { useAppSelector } from '../../app/store';
+import { useToast } from '../../components/ui/Toast';
 import { formatInr } from '../../lib/productMedia';
+import { orderRepository } from '../../services/data/orderRepository';
+import { getApiErrorMessage } from '../../services/api/apiClient';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -31,12 +35,20 @@ type TimelineStep = { key: string; label: string; done: boolean; active: boolean
 function buildTimeline(status: string): TimelineStep[] {
   const normalized = status.toLowerCase();
   const delivered = normalized.includes('deliver');
+  const cancelled = normalized.includes('cancel');
   const confirmed =
     delivered ||
     normalized.includes('paid') ||
     normalized.includes('confirm') ||
     normalized.includes('ship');
   const pendingPayment = normalized.includes('pending');
+
+  if (cancelled) {
+    return [
+      { key: 'placed', label: 'Order placed', done: true, active: false },
+      { key: 'cancelled', label: 'Cancelled', done: true, active: true },
+    ];
+  }
 
   return [
     { key: 'placed', label: 'Order placed', done: true, active: false },
@@ -64,9 +76,12 @@ function buildTimeline(status: string): TimelineStep[] {
 export function OrderDetailsScreen() {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<Route>();
+  const toast = useToast();
   const order = useAppSelector((state) =>
     state.orders.items.find((item) => item.id === route.params.orderId),
   );
+  const [busy, setBusy] = useState(false);
+  const [reason, setReason] = useState('');
 
   if (!order) {
     return (
@@ -92,6 +107,43 @@ export function OrderDetailsScreen() {
 
   const timeline = buildTimeline(order.status);
   const address = order.shippingAddress;
+  const statusLower = order.status.toLowerCase();
+  const canCancel =
+    !statusLower.includes('cancel') &&
+    !statusLower.includes('deliver') &&
+    !statusLower.includes('ship');
+  const canReturnOrExchange =
+    statusLower.includes('deliver') || statusLower.includes('confirm') || statusLower.includes('paid');
+
+  const runAction = async (kind: 'cancel' | 'return' | 'exchange') => {
+    const note = reason.trim() || (kind === 'cancel' ? 'Changed mind' : 'Issue with order');
+    setBusy(true);
+    try {
+      if (kind === 'cancel') await orderRepository.cancel(order.id, note);
+      if (kind === 'return') await orderRepository.requestReturn(order.id, note);
+      if (kind === 'exchange') await orderRepository.requestExchange(order.id, note);
+      toast.show(
+        kind === 'cancel' ? 'Order cancelled' : kind === 'return' ? 'Return requested' : 'Exchange requested',
+      );
+      setReason('');
+      await orderRepository.syncToStore();
+    } catch (error) {
+      toast.show(getApiErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmAction = (kind: 'cancel' | 'return' | 'exchange') => {
+    Alert.alert(
+      kind === 'cancel' ? 'Cancel order?' : kind === 'return' ? 'Request return?' : 'Request exchange?',
+      'You can add an optional reason below before confirming.',
+      [
+        { text: 'Back', style: 'cancel' },
+        { text: 'Confirm', style: kind === 'cancel' ? 'destructive' : 'default', onPress: () => void runAction(kind) },
+      ],
+    );
+  };
 
   return (
     <Screen edges={[]} style={styles.screen}>
@@ -180,12 +232,12 @@ export function OrderDetailsScreen() {
             </Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Taxes</Text>
+            <Text style={styles.summaryLabel}>Tax</Text>
             <Text style={styles.summaryValue}>{formatInr(order.tax)}</Text>
           </View>
-          <View style={[styles.summaryRow, styles.summaryTotal]}>
-            <Text style={styles.totalLabel}>Final price</Text>
-            <Text style={styles.totalValue}>{formatInr(order.total)}</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Total</Text>
+            <Text style={styles.summaryValue}>{formatInr(order.total)}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Payment</Text>
@@ -206,12 +258,63 @@ export function OrderDetailsScreen() {
             </View>
           </>
         ) : null}
+
+        {(canCancel || canReturnOrExchange) && (
+          <>
+            <Text style={styles.sectionTitle}>Need help?</Text>
+            <View style={styles.card}>
+              <TextInput
+                style={styles.reasonInput}
+                placeholder="Optional reason"
+                placeholderTextColor={colors.textMuted}
+                value={reason}
+                onChangeText={setReason}
+              />
+              {canCancel ? (
+                <Pressable
+                  style={[styles.actionBtn, styles.dangerBtn]}
+                  disabled={busy}
+                  onPress={() => confirmAction('cancel')}
+                >
+                  <Text style={styles.actionBtnText}>Cancel order</Text>
+                </Pressable>
+              ) : null}
+              {canReturnOrExchange ? (
+                <>
+                  <Pressable
+                    style={styles.actionBtn}
+                    disabled={busy}
+                    onPress={() => confirmAction('return')}
+                  >
+                    <Text style={styles.actionBtnDark}>Request return</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.actionBtn}
+                    disabled={busy}
+                    onPress={() => confirmAction('exchange')}
+                  >
+                    <Text style={styles.actionBtnDark}>Request exchange</Text>
+                  </Pressable>
+                </>
+              ) : null}
+            </View>
+          </>
+        )}
       </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  actionBtn: {
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: spacing.sm,
+    paddingVertical: 12,
+  },
+  actionBtnDark: { color: colors.text, fontWeight: '800', textAlign: 'center' },
+  actionBtnText: { color: colors.onAccent, fontWeight: '800', textAlign: 'center' },
   addressLine: {
     color: colors.textMuted,
     fontSize: 14,
@@ -248,6 +351,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
   },
+  dangerBtn: { backgroundColor: colors.danger, borderWidth: 0 },
   dot: {
     borderRadius: 7,
     height: 14,
@@ -269,15 +373,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: spacing.xl,
   },
-  emptyTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  fallbackText: {
-    color: colors.textMuted,
-    fontWeight: '800',
-  },
+  emptyTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  fallbackText: { fontSize: 18 },
   headerCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -286,76 +383,33 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     padding: spacing.md,
   },
-  headerTop: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  lineCopy: {
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  lineImage: {
-    backgroundColor: colors.background,
-    borderRadius: 8,
-    height: 64,
-    marginRight: spacing.md,
-    width: 64,
-  },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between' },
+  lineCopy: { flex: 1, marginHorizontal: spacing.sm },
+  lineImage: { borderRadius: 8, height: 56, width: 56 },
   lineImageFallback: {
     alignItems: 'center',
+    backgroundColor: colors.background,
     justifyContent: 'center',
   },
-  lineMeta: {
-    color: colors.textMuted,
-    fontSize: 13,
-    marginTop: 4,
-  },
-  lineName: {
+  lineMeta: { color: colors.textMuted, fontSize: 12, marginTop: 4 },
+  lineName: { color: colors.text, fontWeight: '700' },
+  lineRow: { alignItems: 'center', flexDirection: 'row', marginBottom: spacing.sm },
+  lineTotal: { color: colors.text, fontWeight: '800' },
+  metaLine: { color: colors.textMuted, fontSize: 13, marginTop: 4 },
+  orderNumber: { color: colors.text, flex: 1, fontSize: 16, fontWeight: '800' },
+  rail: { flex: 1, marginVertical: 2, width: 2 },
+  railOff: { backgroundColor: colors.border },
+  railOn: { backgroundColor: colors.accent },
+  reasonInput: {
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
     color: colors.text,
-    fontSize: 14,
-    fontWeight: '700',
+    marginBottom: spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  lineRow: {
-    alignItems: 'center',
-    borderBottomColor: colors.border,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    paddingVertical: spacing.sm,
-  },
-  lineTotal: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  metaLine: {
-    color: colors.textMuted,
-    fontSize: 13,
-    marginTop: 2,
-  },
-  orderNumber: {
-    color: colors.text,
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '800',
-    marginRight: spacing.sm,
-  },
-  rail: {
-    flex: 1,
-    marginVertical: 2,
-    width: 2,
-  },
-  railOff: {
-    backgroundColor: colors.border,
-  },
-  railOn: {
-    backgroundColor: colors.accent,
-  },
-  screen: {
-    backgroundColor: colors.background,
-    flex: 1,
-  },
+  screen: { backgroundColor: colors.background, flex: 1 },
   sectionTitle: {
     color: colors.text,
     fontSize: 15,
@@ -364,74 +418,29 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   statusBadge: {
-    backgroundColor: colors.accentSoft,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    backgroundColor: colors.background,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
-  statusText: {
-    color: colors.text,
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'capitalize',
-  },
-  summaryLabel: {
-    color: colors.textMuted,
-    fontSize: 14,
-  },
+  statusText: { color: colors.text, fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  summaryLabel: { color: colors.textMuted },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 4,
+    marginBottom: 8,
   },
-  summaryTotal: {
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-  },
-  summaryValue: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  summaryValue: { color: colors.text, fontWeight: '700' },
   timelineCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
     marginBottom: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    padding: spacing.md,
   },
-  timelineLabel: {
-    color: colors.textMuted,
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-    paddingBottom: spacing.md,
-  },
-  timelineLabelOn: {
-    color: colors.text,
-    fontWeight: '800',
-  },
-  timelineRail: {
-    alignItems: 'center',
-    marginRight: spacing.md,
-    width: 14,
-  },
-  timelineRow: {
-    flexDirection: 'row',
-    minHeight: 36,
-  },
-  totalLabel: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  totalValue: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '900',
-  },
+  timelineLabel: { color: colors.textMuted, flex: 1, fontSize: 14, marginLeft: spacing.sm },
+  timelineLabelOn: { color: colors.text, fontWeight: '700' },
+  timelineRail: { alignItems: 'center', width: 14 },
+  timelineRow: { flexDirection: 'row', minHeight: 36 },
 });

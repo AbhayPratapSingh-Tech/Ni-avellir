@@ -1,4 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { appConfig } from '../../config/appConfig';
+import { addressRepository } from '../../services/data/addressRepository';
+import { authRepository } from '../../services/data/authRepository';
+import { useToast } from '../../components/ui/Toast';
 import {
   Alert,
   FlatList,
@@ -91,11 +96,20 @@ const FIELD_META: Array<{
 
 export function AddressesScreen() {
   const dispatch = useAppDispatch();
+  const toast = useToast();
   const addresses = useAppSelector((state) => state.addresses.items);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [tried, setTried] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<keyof AddressFields, boolean>>>({});
+
+  useFocusEffect(
+    useCallback(() => {
+      if (appConfig.dataSource === 'api') {
+        void addressRepository.syncToStore();
+      }
+    }, []),
+  );
 
   const errors = useMemo(
     () =>
@@ -136,21 +150,29 @@ export function AddressesScreen() {
     setFormOpen(true);
   };
 
-  const save = () => {
+  const save = async () => {
     setTried(true);
     if (hasAddressErrors(errors)) return;
-    dispatch(
-      upsertAddress({
-        id: form.id,
-        fullName: form.fullName.trim(),
-        phone: digitsOnly(form.phone),
-        line1: form.line1.trim(),
-        city: form.city.trim(),
-        state: form.state.trim(),
-        postalCode: digitsOnly(form.postalCode),
-        ...(form.id ? {} : { isDefault: addresses.length === 0 }),
-      }),
-    );
+    const payload = {
+      fullName: form.fullName.trim(),
+      phone: digitsOnly(form.phone),
+      line1: form.line1.trim(),
+      city: form.city.trim(),
+      state: form.state.trim(),
+      postalCode: digitsOnly(form.postalCode),
+      ...(form.id ? {} : { isDefault: addresses.length === 0 }),
+    };
+    if (appConfig.dataSource === 'api') {
+      try {
+        if (form.id) await addressRepository.update(form.id, payload);
+        else await addressRepository.create(payload);
+      } catch (error) {
+        toast.show(authRepository.getApiErrorMessage(error));
+        return;
+      }
+    } else {
+      dispatch(upsertAddress({ id: form.id, ...payload }));
+    }
     setFormOpen(false);
   };
 
@@ -160,7 +182,13 @@ export function AddressesScreen() {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => dispatch(deleteAddress(address.id)),
+        onPress: () => {
+          if (appConfig.dataSource === 'api') {
+            void addressRepository.remove(address.id);
+            return;
+          }
+          dispatch(deleteAddress(address.id));
+        },
       },
     ]);
   };
@@ -201,7 +229,15 @@ export function AddressesScreen() {
             <Text style={styles.line}>Phone {item.phone}</Text>
             <View style={styles.actions}>
               {!item.isDefault ? (
-                <Pressable onPress={() => dispatch(setDefaultAddress(item.id))}>
+                <Pressable
+                  onPress={() => {
+                    if (appConfig.dataSource === 'api') {
+                      void addressRepository.setDefault(item.id);
+                      return;
+                    }
+                    dispatch(setDefaultAddress(item.id));
+                  }}
+                >
                   <Text style={styles.actionLink}>Set default</Text>
                 </Pressable>
               ) : (

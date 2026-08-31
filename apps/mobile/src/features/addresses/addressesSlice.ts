@@ -116,9 +116,12 @@ const addressesSlice = createSlice({
         item.isDefault = item.id === action.payload;
       });
     },
+    setAddresses(state, action: PayloadAction<SavedAddress[]>) {
+      state.items = action.payload;
+    },
   },
 });
 
-export const { upsertAddress, updateAddress, deleteAddress, setDefaultAddress } =
+export const { upsertAddress, updateAddress, deleteAddress, setDefaultAddress, setAddresses } =
   addressesSlice.actions;
 export const addressesReducer = addressesSlice.reducer;

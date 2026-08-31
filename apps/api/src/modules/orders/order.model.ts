@@ -1,6 +1,7 @@
-import { Schema, model, type Model } from 'mongoose';
+import { Schema, model, type Model, type Types } from 'mongoose';
 
 export interface OrderDocument {
+  userId?: Types.ObjectId;
   orderNumber: string;
   customer: {
     name: string;
@@ -25,18 +26,31 @@ export interface OrderDocument {
   };
   paymentMethod: string;
   subtotal: number;
+  discount: number;
   shipping: number;
   tax: number;
   total: number;
   currency: string;
   status: string;
   estimatedDelivery: string;
+  cancelReason?: string;
+  returnRequest?: {
+    reason: string;
+    status: 'requested' | 'approved' | 'rejected' | 'completed';
+    requestedAt: Date;
+  };
+  exchangeRequest?: {
+    reason: string;
+    status: 'requested' | 'approved' | 'rejected' | 'completed';
+    requestedAt: Date;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
 
 const orderSchema = new Schema<OrderDocument>(
   {
+    userId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     orderNumber: { type: String, required: true, unique: true },
     customer: {
       name: { type: String, required: true },
@@ -63,12 +77,24 @@ const orderSchema = new Schema<OrderDocument>(
     },
     paymentMethod: { type: String, required: true },
     subtotal: { type: Number, required: true },
+    discount: { type: Number, default: 0 },
     shipping: { type: Number, required: true },
     tax: { type: Number, required: true },
     total: { type: Number, required: true },
     currency: { type: String, default: 'INR' },
     status: { type: String, default: 'confirmed' },
     estimatedDelivery: { type: String, required: true },
+    cancelReason: { type: String },
+    returnRequest: {
+      reason: { type: String },
+      status: { type: String, enum: ['requested', 'approved', 'rejected', 'completed'] },
+      requestedAt: { type: Date },
+    },
+    exchangeRequest: {
+      reason: { type: String },
+      status: { type: String, enum: ['requested', 'approved', 'rejected', 'completed'] },
+      requestedAt: { type: Date },
+    },
   },
   { timestamps: true },
 );

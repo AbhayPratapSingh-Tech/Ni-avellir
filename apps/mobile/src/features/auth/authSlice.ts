@@ -1,4 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { appConfig } from '../../config/appConfig';
+import { authRepository } from '../../services/data/authRepository';
 import { clearSessionTokens } from '../../services/api/sessionTokens';
 
 export type AuthUser = {
@@ -77,6 +79,10 @@ export const authReducer = authSlice.reducer;
  * Returns the user to the shop as guest (does not dump onto Onboarding).
  */
 export function signOutAndClearSession() {
-  clearSessionTokens();
+  if (appConfig.dataSource === 'api') {
+    void authRepository.logout();
+  } else {
+    clearSessionTokens();
+  }
   return enterGuest();
 }
