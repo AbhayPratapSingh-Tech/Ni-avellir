@@ -1,7 +1,7 @@
+import express from 'express';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import express from 'express';
 import mongoSanitize from 'express-mongo-sanitize';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
@@ -16,6 +16,7 @@ import { createProductRouter } from './modules/products/product.routes.js';
 import { createCartRouter } from './modules/cart/cart.routes.js';
 import { createOrderRouter } from './modules/orders/order.routes.js';
 import { createPaymentRouter } from './modules/payments/payment.routes.js';
+import { createPaymentWebhookRouter } from './modules/payments/payment-webhook.routes.js';
 import { createAddressRouter } from './modules/addresses/address.routes.js';
 import { createWishlistRouter } from './modules/wishlist/wishlist.routes.js';
 import { createCouponRouter } from './modules/coupons/coupon.routes.js';
@@ -37,6 +38,11 @@ export function createApp(env: Env) {
   );
   app.use(compression());
   app.use(cookieParser());
+  app.use(
+    '/api/v1/payments/razorpay/webhook',
+    express.raw({ type: 'application/json' }),
+    createPaymentWebhookRouter(env),
+  );
   app.use(express.json({ limit: '1mb' }));
   app.use(mongoSanitize());
   app.use(guestSessionMiddleware);

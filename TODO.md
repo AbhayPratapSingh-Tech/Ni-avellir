@@ -31,7 +31,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 
 - [ ] **Shipment tracking** — carrier tracking numbers + timeline beyond status labels.
 - [ ] **Invoice / PDF** — downloadable tax invoice for orders.
-- [ ] **Payment webhooks** — Razorpay server webhooks (idempotent) beside client `/confirm` (see guide below when building).
+- [x] **Payment webhooks** — Razorpay `POST /payments/razorpay/webhook` (idempotent, raw-body HMAC verify) beside client `/confirm`.
 - [ ] **Push notifications (FCM / APNs)** — device tokens + backend fan-out (in-app Notifications API already exists).
 - [ ] **Automated tests** — Jest + RNTL + Supertest.
 - [ ] Coupon admin UI / CMS (API + seed only for now).

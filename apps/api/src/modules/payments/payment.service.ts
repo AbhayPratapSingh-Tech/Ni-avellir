@@ -4,6 +4,7 @@ import { AppError } from '../../common/errors/app-error.js';
 import { Order } from '../orders/order.model.js';
 import { Product } from '../products/product.model.js';
 import { Payment } from './payment.model.js';
+import { PaymentWebhookEvent } from './payment-webhook-event.model.js';
 import type {
   CreatePaymentIntentInput,
   CreatePaymentIntentResult,
@@ -11,6 +12,19 @@ import type {
   VerifyPaymentInput,
 } from './payment-provider.js';
 import { RazorpayProvider } from './providers/razorpay.provider.js';
+
+type RazorpayPaymentEntity = {
+  id?: string;
+  order_id?: string;
+  status?: string;
+};
+
+type RazorpayWebhookPayload = {
+  event: string;
+  payload?: {
+    payment?: { entity?: RazorpayPaymentEntity };
+  };
+};
 
 export class PaymentService {
   private readonly providers: Map<PaymentProviderCode, PaymentProvider>;
@@ -107,21 +121,61 @@ export class PaymentService {
       throw new AppError('Invalid payment signature', 400);
     }
 
-    payment.status = 'paid';
-    payment.providerPaymentId = input.providerPaymentId;
-    await payment.save();
+    return this.markRazorpayPaid(payment, input.providerPaymentId);
+  }
 
-    if (order.status === 'pending_payment') {
-      await this.finalizePaidOrder(order);
+  async handleRazorpayWebhook(input: {
+    rawBody: Buffer;
+    signature?: string;
+    eventId?: string;
+  }) {
+    if (this.razorpay.isDemoMode) {
+      throw new AppError('Webhooks require Razorpay Test/Live keys (demo mode is active)', 400);
+    }
+    if (!this.razorpay.hasWebhookSecret) {
+      throw new AppError('RAZORPAY_WEBHOOK_SECRET is not configured', 503);
+    }
+    if (!this.razorpay.verifyWebhookSignature(input.rawBody, input.signature)) {
+      throw new AppError('Invalid webhook signature', 400);
     }
 
-    return { order, payment, alreadyPaid: false };
+    let payload: RazorpayWebhookPayload;
+    try {
+      payload = JSON.parse(input.rawBody.toString('utf8')) as RazorpayWebhookPayload;
+    } catch {
+      throw new AppError('Invalid webhook payload', 400);
+    }
+
+    const paymentEntity = payload.payload?.payment?.entity;
+    const dedupeId =
+      input.eventId ??
+      `${payload.event}:${paymentEntity?.id ?? paymentEntity?.order_id ?? 'unknown'}`;
+
+    const existing = await PaymentWebhookEvent.findOne({ eventId: dedupeId });
+    if (existing) {
+      return { duplicate: true as const, status: existing.status };
+    }
+
+    const result = await this.processRazorpayWebhookEvent(payload);
+    await PaymentWebhookEvent.create({
+      eventId: dedupeId,
+      event: payload.event,
+      provider: 'razorpay',
+      providerPaymentId: result.providerPaymentId,
+      providerIntentId: result.providerIntentId,
+      status: result.status,
+    });
+
+    return result;
   }
 
   /** Test/demo checkout: mint a valid signed payment without opening Razorpay SDK. */
   async completeDemoRazorpayPayment(orderId: string) {
-    if (!this.razorpay.isDemoMode && process.env.NODE_ENV === 'production') {
-      throw new AppError('Demo payment is disabled', 403);
+    if (!this.razorpay.isDemoMode) {
+      throw new AppError(
+        'Demo payment is disabled when Razorpay keys are configured — use native checkout',
+        403,
+      );
     }
 
     const order = await Order.findById(orderId);
@@ -147,6 +201,79 @@ export class PaymentService {
       providerPaymentId,
       signature,
     });
+  }
+
+  private async processRazorpayWebhookEvent(payload: RazorpayWebhookPayload) {
+    const paymentEntity = payload.payload?.payment?.entity;
+    const providerIntentId = paymentEntity?.order_id;
+    const providerPaymentId = paymentEntity?.id;
+
+    if (payload.event === 'payment.captured') {
+      if (!providerIntentId || !providerPaymentId) {
+        throw new AppError('Webhook missing payment identifiers', 400);
+      }
+      const payment = await Payment.findOne({ providerIntentId });
+      if (!payment) {
+        throw new AppError('Payment intent not found for webhook', 404);
+      }
+      await this.markRazorpayPaid(payment, providerPaymentId, {
+        webhookEvent: payload.event,
+        providerPaymentId,
+      });
+      return {
+        status: 'processed' as const,
+        providerIntentId,
+        providerPaymentId,
+      };
+    }
+
+    if (payload.event === 'payment.failed') {
+      if (!providerIntentId) {
+        return { status: 'ignored' as const };
+      }
+      const payment = await Payment.findOne({ providerIntentId });
+      if (payment && payment.status !== 'paid') {
+        payment.status = 'failed';
+        if (providerPaymentId) payment.providerPaymentId = providerPaymentId;
+        await payment.save();
+      }
+      return {
+        status: 'processed' as const,
+        providerIntentId,
+        providerPaymentId,
+      };
+    }
+
+    return {
+      status: 'ignored' as const,
+      providerIntentId,
+      providerPaymentId,
+    };
+  }
+
+  private async markRazorpayPaid(
+    payment: InstanceType<typeof Payment>,
+    providerPaymentId: string,
+    raw?: Record<string, unknown>,
+  ) {
+    const order = await Order.findById(payment.orderId);
+    if (!order) {
+      throw new AppError('Order not found', 404);
+    }
+    if (payment.status === 'paid') {
+      return { order, payment, alreadyPaid: true };
+    }
+
+    payment.status = 'paid';
+    payment.providerPaymentId = providerPaymentId;
+    if (raw) payment.raw = raw;
+    await payment.save();
+
+    if (order.status === 'pending_payment') {
+      await this.finalizePaidOrder(order);
+    }
+
+    return { order, payment, alreadyPaid: false };
   }
 
   private async finalizePaidOrder(order: InstanceType<typeof Order>) {

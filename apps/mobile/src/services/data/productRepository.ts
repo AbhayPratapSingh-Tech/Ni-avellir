@@ -323,7 +323,11 @@ export class ProductRepository {
     return this.withFallback(
       async () => {
         const { data } = await apiClient.post('/orders', input);
-        return data.data.order;
+        const order = data.data.order as { id?: string; _id?: string };
+        return {
+          ...order,
+          id: String(order.id ?? order._id),
+        };
       },
       () => {
       let subtotal = 0;
@@ -417,7 +421,11 @@ export class ProductRepository {
     return this.withFallback(
       async () => {
         const { data } = await apiClient.post('/payments/razorpay/confirm', input);
-        return data.data.order;
+        const order = data.data.order as { id?: string; _id?: string };
+        return {
+          ...order,
+          id: String(order.id ?? order._id ?? input.orderId),
+        };
       },
       () => ({
         id: input.orderId,

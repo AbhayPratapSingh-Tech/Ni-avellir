@@ -143,6 +143,7 @@ Mobile defaults to **mock** via `apps/mobile/src/config/appConfig.ts`.
 - `POST /api/v1/orders/:id/cancel|return|exchange` — authenticated post-purchase actions.
 - `POST /api/v1/payments/intents` — creates Razorpay order (or demo intent).
 - `POST /api/v1/payments/razorpay/confirm` — HMAC verify → mark payment + order `paid` + decrement stock.
+- `POST /api/v1/payments/razorpay/webhook` — Razorpay server webhook (raw body + `X-Razorpay-Signature`); idempotent via `PaymentWebhookEvent`; handles `payment.captured` / `payment.failed`.
 - `POST /api/v1/payments/razorpay/demo-complete` — college/test path without charging (blocked in production when real keys are set).
 
 **Mobile sync**
@@ -155,7 +156,7 @@ Mobile defaults to **mock** via `apps/mobile/src/config/appConfig.ts`.
 - Leave `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` as `replace-with-*` → **demo mode** (signed dummy intents, same HMAC verify path).
 - Or paste Dashboard **Test Mode** keys (`rzp_test_…`) → real Razorpay Orders API create + verify.
 - Mobile: Checkout branches on `intent.demoMode` — demo sheet + `/demo-complete`, or `react-native-razorpay` + `/confirm`.
-- Never commit real keys. Prefer Test Mode until production go-live; webhook idempotency remains a follow-up.
+- Never commit real keys. Prefer Test Mode until production go-live; set `RAZORPAY_WEBHOOK_SECRET` for webhooks (ngrok URL locally).
 - Agent rules for future edits: **`AI_AGENT_GUIDE.md`** + `.cursor/rules/nidavellir-agent-alignment.mdc`.
 
 ## `intent.demoMode` — how to branch checkout (college demo → live)
@@ -210,7 +211,7 @@ Today the app branches on `intent.demoMode` in `CheckoutScreen`: demo sheet + `/
 4. Mobile must call **`/razorpay/confirm`** after native Checkout success — **not** `/razorpay/demo-complete`.
 5. Ensure production blocks demo-complete when real keys are configured (`PaymentService.completeDemoRazorpayPayment` already rejects demo in `NODE_ENV=production` when not in provider demo mode).
 6. Rebuild native apps after adding `react-native-razorpay` (pods / Gradle); New Architecture is currently off, which is preferred for this SDK.
-7. Optional later: Razorpay webhooks (idempotent) as a second source of truth besides client confirm.
+7. Razorpay webhooks: `POST /api/v1/payments/razorpay/webhook` + `RAZORPAY_WEBHOOK_SECRET` (backup to client `/confirm`; requires Test/Live keys + public HTTPS or ngrok).
 
 ### Quick sanity check
 

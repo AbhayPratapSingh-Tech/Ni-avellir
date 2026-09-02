@@ -3,13 +3,10 @@ import type { Env } from '../../config/env.js';
 import { asyncHandler } from '../../common/middleware/async-handler.js';
 import { createPaymentStack } from './payment.factory.js';
 
-export function createPaymentRouter(env: Env) {
+/** Mounted before express.json() so webhook signature verification uses the raw body. */
+export function createPaymentWebhookRouter(env: Env) {
   const router = Router();
   const { controller } = createPaymentStack(env);
-
-  router.post('/intents', asyncHandler(controller.createIntent));
-  router.post('/razorpay/confirm', asyncHandler(controller.confirm));
-  router.post('/razorpay/demo-complete', asyncHandler(controller.demoComplete));
-
+  router.post('/', asyncHandler(controller.razorpayWebhook));
   return router;
 }

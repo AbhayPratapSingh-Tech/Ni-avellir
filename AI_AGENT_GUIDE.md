@@ -169,7 +169,7 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 
 Most auth/cart/orders live paths are implemented. Still deferred (see `TODO.md`):
 
-- Razorpay **webhooks** (idempotent) beside client confirm.
+- Razorpay **webhooks** implemented (`POST /payments/razorpay/webhook`, idempotent) beside client `/confirm`.
 - **FCM / APNs** push (in-app notifications inbox already works).
 - Shipment tracking, invoice PDF, automated tests.
 - **HTTPS / production deploy** (Railway/Render/AWS + store builds) with real secrets.

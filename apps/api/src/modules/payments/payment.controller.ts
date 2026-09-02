@@ -59,4 +59,21 @@ export class PaymentController {
       },
     });
   };
+
+  /** Razorpay server webhook — idempotent backup to client /confirm. */
+  razorpayWebhook = async (request: Request, response: Response) => {
+    const signature = request.headers['x-razorpay-signature'];
+    const eventId = request.headers['x-razorpay-event-id'];
+    const rawBody = request.body;
+    if (!Buffer.isBuffer(rawBody)) {
+      response.status(400).json({ error: { message: 'Webhook requires raw JSON body' } });
+      return;
+    }
+    const result = await this.service.handleRazorpayWebhook({
+      rawBody,
+      signature: typeof signature === 'string' ? signature : undefined,
+      eventId: typeof eventId === 'string' ? eventId : undefined,
+    });
+    response.json({ data: result });
+  };
 }

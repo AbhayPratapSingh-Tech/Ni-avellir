@@ -10,7 +10,13 @@ node_modules/
 !.env.*.example
 onlyme.md
 
-# Local-only project notes
+# API credentials (Razorpay keys, JWT secrets, Mongo URI, etc.) — never commit
+apps/api/.env.development
+apps/api/.env.staging
+apps/api/.env.production
+apps/api/.env.local
+
+# Local-only project notes (may contain API keys / endpoints)
 LOCAL_COMMANDS.md
 API_DETAILS.local.md
 API_DETAILS.md
