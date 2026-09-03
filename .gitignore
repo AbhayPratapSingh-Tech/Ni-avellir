@@ -19,8 +19,10 @@ apps/api/.env.local
 # Local-only project notes (may contain API keys / endpoints)
 LOCAL_COMMANDS.md
 API_DETAILS.local.md
+API_DETAILS.live.local.md
 API_DETAILS.md
 **/API_DETAILS.local.md
+**/API_DETAILS.live.local.md
 
 # Signing credentials - never commit
 *.jks

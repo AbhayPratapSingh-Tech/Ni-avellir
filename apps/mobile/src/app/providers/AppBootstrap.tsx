@@ -4,6 +4,11 @@ import { appConfig } from '../../config/appConfig';
 import { useAppDispatch } from '../store';
 import { signIn } from '../../features/auth/authSlice';
 import { hydrateSessionTokensFromSecureStore } from '../../services/api/sessionTokens';
+import {
+  pingApiHealth,
+  startApiKeepAlive,
+  stopApiKeepAlive,
+} from '../../services/api/wakeApiServer';
 import { authRepository } from '../../services/data/authRepository';
 import { cartRepository } from '../../services/data/cartRepository';
 import { colors } from '../../theme/tokens';
@@ -15,7 +20,12 @@ export function AppBootstrap({ children }: PropsWithChildren) {
   useEffect(() => {
     if (appConfig.dataSource !== 'api') return;
     let mounted = true;
+    startApiKeepAlive();
     (async () => {
+      // Wake Render Free before auth/cart so the first real calls hit a warm server.
+      await pingApiHealth();
+      if (!mounted) return;
+
       const hydrated = await hydrateSessionTokensFromSecureStore();
       if (hydrated) {
         const user = await authRepository.me();
@@ -39,6 +49,7 @@ export function AppBootstrap({ children }: PropsWithChildren) {
     })();
     return () => {
       mounted = false;
+      stopApiKeepAlive();
     };
   }, [dispatch]);
 

@@ -14,6 +14,7 @@ Related: `PROJECT_INSIGHTS.md`, `ARCHITECTURE.md`, `apps/mobile/src/config/appCo
 4. **Branch on `intent.demoMode`** for Razorpay UI (demo sheet vs `react-native-razorpay` + `/confirm`).
 5. **New Architecture stays off** until libs are stable (see Podfile / `gradle.properties`).
 6. **Prefer repository + Redux patterns already in the app** — do not invent parallel data layers.
+7. **Never create a git commit unless the user explicitly asks** in that message. Draft commit message lines / `git status` summaries are fine; do **not** run `git commit` (or `git push`) on your own. If unclear, ask first. Same rule applies after “give me commit lines” — lines only, no commit.
 
 ---
 
@@ -25,7 +26,10 @@ File: `apps/mobile/src/config/appConfig.ts`
 |---------|--------------|----------------|
 | `dataSource` | `'mock'` | `'api'` |
 | `allowMockFallback` | `true` | `false` |
-| `apiBaseUrl` | emulator host `:4000/api/v1` | HTTPS staging/prod `/api/v1` |
+| `apiBaseUrl` | emulator host `:4000/api/v1` | `https://ni-avellir.onrender.com/api/v1` (Render) |
+| `apiKeepAliveIntervalMs` | n/a | `20 * 60 * 1000` — silent `/health` while app is foregrounded |
+
+**Render Free cold starts:** `AppBootstrap` awaits `pingApiHealth()` then starts `startApiKeepAlive()` (`wakeApiServer.ts`). That reduces sleep mid-demo; it is not a substitute for a paid always-on plan.
 
 Also required on the server: Mongo, JWT secrets, Razorpay Test then Live keys (`apps/api/.env.*`).
 
@@ -45,7 +49,8 @@ npm run dev          # Metro
 npm run android      # or ios (+ pod install first time)
 ```
 
-Confirm API: `curl -s http://localhost:4000/health`  
+Confirm API: `curl -sS -m 90 https://ni-avellir.onrender.com/health` (live) or `curl -s http://localhost:4000/health` (local)  
+Postman: `API_DETAILS.live.example.md` · `python3 scripts/generate-api-details-local.py --live`  
 Local JWT/cURLs (gitignored): `python3 scripts/generate-api-details-local.py`
 
 **College mock (no Mongo):** set `dataSource: 'mock'`, then `npm run dev` + device only.
@@ -172,5 +177,5 @@ Most auth/cart/orders live paths are implemented. Still deferred (see `TODO.md`)
 - Razorpay **webhooks** implemented (`POST /payments/razorpay/webhook`, idempotent) beside client `/confirm`.
 - **FCM / APNs** push (in-app notifications inbox already works).
 - Shipment tracking, invoice PDF, automated tests.
-- **HTTPS / production deploy** (Railway/Render/AWS + store builds) with real secrets.
+- **HTTPS / production deploy** (Railway/Render/AWS + store builds) with real secrets. Render: `render.yaml` + `npm run build:api` / `npm run start:api` (not Metro).
 - Strict `allowMockFallback: false` on staging/prod store builds.

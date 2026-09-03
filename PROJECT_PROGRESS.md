@@ -2,11 +2,21 @@
 
 ## Status
 
-The Niðavellir marketplace is **functionally complete** for a college final-semester demo. The mobile app (React Native) and backend API (Node.js/Express/MongoDB) are implemented, typecheck cleanly, and are wired with a data-source abstraction that supports both zero-setup mock mode and a live API mode.
+The Niðavellir marketplace is **demo-ready on a live hosted API**. Mobile defaults to `dataSource: 'api'` against **Render Free** (`https://ni-avellir.onrender.com/api/v1`) + MongoDB Atlas. Razorpay Test Mode + webhooks are wired. Mock mode remains available for offline college demos.
 
-The shop now opens behind an onboarding + login/signup gate. Commerce screens use a light esports theme (mist background, ink type, cobalt accent).
+The shop opens behind onboarding + login/signup. Commerce screens use a light esports theme.
 
 ## Completed
+
+### Phase 1–9 (college demo foundation)
+See sections below / git history: architecture, monorepo, Express API, RN shop, auth gate, catalog/PDP/account polish.
+
+### Live API (Atlas) + hosted deploy
+- Auth JWT, OTP (demo/SMS), Keychain hydrate, server cart + coupons, addresses, wishlist, reviews, notifications, serviceability, orders, cancel/return/exchange.
+- Razorpay: intents, native SDK confirm, webhook idempotency, demo-complete blocked when real keys set.
+- **Render Free** deploy (`render.yaml`, `build:api` / `start:api`) — health OK at `/health`.
+- Mobile `apiBaseUrl` → Render; silent `/health` keep-alive on bootstrap + every 20 min (`wakeApiServer.ts`).
+- Postman/cURL docs: `API_DETAILS.live.example.md` + `generate-api-details-local.py --live`.
 
 ### Phase 1: Architecture
 - Full architecture plan (monorepo, bare React Native CLI, backend, shared contracts).
@@ -15,7 +25,7 @@ The shop now opens behind an onboarding + login/signup gate. Commerce screens us
 - All required Phase 2 business decisions finalized.
 
 ### Phase 2: Project Setup
-- pnpm monorepo with Turborepo.
+- npm monorepo with Turborepo (workspaces under `apps/*`, `packages/*`).
 - Bare React Native mobile app with committed `ios/` + `android/`.
 - Node.js/Express backend API.
 - Shared package (`@nidavellir/shared`) for contracts/types/validation.
@@ -29,7 +39,7 @@ The shop now opens behind an onboarding + login/signup gate. Commerce screens us
 - Order model/service/controller/routes (create, list, getById).
 - Payment provider abstraction (Razorpay + COD).
 - Email provider abstraction (Resend).
-- Seed script + `pnpm --filter api seed`.
+- Seed script + workspace seed.
 
 ### Phase 4: Mobile Foundation
 - Config layer for mock-to-API switching (`config/appConfig.ts`).
@@ -77,7 +87,7 @@ The shop now opens behind an onboarding + login/signup gate. Commerce screens us
 
 ## Next Step
 
-Optional hardening: persist auth + orders + avatar across reloads, write automated tests (Jest + React Native Testing Library + Supertest), and full deployment docs. The core app is complete and demo-ready.
+Optional: automated tests, FCM push, store builds (Play / TestFlight), paid always-on Render if Free cold starts are unacceptable. Core app + hosted API are demo-ready.
 
 ## Approval Log
 
@@ -90,5 +100,6 @@ Optional hardening: persist auth + orders + avatar across reloads, write automat
 - Phase 7 developer guide: **Complete**.
 - Phase 8 auth gate + shop UI polish: **Complete**.
 - Phase 9 catalog / PDP / Account polish: **Complete**.
+- Live API + Render hosting: **Complete** (Free tier; store deploy remaining).
 - Phase 10 testing hardening: Not started (optional).
-- Phase 11 deployment: Not started (optional).
+- Phase 11 store deployment: Not started (optional).

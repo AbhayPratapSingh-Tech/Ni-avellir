@@ -13,6 +13,7 @@ This file is a guide for future AI assistants and contributors working on Nidave
 - Run required checks after implementation phases once scripts exist: lint, typecheck, tests, and build.
 - Never add secrets, real credentials, private keys, or provider tokens to the repository.
 - Prefer explicit architecture and contracts over hidden assumptions.
+- **Never run `git commit` or `git push` unless the user explicitly asks to commit/push in that turn.** Offering commit message lines is OK; committing is not. See `AI_AGENT_GUIDE.md` non‑negotiable #7.
 
 ## Product Intent
 
@@ -112,8 +113,9 @@ Mobile defaults to **mock** via `apps/mobile/src/config/appConfig.ts`.
 
 1. `dataSource: 'api'`
 2. `allowMockFallback: false` (strict — no silent demo catalog/order fakes for critical paths)
-3. `apiBaseUrl` → staging/production HTTPS `…/api/v1` (Android emulator host remains `10.0.2.2` for local API)
+3. `apiBaseUrl` → live Render `https://ni-avellir.onrender.com/api/v1` (local laptop API was `http://10.0.2.2:4000/api/v1` on Android / `localhost` on iOS)
 4. Follow the agent checklist in **`AI_AGENT_GUIDE.md`**
+5. Render Free: app silently pings `GET /api/v1/health` on bootstrap and every 20 minutes while foregrounded (`wakeApiServer.ts`) so cold starts are less likely mid-session — not a paid always-on substitute.
 
 **Backend path**
 

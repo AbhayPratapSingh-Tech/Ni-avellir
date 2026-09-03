@@ -17,7 +17,8 @@ async function main() {
     process.exit(1);
   }
 
-  app.listen(env.port, () => {
+  // Bind 0.0.0.0 so cloud hosts (Render, Railway, etc.) can reach the process.
+  app.listen(env.port, '0.0.0.0', () => {
     logger.info({ port: env.port, environment: env.nodeEnv }, 'API server listening');
   });
 }

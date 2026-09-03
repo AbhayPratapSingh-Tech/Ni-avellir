@@ -1,5 +1,3 @@
-import { Platform } from 'react-native';
-
 /**
  * Central app configuration — single switchboard for mock vs live API.
  *
@@ -14,7 +12,8 @@ import { Platform } from 'react-native';
  */
 export type DataSourceMode = 'mock' | 'api';
 
-const apiHost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+/** Render Free API (production/staging test). Swap to `localApiBaseUrl` for laptop API. */
+const liveApiBaseUrl = 'https://ni-avellir.onrender.com/api/v1';
 
 export const appConfig = {
   /**
@@ -33,7 +32,15 @@ export const appConfig = {
   allowMockFallback: false,
 
   /** Base URL of the API server (used only when dataSource === 'api'). */
-  apiBaseUrl: `http://${apiHost}:4000/api/v1`,
+  apiBaseUrl: liveApiBaseUrl,
+
+  /**
+   * Render Free cold-start mitigation (api mode only).
+   * Silent GET `/health` on bootstrap + every interval while the app is foregrounded.
+   */
+  apiKeepAliveIntervalMs: 20 * 60 * 1000,
+  /** Health ping timeout — cold starts can exceed the normal 15s apiClient timeout. */
+  apiHealthTimeoutMs: 90_000,
 
   /** Currency formatting defaults. */
   currency: 'INR',
