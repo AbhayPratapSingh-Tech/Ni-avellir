@@ -19,13 +19,15 @@ export class RazorpayProvider implements PaymentProvider {
   readonly code = PaymentProviderCode.Razorpay;
   private readonly keyId: string;
   private readonly keySecret: string;
+  private readonly webhookSecret?: string;
   private readonly demoMode: boolean;
   private readonly client: Razorpay | null;
 
-  constructor(keyId?: string, keySecret?: string) {
+  constructor(keyId?: string, keySecret?: string, webhookSecret?: string) {
     this.demoMode = !isUsableKey(keyId) || !isUsableKey(keySecret);
     this.keyId = this.demoMode ? 'rzp_test_demo_nidavellir' : keyId!;
     this.keySecret = this.demoMode ? 'demo_razorpay_secret_nidavellir' : keySecret!;
+    this.webhookSecret = isUsableKey(webhookSecret) ? webhookSecret : undefined;
     this.client = this.demoMode
       ? null
       : new Razorpay({
@@ -81,6 +83,20 @@ export class RazorpayProvider implements PaymentProvider {
     }
   }
 
+  /** Verify Razorpay webhook POST body using the Dashboard webhook secret. */
+  verifyWebhookSignature(rawBody: Buffer | string, signature?: string): boolean {
+    if (!signature || !this.webhookSecret) {
+      return false;
+    }
+    const body = typeof rawBody === 'string' ? rawBody : rawBody.toString('utf8');
+    const expected = crypto.createHmac('sha256', this.webhookSecret).update(body).digest('hex');
+    try {
+      return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+    } catch {
+      return false;
+    }
+  }
+
   /** Dev/test helper: sign a successful payment the same way Checkout would. */
   signDemoPayment(orderId: string, paymentId: string): string {
     return crypto
@@ -91,6 +107,10 @@ export class RazorpayProvider implements PaymentProvider {
 
   get isDemoMode() {
     return this.demoMode;
+  }
+
+  get hasWebhookSecret() {
+    return Boolean(this.webhookSecret);
   }
 
   get publicKeyId() {

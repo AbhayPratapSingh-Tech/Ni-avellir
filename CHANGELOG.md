@@ -4,6 +4,14 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Live Render API + Postman docs + keep-alive
+
+- Hosted API on Render Free (`https://ni-avellir.onrender.com`); mobile `apiBaseUrl` points at live `/api/v1`.
+- Silent `/health` wake on bootstrap + 20-minute foreground keep-alive (`wakeApiServer.ts`).
+- Added `API_DETAILS.live.example.md` (Postman/cURL templates) and `generate-api-details-local.py --live`.
+- `render.yaml` + `build:api` / `start:api` so deploys run Express (not Metro).
+- Docs status updated: README, TODO, PROJECT_PROGRESS, DEVELOPER_GUIDE, AI_AGENT_GUIDE, PROJECT_INSIGHTS.
+
 ### Catalog, PDP, and Account polish
 
 - Expanded shared mock catalog (~28 products, 6 franchises, `you-may-also-like` tag, richer specs).

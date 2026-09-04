@@ -1,0 +1,40 @@
+# Render Blueprint — API only (not Metro / mobile).
+# Dashboard: set Start Command to `npm run start:api` if this service was created manually.
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: nidavellir-api
+    runtime: node
+    plan: free
+    region: oregon
+    branch: Nidavellir
+    rootDir: .
+    buildCommand: NPM_CONFIG_PRODUCTION=false npm install && npm run build:api
+    startCommand: npm run start:api
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20.20.2
+      - key: NODE_ENV
+        value: production
+      # Set these in the Render dashboard (do not commit secrets):
+      # MONGODB_URI, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET,
+      # RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET,
+      # API_BASE_URL, CORS_ORIGINS, EMAIL_DEMO_MODE, SMS_DEMO_MODE
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: API_BASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

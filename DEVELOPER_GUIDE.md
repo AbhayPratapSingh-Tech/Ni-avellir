@@ -19,17 +19,21 @@ npm install
 npm run setup
 cd apps/mobile/ios && pod install && cd ../../../
 
-# 3. Live API path (current appConfig default: dataSource 'api')
-#    Put Atlas/local MONGODB_URI in apps/api/.env.development
-npm run dev:api
-npm run seed --workspace apps/api
+# 3. Live API path (current appConfig default: dataSource 'api' → Render)
+#    Hosted: https://ni-avellir.onrender.com/api/v1 — only Metro needed:
 npm run dev
 npm run ios   # or: npm run android
+
+# Optional local API instead of Render:
+#   Put Atlas/local MONGODB_URI in apps/api/.env.development
+#   npm run dev:api && npm run seed --workspace apps/api
+#   set apiBaseUrl to http://localhost:4000/api/v1 (iOS) or 10.0.2.2 (Android)
 ```
 
-**Know it works:** `curl -s http://localhost:4000/health` → `status":"ok"`. Regenerate local JWT/cURL cheat sheet: `python3 scripts/generate-api-details-local.py` → `API_DETAILS.local.md` (gitignored).
+**Know it works:** `curl -sS -m 90 https://ni-avellir.onrender.com/health` → `"status":"ok"`.  
+Postman live cURLs: `API_DETAILS.live.example.md`. JWT sheet: `python3 scripts/generate-api-details-local.py --live`.
 
-Mock-only (no Mongo): set `appConfig.dataSource` to `'mock'`, then `npm run dev` + device.
+Mock-only (no Mongo/Render): set `appConfig.dataSource` to `'mock'`, then `npm run dev` + device.
 
 ## How to Run
 

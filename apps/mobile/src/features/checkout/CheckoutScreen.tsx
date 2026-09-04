@@ -36,7 +36,11 @@ type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 const PAYMENT_METHODS = [
   { id: 'cash_on_delivery', label: 'Cash on Delivery', desc: 'Pay when it arrives' },
-  { id: 'razorpay_demo', label: 'UPI / Card (Razorpay)', desc: 'Test / demo checkout' },
+  {
+    id: 'razorpay_demo',
+    label: 'UPI / Card (Razorpay)',
+    desc: 'Secure checkout via Razorpay',
+  },
 ] as const;
 
 type PendingRazorpay = {
@@ -538,12 +542,18 @@ export function CheckoutScreen() {
 
         {step === 'Review' ? (
           <Pressable
-            style={[styles.primaryBtn, submitting && styles.btnDisabled]}
-            disabled={submitting}
+            style={[styles.primaryBtn, (submitting || paying) && styles.btnDisabled]}
+            disabled={submitting || paying}
             onPress={placeOrder}
           >
             <Text style={styles.primaryBtnText}>
-              {submitting ? 'Placing order...' : `Place order · ₹${cart.total.toLocaleString('en-IN')}`}
+              {paying
+                ? 'Opening Razorpay…'
+                : submitting
+                  ? payment === 'razorpay_demo'
+                    ? 'Creating order…'
+                    : 'Placing order…'
+                  : `Place order · ₹${cart.total.toLocaleString('en-IN')}`}
             </Text>
           </Pressable>
         ) : (

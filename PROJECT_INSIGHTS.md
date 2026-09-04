@@ -13,6 +13,7 @@ This file is a guide for future AI assistants and contributors working on Nidave
 - Run required checks after implementation phases once scripts exist: lint, typecheck, tests, and build.
 - Never add secrets, real credentials, private keys, or provider tokens to the repository.
 - Prefer explicit architecture and contracts over hidden assumptions.
+- **Never run `git commit` or `git push` unless the user explicitly asks to commit/push in that turn.** Offering commit message lines is OK; committing is not. See `AI_AGENT_GUIDE.md` non‑negotiable #7.
 
 ## Product Intent
 
@@ -112,8 +113,9 @@ Mobile defaults to **mock** via `apps/mobile/src/config/appConfig.ts`.
 
 1. `dataSource: 'api'`
 2. `allowMockFallback: false` (strict — no silent demo catalog/order fakes for critical paths)
-3. `apiBaseUrl` → staging/production HTTPS `…/api/v1` (Android emulator host remains `10.0.2.2` for local API)
+3. `apiBaseUrl` → live Render `https://ni-avellir.onrender.com/api/v1` (local laptop API was `http://10.0.2.2:4000/api/v1` on Android / `localhost` on iOS)
 4. Follow the agent checklist in **`AI_AGENT_GUIDE.md`**
+5. Render Free: app silently pings `GET /api/v1/health` on bootstrap and every 20 minutes while foregrounded (`wakeApiServer.ts`) so cold starts are less likely mid-session — not a paid always-on substitute.
 
 **Backend path**
 
@@ -143,6 +145,7 @@ Mobile defaults to **mock** via `apps/mobile/src/config/appConfig.ts`.
 - `POST /api/v1/orders/:id/cancel|return|exchange` — authenticated post-purchase actions.
 - `POST /api/v1/payments/intents` — creates Razorpay order (or demo intent).
 - `POST /api/v1/payments/razorpay/confirm` — HMAC verify → mark payment + order `paid` + decrement stock.
+- `POST /api/v1/payments/razorpay/webhook` — Razorpay server webhook (raw body + `X-Razorpay-Signature`); idempotent via `PaymentWebhookEvent`; handles `payment.captured` / `payment.failed`.
 - `POST /api/v1/payments/razorpay/demo-complete` — college/test path without charging (blocked in production when real keys are set).
 
 **Mobile sync**
@@ -155,7 +158,7 @@ Mobile defaults to **mock** via `apps/mobile/src/config/appConfig.ts`.
 - Leave `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` as `replace-with-*` → **demo mode** (signed dummy intents, same HMAC verify path).
 - Or paste Dashboard **Test Mode** keys (`rzp_test_…`) → real Razorpay Orders API create + verify.
 - Mobile: Checkout branches on `intent.demoMode` — demo sheet + `/demo-complete`, or `react-native-razorpay` + `/confirm`.
-- Never commit real keys. Prefer Test Mode until production go-live; webhook idempotency remains a follow-up.
+- Never commit real keys. Prefer Test Mode until production go-live; set `RAZORPAY_WEBHOOK_SECRET` for webhooks (ngrok URL locally).
 - Agent rules for future edits: **`AI_AGENT_GUIDE.md`** + `.cursor/rules/nidavellir-agent-alignment.mdc`.
 
 ## `intent.demoMode` — how to branch checkout (college demo → live)
@@ -210,7 +213,7 @@ Today the app branches on `intent.demoMode` in `CheckoutScreen`: demo sheet + `/
 4. Mobile must call **`/razorpay/confirm`** after native Checkout success — **not** `/razorpay/demo-complete`.
 5. Ensure production blocks demo-complete when real keys are configured (`PaymentService.completeDemoRazorpayPayment` already rejects demo in `NODE_ENV=production` when not in provider demo mode).
 6. Rebuild native apps after adding `react-native-razorpay` (pods / Gradle); New Architecture is currently off, which is preferred for this SDK.
-7. Optional later: Razorpay webhooks (idempotent) as a second source of truth besides client confirm.
+7. Razorpay webhooks: `POST /api/v1/payments/razorpay/webhook` + `RAZORPAY_WEBHOOK_SECRET` (backup to client `/confirm`; requires Test/Live keys + public HTTPS or ngrok).
 
 ### Quick sanity check
 

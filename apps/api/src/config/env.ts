@@ -20,6 +20,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().optional().default('Niðavellir <onboarding@resend.dev>'),
   EMAIL_DEMO_MODE: z
@@ -56,6 +57,7 @@ export function loadEnv() {
     port: parsed.PORT,
     razorpayKeyId: parsed.RAZORPAY_KEY_ID,
     razorpayKeySecret: parsed.RAZORPAY_KEY_SECRET,
+    razorpayWebhookSecret: parsed.RAZORPAY_WEBHOOK_SECRET,
     resendApiKey: parsed.RESEND_API_KEY,
     emailFrom: parsed.EMAIL_FROM,
     emailDemoMode:
