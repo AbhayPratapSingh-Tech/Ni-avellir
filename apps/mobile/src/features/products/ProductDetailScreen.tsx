@@ -213,6 +213,10 @@ export function ProductDetailScreen() {
           <Text style={styles.brand}>{product.brand}</Text>
           <Text style={styles.franchise}>{product.franchise}</Text>
           <Text style={styles.name}>{product.name}</Text>
+          <Text style={styles.metaLine}>
+            SKU {String(product.sku ?? '').toUpperCase()}
+            {product.runeXp ? ` · +${product.runeXp} Rune XP` : ''}
+          </Text>
           <Text style={styles.description}>{product.description}</Text>
           <View style={styles.ratingRow}>
             <StarRating rating={product.rating} />
@@ -659,6 +663,12 @@ const styles = StyleSheet.create({
     fontSize: typography.title,
     fontWeight: '800',
     marginTop: 4,
+  },
+  metaLine: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 6,
   },
   outOfStock: {
     color: colors.danger,

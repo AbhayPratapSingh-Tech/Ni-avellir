@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -15,10 +15,18 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback } from 'react';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
-import { clearCart } from '../cart/cartSlice';
 import { addOrder } from '../orders/ordersSlice';
-import { upsertAddress } from '../addresses/addressesSlice';
+import { updateProfile } from '../auth/authSlice';
+import {
+  deleteAddress,
+  setDefaultAddress,
+  upsertAddress,
+  type SavedAddress,
+} from '../addresses/addressesSlice';
 import { getApiErrorMessage } from '../../services/api/apiClient';
+import { appConfig } from '../../config/appConfig';
+import { addressRepository } from '../../services/data/addressRepository';
+import { cartRepository } from '../../services/data/cartRepository';
 import { productRepository } from '../../services/data/productRepository';
 import { openRazorpayCheckout } from '../../services/payments/openRazorpayCheckout';
 import { RazorpayTestCheckout } from '../../components/commerce/RazorpayTestCheckout';
@@ -26,13 +34,21 @@ import {
   digitsOnly,
   hasAddressErrors,
   validateAddressFields,
+  type AddressFields,
 } from '../../lib/addressValidation';
 import { isLoggedInUser, requireLogin } from '../../lib/authGates';
 import { goBackOrHome } from '../../lib/navigation';
 import { useToast } from '../../components/ui/Toast';
+import { authRepository } from '../../services/data/authRepository';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
+
+/** Prefer last 10 digits so +91 / 91-prefixed values stay valid. */
+function normalizeIndianMobile(value: string) {
+  const digits = digitsOnly(value);
+  return digits.length > 10 ? digits.slice(-10) : digits;
+}
 
 const PAYMENT_METHODS = [
   { id: 'cash_on_delivery', label: 'Cash on Delivery', desc: 'Pay when it arrives' },
@@ -76,14 +92,19 @@ export function CheckoutScreen() {
   const toast = useToast();
   const cart = useAppSelector((state) => state.cart);
   const user = useAppSelector((state) => state.auth.user);
-  const defaultAddress = useAppSelector(
-    (state) => state.addresses.items.find((item) => item.isDefault) ?? state.addresses.items[0],
-  );
+  const savedAddresses = useAppSelector((state) => state.addresses.items);
   const [step, setStep] = useState<Step>('Address');
   const [submitting, setSubmitting] = useState(false);
   const [triedAddress, setTriedAddress] = useState(false);
   const [razorpayPending, setRazorpayPending] = useState<PendingRazorpay | null>(null);
   const [paying, setPaying] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [addressPanel, setAddressPanel] = useState<'list' | 'form'>('list');
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [savingAddress, setSavingAddress] = useState(false);
+  /** Prevents empty→sync race from trapping checkout on the Add address form. */
+  const addressFormIntentRef = useRef<'none' | 'add' | 'edit'>('none');
+  const scrollRef = useRef<ScrollView>(null);
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -93,30 +114,263 @@ export function CheckoutScreen() {
   const [postalCode, setPostalCode] = useState('');
   const [payment, setPayment] = useState<string>('cash_on_delivery');
 
+  const hasSavedAddresses = savedAddresses.length > 0;
+  const showAddressForm = !hasSavedAddresses || addressPanel === 'form';
+
+  const applySavedAddress = useCallback((address: SavedAddress) => {
+    setSelectedAddressId(address.id);
+    setFullName(address.fullName);
+    setPhone(normalizeIndianMobile(address.phone));
+    setLine1(address.line1);
+    setCity(address.city);
+    setStateName(address.state);
+    setPostalCode(digitsOnly(address.postalCode).slice(0, 6));
+  }, []);
+
+  const clearAddressFields = useCallback(() => {
+    setFullName(user && !user.isGuest ? user.name || '' : '');
+    setPhone(user && !user.isGuest ? normalizeIndianMobile(user.phone || '') : '');
+    setLine1('');
+    setCity('');
+    setStateName('');
+    setPostalCode('');
+  }, [user]);
+
   useFocusEffect(
     useCallback(() => {
       if (!isLoggedInUser(user)) {
         requireLogin({ user, dispatch, toast, reason: 'checkout' });
         goBackOrHome(navigation);
+        return;
+      }
+      if (appConfig.dataSource === 'api') {
+        void addressRepository.syncToStore();
       }
     }, [dispatch, navigation, toast, user]),
   );
 
   useEffect(() => {
-    if (defaultAddress) {
-      setFullName((prev) => prev || defaultAddress.fullName);
-      setPhone((prev) => prev || defaultAddress.phone);
-      setLine1((prev) => prev || defaultAddress.line1);
-      setCity((prev) => prev || defaultAddress.city);
-      setStateName((prev) => prev || defaultAddress.state);
-      setPostalCode((prev) => prev || defaultAddress.postalCode);
+    if (!hasSavedAddresses) {
+      addressFormIntentRef.current = 'none';
+      setAddressPanel('form');
+      setEditingAddressId(null);
+      if (user && !user.isGuest) {
+        setFullName((prev) => prev || user.name || '');
+        setPhone((prev) => prev || normalizeIndianMobile(user.phone || ''));
+      }
       return;
     }
-    if (user && !user.isGuest) {
-      setFullName((prev) => prev || user.name || '');
-      setPhone((prev) => prev || digitsOnly(user.phone || ''));
+
+    // Addresses finished syncing — leave the blank Add form unless user opened Add/Edit.
+    if (addressPanel === 'form' && addressFormIntentRef.current === 'none') {
+      setAddressPanel('list');
+      return;
     }
-  }, [defaultAddress, user]);
+
+    // Only sync card → fields on the Address step so Payment/Review aren't wiped mid-flow.
+    if (addressPanel !== 'list' || step !== 'Address') return;
+
+    const preferred =
+      savedAddresses.find((item) => item.id === selectedAddressId) ??
+      savedAddresses.find((item) => item.isDefault) ??
+      savedAddresses[0];
+    if (!preferred) return;
+
+    setSelectedAddressId(preferred.id);
+    setFullName(preferred.fullName);
+    setPhone(normalizeIndianMobile(preferred.phone));
+    setLine1(preferred.line1);
+    setCity(preferred.city);
+    setStateName(preferred.state);
+    setPostalCode(digitsOnly(preferred.postalCode).slice(0, 6));
+
+    if (!savedAddresses.some((item) => item.isDefault)) {
+      if (appConfig.dataSource === 'api') {
+        void addressRepository.setDefault(preferred.id);
+      } else {
+        dispatch(setDefaultAddress(preferred.id));
+      }
+    }
+  }, [
+    addressPanel,
+    dispatch,
+    hasSavedAddresses,
+    savedAddresses,
+    selectedAddressId,
+    step,
+    user,
+  ]);
+
+  const resolveShippingAddress = useCallback((): AddressFields | null => {
+    if (hasSavedAddresses) {
+      const chosen =
+        savedAddresses.find((item) => item.id === selectedAddressId) ??
+        savedAddresses.find((item) => item.isDefault) ??
+        savedAddresses[0];
+      if (chosen) {
+        const fromCard: AddressFields = {
+          fullName: chosen.fullName.trim(),
+          phone: normalizeIndianMobile(chosen.phone),
+          line1: chosen.line1.trim(),
+          city: chosen.city.trim(),
+          state: chosen.state.trim(),
+          postalCode: digitsOnly(chosen.postalCode).slice(0, 6),
+        };
+        if (!hasAddressErrors(validateAddressFields(fromCard))) {
+          return fromCard;
+        }
+      }
+    }
+
+    const fromForm: AddressFields = {
+      fullName: fullName.trim(),
+      phone: normalizeIndianMobile(phone),
+      line1: line1.trim(),
+      city: city.trim(),
+      state: stateName.trim(),
+      postalCode: digitsOnly(postalCode).slice(0, 6),
+    };
+    if (hasAddressErrors(validateAddressFields(fromForm))) return null;
+    return fromForm;
+  }, [
+    fullName,
+    hasSavedAddresses,
+    line1,
+    phone,
+    postalCode,
+    savedAddresses,
+    selectedAddressId,
+    stateName,
+    city,
+  ]);
+
+  const openAddAddress = () => {
+    addressFormIntentRef.current = 'add';
+    setEditingAddressId(null);
+    setTriedAddress(false);
+    clearAddressFields();
+    setAddressPanel('form');
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const openEditAddress = (address: SavedAddress) => {
+    addressFormIntentRef.current = 'edit';
+    setEditingAddressId(address.id);
+    setTriedAddress(false);
+    applySavedAddress(address);
+    setAddressPanel('form');
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const cancelAddressForm = () => {
+    if (!hasSavedAddresses) return;
+    addressFormIntentRef.current = 'none';
+    setTriedAddress(false);
+    setEditingAddressId(null);
+    setAddressPanel('list');
+    const selected =
+      savedAddresses.find((item) => item.id === selectedAddressId) ??
+      savedAddresses.find((item) => item.isDefault) ??
+      savedAddresses[0];
+    if (selected) applySavedAddress(selected);
+  };
+
+  const makeDefaultAddress = (address: SavedAddress) => {
+    if (address.isDefault) {
+      toast.show('Already set as Default address');
+      return;
+    }
+    applySavedAddress(address);
+    if (appConfig.dataSource === 'api') {
+      void addressRepository.setDefault(address.id).then(() => {
+        toast.show('Default address updated');
+      });
+      return;
+    }
+    dispatch(setDefaultAddress(address.id));
+    toast.show('Default address updated');
+  };
+
+  const confirmDeleteAddress = (address: SavedAddress) => {
+    Alert.alert('Delete address', `Remove ${address.fullName}'s address?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          const remaining = savedAddresses.filter((item) => item.id !== address.id);
+          const next =
+            remaining.find((item) => item.isDefault) ?? remaining[0] ?? null;
+          if (appConfig.dataSource === 'api') {
+            void addressRepository.remove(address.id).then(() => {
+              if (selectedAddressId === address.id) {
+                if (next) applySavedAddress(next);
+                else {
+                  setSelectedAddressId(null);
+                  clearAddressFields();
+                  setAddressPanel('form');
+                }
+              }
+              toast.show('Address deleted');
+            });
+            return;
+          }
+          dispatch(deleteAddress(address.id));
+          if (selectedAddressId === address.id) {
+            if (next) applySavedAddress(next);
+            else {
+              setSelectedAddressId(null);
+              clearAddressFields();
+              setAddressPanel('form');
+            }
+          }
+          toast.show('Address deleted');
+        },
+      },
+    ]);
+  };
+
+  const saveAddressForm = async () => {
+    setTriedAddress(true);
+    if (!addressValid) {
+      toast.show('Fix the highlighted address fields to save');
+      return;
+    }
+    const payload = {
+      fullName: fullName.trim(),
+      phone: digitsOnly(phone),
+      line1: line1.trim(),
+      city: city.trim(),
+      state: stateName.trim(),
+      postalCode: digitsOnly(postalCode),
+      ...(editingAddressId ? {} : { isDefault: savedAddresses.length === 0 }),
+    };
+    setSavingAddress(true);
+    try {
+      if (appConfig.dataSource === 'api') {
+        if (editingAddressId) {
+          await addressRepository.update(editingAddressId, payload);
+          applySavedAddress({ id: editingAddressId, ...payload });
+        } else {
+          const created = await addressRepository.create(payload);
+          applySavedAddress(created);
+        }
+      } else {
+        const id = editingAddressId ?? `addr_${Date.now()}`;
+        dispatch(upsertAddress({ id, ...payload }));
+        applySavedAddress({ id, ...payload });
+      }
+      toast.show(editingAddressId ? 'Address updated' : 'Address saved');
+      addressFormIntentRef.current = 'none';
+      setEditingAddressId(null);
+      setTriedAddress(false);
+      setAddressPanel('list');
+    } catch (error) {
+      toast.show(authRepository.getApiErrorMessage(error));
+    } finally {
+      setSavingAddress(false);
+    }
+  };
 
   const addressErrors = useMemo((): AddressErrors => {
     const result = validateAddressFields({
@@ -149,8 +403,30 @@ export function CheckoutScreen() {
   const footerPadBottom = Math.max(insets.bottom, Platform.OS === 'android' ? 56 : 16);
 
   const goNextFromAddress = () => {
-    setTriedAddress(true);
-    if (!addressValid) return;
+    if (showAddressForm && hasSavedAddresses) {
+      toast.show('Save or cancel the address form to continue');
+      return;
+    }
+
+    const shipping = resolveShippingAddress();
+    if (!shipping) {
+      setTriedAddress(true);
+      toast.show(
+        hasSavedAddresses
+          ? 'This address is incomplete — tap Edit to fix it'
+          : 'Fix the highlighted address fields to continue',
+      );
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
+
+    setFullName(shipping.fullName);
+    setPhone(shipping.phone);
+    setLine1(shipping.line1);
+    setCity(shipping.city);
+    setStateName(shipping.state);
+    setPostalCode(shipping.postalCode);
+    setTriedAddress(false);
     setStep('Payment');
   };
 
@@ -237,17 +513,42 @@ export function CheckoutScreen() {
       }),
     );
     dispatch(upsertAddress({ ...shippingAddress, isDefault: true }));
-    dispatch(clearCart());
+    // Clear server cart + Redux so refresh/bootstrap don't restore purchased lines.
+    void cartRepository.clear();
+    // Pull updated Rune XP after COD / paid order.
+    void authRepository.me().then((next) => {
+      if (!next) return;
+      dispatch(
+        updateProfile({
+          name: next.name,
+          email: next.email,
+          phone: next.phone,
+          avatarUri: next.avatarUrl ?? null,
+          runeXp: next.runeXp,
+        }),
+      );
+    });
     setRazorpayPending(null);
     navigation.replace('OrderConfirmation', { orderId: order.orderNumber ?? orderId });
   };
 
   const placeOrder = async () => {
-    if (!addressValid) {
+    const shipping = resolveShippingAddress();
+    if (!shipping) {
+      toast.show('Shipping address is incomplete — update it to place the order');
       setStep('Address');
       setTriedAddress(true);
+      if (!hasSavedAddresses) setAddressPanel('form');
       return;
     }
+
+    setFullName(shipping.fullName);
+    setPhone(shipping.phone);
+    setLine1(shipping.line1);
+    setCity(shipping.city);
+    setStateName(shipping.state);
+    setPostalCode(shipping.postalCode);
+
     setSubmitting(true);
     try {
       const itemInputs = cart.items.map((item) => ({
@@ -259,15 +560,15 @@ export function CheckoutScreen() {
           ? user.email.trim()
           : 'demo@nidavellir.app';
       const order = await productRepository.createOrder({
-        customer: { name: fullName.trim(), email, phone: digitsOnly(phone) },
+        customer: { name: shipping.fullName, email, phone: shipping.phone },
         items: itemInputs,
         shippingAddress: {
-          fullName: fullName.trim(),
-          phone: digitsOnly(phone),
-          line1: line1.trim(),
-          city: city.trim(),
-          state: stateName.trim(),
-          postalCode: digitsOnly(postalCode),
+          fullName: shipping.fullName,
+          phone: shipping.phone,
+          line1: shipping.line1,
+          city: shipping.city,
+          state: shipping.state,
+          postalCode: shipping.postalCode,
         },
         paymentMethod: payment,
       });
@@ -292,9 +593,9 @@ export function CheckoutScreen() {
         keyId: intent.keyId,
         providerIntentId: intent.providerIntentId,
         demoMode: intent.demoMode,
-        customerName: fullName.trim(),
+        customerName: shipping.fullName,
         customerEmail: email,
-        customerPhone: digitsOnly(phone),
+        customerPhone: shipping.phone,
       };
 
       // Branch on intent.demoMode (see PROJECT_INSIGHTS.md):
@@ -399,10 +700,10 @@ export function CheckoutScreen() {
                     style={[styles.stepChipText, reached ? styles.stepChipTextOn : styles.stepChipTextOff]}
                   >
                     {index + 1}
-                  </Text>
-                </View>
+              </Text>
+            </View>
                 <Text style={[styles.stepLabel, reached && styles.stepLabelOn]}>{label}</Text>
-              </View>
+          </View>
               {showLine ? <View style={[styles.stepLine, lineFilled && styles.stepLineOn]} /> : null}
             </View>
           );
@@ -410,57 +711,158 @@ export function CheckoutScreen() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         keyboardShouldPersistTaps="handled"
       >
         {step === 'Address' ? (
           <View>
-            <Text style={styles.sectionTitle}>Shipping address</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {showAddressForm
+                  ? editingAddressId
+                    ? 'Edit address'
+                    : hasSavedAddresses
+                      ? 'Add address'
+                      : 'Shipping address'
+                  : 'Shipping address'}
+              </Text>
+              {hasSavedAddresses && !showAddressForm ? (
+                <Pressable style={styles.addAddressBtn} onPress={openAddAddress}>
+                  <Text style={styles.addAddressBtnText}>＋ Add address</Text>
+                </Pressable>
+              ) : null}
+            </View>
 
-            <Field
-              label="Full name"
-              value={fullName}
-              onChangeText={setFullName}
-              error={showError('fullName')}
-              autoCapitalize="words"
-            />
-            <Field
-              label="Phone"
-              value={phone}
-              onChangeText={(value) => setPhone(digitsOnly(value).slice(0, 10))}
-              error={showError('phone')}
-              keyboardType="phone-pad"
-              maxLength={10}
-            />
-            <Field
-              label="Address line 1"
-              value={line1}
-              onChangeText={setLine1}
-              error={showError('line1')}
-            />
-            <Field
-              label="City"
-              value={city}
-              onChangeText={setCity}
-              error={showError('city')}
-              autoCapitalize="words"
-            />
-            <Field
-              label="State"
-              value={stateName}
-              onChangeText={setStateName}
-              error={showError('stateName')}
-              autoCapitalize="words"
-            />
-            <Field
-              label="Postal code"
-              value={postalCode}
-              onChangeText={(value) => setPostalCode(digitsOnly(value).slice(0, 6))}
-              error={showError('postalCode')}
-              keyboardType="number-pad"
-              maxLength={6}
-            />
+            {!showAddressForm ? (
+              <View style={styles.savedBlock}>
+                <Text style={styles.savedLabel}>Saved addresses — tap to use</Text>
+                {savedAddresses.map((address) => {
+                  const selected =
+                    selectedAddressId === address.id ||
+                    (!selectedAddressId && Boolean(address.isDefault));
+                  return (
+                    <View
+                      key={address.id}
+                      style={[styles.savedCard, selected && styles.savedCardOn]}
+                    >
+                      <Pressable onPress={() => applySavedAddress(address)}>
+                        <View style={styles.savedCardTop}>
+                          <Text style={styles.savedName}>{address.fullName}</Text>
+                          {address.isDefault ? (
+                            <View style={styles.defaultBadge}>
+                              <Text style={styles.defaultBadgeText}>Default address</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        <Text style={styles.savedLine} numberOfLines={2}>
+                          {address.line1}, {address.city}, {address.state} {address.postalCode}
+                        </Text>
+                        <Text style={styles.savedLine}>Phone {address.phone}</Text>
+                      </Pressable>
+                      <View style={styles.cardActions}>
+                        {!address.isDefault ? (
+                          <Pressable onPress={() => makeDefaultAddress(address)} hitSlop={8}>
+                            <Text style={styles.cardAction}>Set as default</Text>
+                          </Pressable>
+                        ) : (
+                          <Text style={styles.cardActionMuted}>Using for checkout</Text>
+                        )}
+                        <View style={styles.cardActionsRight}>
+                          <Pressable onPress={() => openEditAddress(address)} hitSlop={8}>
+                            <Text style={styles.cardAction}>Edit</Text>
+                          </Pressable>
+                          <Pressable onPress={() => confirmDeleteAddress(address)} hitSlop={8}>
+                            <Text style={[styles.cardAction, styles.cardActionDanger]}>Delete</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View>
+                {triedAddress && !addressValid ? (
+                  <Text style={styles.formBanner}>
+                    Continue needs a valid Indian name, 10-digit mobile (6–9…), full street, city,
+                    state, and 6-digit PIN.
+                  </Text>
+                ) : null}
+
+                <Field
+                  label="Full name"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  error={showError('fullName')}
+                  autoCapitalize="words"
+                />
+                <Field
+                  label="Phone"
+                  value={phone}
+                  onChangeText={(value) => setPhone(digitsOnly(value).slice(0, 10))}
+                  error={showError('phone')}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                />
+                <Field
+                  label="Address line 1"
+                  value={line1}
+                  onChangeText={setLine1}
+                  error={showError('line1')}
+                />
+                <Field
+                  label="City"
+                  value={city}
+                  onChangeText={setCity}
+                  error={showError('city')}
+                  autoCapitalize="words"
+                />
+                <Field
+                  label="State"
+                  value={stateName}
+                  onChangeText={setStateName}
+                  error={showError('stateName')}
+                  autoCapitalize="words"
+                />
+                <Field
+                  label="Postal code"
+                  value={postalCode}
+                  onChangeText={(value) => setPostalCode(digitsOnly(value).slice(0, 6))}
+                  error={showError('postalCode')}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
+
+                {hasSavedAddresses ? (
+                  <View style={styles.formActions}>
+                    <Pressable
+                      style={styles.formCancelBtn}
+                      onPress={cancelAddressForm}
+                      disabled={savingAddress}
+                    >
+                      <Text style={styles.formCancelText}>Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.formSaveBtn, savingAddress && styles.btnDisabled]}
+                      onPress={() => {
+                        void saveAddressForm();
+                      }}
+                      disabled={savingAddress}
+                    >
+                      <Text style={styles.formSaveText}>
+                        {savingAddress
+                          ? 'Saving…'
+                          : editingAddressId
+                            ? 'Save changes'
+                            : 'Save address'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+              </View>
+            )}
           </View>
         ) : null}
 
@@ -780,9 +1182,144 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.text,
+    flex: 1,
     fontSize: 16,
     fontWeight: '800',
+    marginRight: spacing.sm,
+  },
+  sectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: spacing.md,
+  },
+  addAddressBtn: {
+    backgroundColor: '#FFFFFF',
+    borderColor: colors.text,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  addAddressBtnText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  cardActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+  },
+  cardActionsRight: {
+    flexDirection: 'row',
+  },
+  cardAction: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+    marginLeft: spacing.md,
+  },
+  cardActionDanger: {
+    color: colors.danger,
+  },
+  cardActionMuted: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  savedCardTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  defaultBadge: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  defaultBadgeText: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  formActions: {
+    flexDirection: 'row',
+    marginTop: spacing.sm,
+  },
+  formCancelBtn: {
+    alignItems: 'center',
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+    paddingVertical: 12,
+  },
+  formCancelText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  formSaveBtn: {
+    alignItems: 'center',
+    backgroundColor: colors.text,
+    borderRadius: 12,
+    flex: 1.4,
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  formSaveText: {
+    color: colors.onAccent,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  formBanner: {
+    backgroundColor: '#FEE2E2',
+    borderRadius: 10,
+    color: colors.danger,
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
+    marginBottom: spacing.md,
+    padding: spacing.sm,
+  },
+  savedBlock: {
+    marginBottom: spacing.md,
+  },
+  savedCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: spacing.sm,
+    padding: spacing.md,
+  },
+  savedCardOn: {
+    borderColor: colors.text,
+    borderWidth: 2,
+  },
+  savedLabel: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: spacing.sm,
+  },
+  savedLine: {
+    color: colors.textMuted,
+    fontSize: 13,
+    marginTop: 4,
+  },
+  savedName: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '800',
   },
   stepChip: {
     alignItems: 'center',

@@ -99,9 +99,13 @@ const cartSlice = createSlice({
       state.total = action.payload.total;
       state.itemCount = action.payload.itemCount;
       state.discount = action.payload.discount ?? 0;
-      state.couponCode = action.payload.couponCode;
-      state.couponDiscountType = action.payload.couponDiscountType;
-      state.couponDiscountValue = action.payload.couponDiscountValue;
+      state.couponCode = action.payload.couponCode || undefined;
+      state.couponDiscountType = action.payload.couponCode
+        ? action.payload.couponDiscountType
+        : undefined;
+      state.couponDiscountValue = action.payload.couponCode
+        ? action.payload.couponDiscountValue
+        : undefined;
       state.totalBeforeDiscount = action.payload.totalBeforeDiscount;
     },
     clearCart(state) {

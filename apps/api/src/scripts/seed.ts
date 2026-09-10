@@ -33,6 +33,8 @@ function toSeedDoc(product: Product) {
     galleryUrls,
     isLimitedDrop: product.isLimitedDrop,
     isFeatured: product.isLimitedDrop || product.rating >= 4.8,
+    sku: product.sku,
+    runeXp: product.runeXp,
   };
 }
 

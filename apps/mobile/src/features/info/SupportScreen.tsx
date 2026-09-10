@@ -24,11 +24,12 @@ const INDIAN_MOBILE_RE = /^[6-9]\d{9}$/;
 const COMPANY = {
   name: 'Niðavellir Forge Pvt. Ltd.',
   address: '12 Forge Lane, Indiranagar\nBengaluru, Karnataka 560038',
-  phone: '+91 80 4567 8901',
-  phoneTel: '+918045678901',
-  email: 'support@nidavellir.app',
-  hours: 'Mon–Sat, 10:00–18:00 IST',
-  whatsapp: '+91 98765 43210',
+  phone: '+91 87509 96351',
+  phoneTel: '+918750996351',
+  email: 'beastboyjr047@gmail.com',
+  hours: 'Mon–Fri, 9:00 AM – 11:00 PM IST',
+  whatsapp: '+91 87509 96351',
+  whatsappUrl: 'https://wa.me/918750996351',
 };
 
 type FormState = {
@@ -165,10 +166,13 @@ export function SupportScreen() {
             <Text style={styles.contactLink}>{COMPANY.email}</Text>
           </Pressable>
 
-          <View style={styles.contactRow}>
+          <Pressable
+            style={styles.contactRow}
+            onPress={() => Linking.openURL(COMPANY.whatsappUrl)}
+          >
             <Text style={styles.contactLabel}>WhatsApp</Text>
-            <Text style={styles.contactValue}>{COMPANY.whatsapp}</Text>
-          </View>
+            <Text style={styles.contactLink}>{COMPANY.whatsapp}</Text>
+          </Pressable>
 
           <View style={[styles.contactRow, styles.contactRowLast]}>
             <Text style={styles.contactLabel}>Hours</Text>

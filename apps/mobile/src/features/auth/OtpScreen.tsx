@@ -91,6 +91,7 @@ export function OtpScreen() {
           email: user.email,
           phone: user.phone,
           avatarUri: user.avatarUrl,
+          runeXp: user.runeXp,
         });
       } catch (error) {
         toast.show(authRepository.getApiErrorMessage(error));
@@ -114,6 +115,7 @@ export function OtpScreen() {
           email: user.email,
           phone: user.phone,
           avatarUri: user.avatarUrl,
+          runeXp: user.runeXp,
         });
       } catch (error) {
         toast.show(authRepository.getApiErrorMessage(error));
@@ -177,7 +179,7 @@ export function OtpScreen() {
       <Pressable style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]} onPress={submit}>
         {({ pressed }) => (
           <Text style={[styles.ctaText, pressed && styles.ctaTextPressed]}>
-            {loading ? 'Verifying…' : purpose === 'verify_email' ? 'Verify & create account' : 'Verify & continue'}
+            {loading ? 'Verifying…' : purpose === 'verify_email' ? 'Verify email' : 'Verify'}
           </Text>
         )}
       </Pressable>

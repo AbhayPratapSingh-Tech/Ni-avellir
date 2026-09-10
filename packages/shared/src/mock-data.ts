@@ -117,9 +117,14 @@ const GALLERY = [
   ...MEDIA.default,
 ] as const;
 
-type ProductSeed = Omit<Product, 'compareAtPrice' | 'imageUrls' | 'specifications' | 'additionalDetails' | 'brand'> & {
+type ProductSeed = Omit<
+  Product,
+  'compareAtPrice' | 'imageUrls' | 'specifications' | 'additionalDetails' | 'brand' | 'sku' | 'runeXp'
+> & {
   brand?: string;
   compareAtPrice?: number;
+  sku?: string;
+  runeXp?: number;
   specifications?: Record<string, string>;
   additionalDetails?: string;
 };
@@ -289,12 +294,27 @@ function resolveProductImages(seed: ProductSeed): { imageUrl: string; imageUrls:
   return { imageUrl: imageUrls[0]!, imageUrls };
 }
 
+function skuFromProductId(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  const n = (hash % 90000) + 10000;
+  return `nw${n}`;
+}
+
+function runeXpFromPrice(price: number): number {
+  return Math.max(10, Math.round(price / 50));
+}
+
 function completeProduct(seed: ProductSeed): Product {
   const cat = CATEGORY_SPECS[seed.category];
   const media = resolveProductImages(seed);
   const compareAtPrice = seed.compareAtPrice ?? Math.round(seed.price * 1.28);
   const brand = resolveBrand(seed);
   const publisher = FRANCHISE_PUBLISHERS[seed.franchise];
+  const sku = seed.sku ?? skuFromProductId(seed.id);
+  const runeXp = seed.runeXp ?? runeXpFromPrice(seed.price);
 
   const extraTags: string[] = [];
   if (seed.category === 'apparel') extraTags.push('fashion');
@@ -316,16 +336,19 @@ function completeProduct(seed: ProductSeed): Product {
   return {
     ...seed,
     brand,
+    sku,
+    runeXp,
     imageUrl: media.imageUrl,
     imageUrls: media.imageUrls,
     tags: [...new Set([...seed.tags, ...extraTags])],
     compareAtPrice,
     specifications: {
-      SKU: seed.id.replace('prod-', 'NDV-').toUpperCase(),
+      SKU: sku.toUpperCase(),
       Brand: brand,
       Franchise: seed.franchise,
       ...(publisher ? { Publisher: publisher } : {}),
       Category: seed.category.replace(/-/g, ' '),
+      'Rune XP': String(runeXp),
       Material: cat.material,
       Origin: 'Niðavellir Studio',
       Weight: cat.weight,

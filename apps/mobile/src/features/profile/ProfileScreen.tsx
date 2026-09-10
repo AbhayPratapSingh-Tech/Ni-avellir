@@ -1,10 +1,13 @@
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useCallback } from 'react';
 import { colors, spacing } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { Screen } from '../../components/ui/Screen';
-import { openLogin, signOutAndClearSession } from '../auth/authSlice';
+import { openLogin, signOutAndClearSession, updateProfile } from '../auth/authSlice';
+import { appConfig } from '../../config/appConfig';
+import { authRepository } from '../../services/data/authRepository';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -20,6 +23,15 @@ const MENU = [
   { key: 'support', label: 'Support', icon: '💬' },
 ] as const;
 
+function isDisplayableAvatar(uri?: string) {
+  if (!uri) return false;
+  return (
+    uri.startsWith('https://') ||
+    uri.startsWith('http://') ||
+    uri.startsWith('data:image/')
+  );
+}
+
 export function ProfileScreen() {
   const navigation = useNavigation<Navigation>();
   const dispatch = useAppDispatch();
@@ -31,6 +43,30 @@ export function ProfileScreen() {
     ? 'Browsing as guest'
     : user?.email || user?.phone || 'demo@nidavellir.app';
   const initial = displayName.charAt(0).toUpperCase();
+  const runeXp = user?.isGuest ? 0 : Number(user?.runeXp ?? 0);
+  const xpNextLevel = Math.max(500, Math.ceil((runeXp + 1) / 500) * 500);
+  const xpFill = Math.min(1, runeXp / xpNextLevel);
+  const xpTier =
+    runeXp >= 2000 ? 'Master' : runeXp >= 1000 ? 'Journeyman' : runeXp >= 250 ? 'Adept' : 'Apprentice';
+  const avatarUri = isDisplayableAvatar(user?.avatarUri) ? user?.avatarUri : undefined;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (appConfig.dataSource !== 'api' || !user || user.isGuest) return;
+      void authRepository.me().then((next) => {
+        if (!next) return;
+        dispatch(
+          updateProfile({
+            name: next.name,
+            email: next.email,
+            phone: next.phone,
+            avatarUri: next.avatarUrl ?? null,
+            runeXp: next.runeXp,
+          }),
+        );
+      });
+    }, [dispatch, user?.email, user?.isGuest]),
+  );
 
   const openEditProfile = () => {
     navigation.navigate('EditProfile');
@@ -39,10 +75,15 @@ export function ProfileScreen() {
   return (
     <Screen>
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+        <View style={styles.brandBanner}>
+          <Text style={styles.brandMark}>Niðavellir</Text>
+          <Text style={styles.brandSub}>Forge Account</Text>
+        </View>
+
         <View style={styles.header}>
           <Pressable onPress={openEditProfile} style={styles.avatarWrap}>
-            {user?.avatarUri ? (
-              <Image source={{ uri: user.avatarUri }} style={styles.avatarImage} />
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
             ) : (
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{initial}</Text>
@@ -64,9 +105,11 @@ export function ProfileScreen() {
         <View style={styles.xpCard}>
           <Text style={styles.xpTitle}>⚒︎ Rune XP</Text>
           <View style={styles.xpBar}>
-            <View style={styles.xpFill} />
+            <View style={[styles.xpFill, { width: `${Math.round(xpFill * 100)}%` as `${number}%` }]} />
           </View>
-          <Text style={styles.xpLabel}>Apprentice · 120 / 500 XP</Text>
+          <Text style={styles.xpLabel}>
+            {xpTier} · {runeXp} / {xpNextLevel} XP
+          </Text>
         </View>
 
         <View style={styles.stats}>
@@ -79,7 +122,7 @@ export function ProfileScreen() {
             <Text style={styles.statLabel}>Orders</Text>
           </View>
           <View style={styles.stat}>
-            <Text style={styles.statValue}>120</Text>
+            <Text style={styles.statValue}>{runeXp}</Text>
             <Text style={styles.statLabel}>XP</Text>
           </View>
         </View>
@@ -312,7 +355,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     borderRadius: 6,
     height: 8,
-    width: '24%',
   },
   xpLabel: {
     color: colors.textMuted,
@@ -322,5 +364,23 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 14,
     fontWeight: '800',
+  },
+  brandBanner: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  brandMark: {
+    color: colors.text,
+    fontSize: 26,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
+  brandSub: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+    textTransform: 'uppercase',
   },
 });

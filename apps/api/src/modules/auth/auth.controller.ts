@@ -50,6 +50,20 @@ export class AuthController {
     response.json({ data: { user } });
   };
 
+  uploadAvatar = async (request: AuthenticatedRequest, response: Response) => {
+    const file = request.file;
+    if (!file?.buffer?.length) {
+      response.status(400).json({ error: { message: 'Avatar image is required' } });
+      return;
+    }
+    const user = await this.service.uploadAvatar(
+      request.userId!,
+      file.buffer,
+      file.mimetype || 'image/jpeg',
+    );
+    response.json({ data: { user } });
+  };
+
   forgotPassword = async (request: AuthenticatedRequest, response: Response) => {
     const result = await this.service.forgotPassword(request.body.email);
     response.json({ data: result });

@@ -23,11 +23,20 @@ function mapOrder(raw: Record<string, unknown>): OrderHistoryItem {
   };
 }
 
+/** My Orders: COD / paid / fulfilled only — not abandoned Razorpay checkouts. */
+export function isVisibleOrderStatus(status: string) {
+  const normalized = status.trim().toLowerCase().replace(/\s+/g, '_');
+  return normalized !== 'pending_payment' && normalized !== 'pending';
+}
+
 export const orderRepository = {
   async syncToStore() {
     if (appConfig.dataSource !== 'api') return;
     const { data } = await apiClient.get('/orders');
-    store.dispatch(setOrders((data.data.orders as Record<string, unknown>[]).map(mapOrder)));
+    const orders = (data.data.orders as Record<string, unknown>[])
+      .map(mapOrder)
+      .filter((order) => isVisibleOrderStatus(order.status));
+    store.dispatch(setOrders(orders));
   },
 
   async getById(id: string) {

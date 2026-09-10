@@ -20,7 +20,18 @@ export const addressRepository = {
   async syncToStore() {
     if (appConfig.dataSource !== 'api') return;
     const { data } = await apiClient.get('/addresses');
-    store.dispatch(setAddresses((data.data.addresses as Record<string, unknown>[]).map(mapAddress)));
+    const addresses = (data.data.addresses as Record<string, unknown>[]).map(mapAddress);
+    if (addresses.length > 0 && !addresses.some((item) => item.isDefault)) {
+      addresses[0]!.isDefault = true;
+      store.dispatch(setAddresses(addresses));
+      try {
+        await apiClient.patch(`/addresses/${addresses[0]!.id}/default`);
+      } catch {
+        // Local default is enough for checkout; retry next sync if PATCH fails.
+      }
+      return;
+    }
+    store.dispatch(setAddresses(addresses));
   },
 
   async create(input: Omit<SavedAddress, 'id'>) {

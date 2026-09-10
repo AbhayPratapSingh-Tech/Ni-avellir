@@ -15,6 +15,7 @@ export type ApiUser = {
   emailVerified: boolean;
   phoneVerified: boolean;
   avatarUrl?: string;
+  runeXp?: number;
 };
 
 async function postLoginSync(refreshToken?: string) {
@@ -107,8 +108,22 @@ export const authRepository = {
     }
   },
 
-  async updateProfile(input: Partial<{ name: string; email: string; avatarUrl: string }>) {
+  async updateProfile(input: Partial<{ name: string; email: string; avatarUrl: string | null }>) {
     const { data } = await apiClient.patch('/auth/me', input);
+    return data.data.user as ApiUser;
+  },
+
+  async uploadAvatar(localUri: string, mimeType = 'image/jpeg') {
+    const form = new FormData();
+    form.append('avatar', {
+      uri: localUri,
+      type: mimeType,
+      name: 'avatar.jpg',
+    } as unknown as Blob);
+    const { data } = await apiClient.post('/auth/me/avatar', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60_000,
+    });
     return data.data.user as ApiUser;
   },
 

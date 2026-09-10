@@ -1,5 +1,5 @@
 import { useEffect, useState, type PropsWithChildren } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { appConfig } from '../../config/appConfig';
 import { useAppDispatch } from '../store';
 import { signIn } from '../../features/auth/authSlice';
@@ -11,7 +11,7 @@ import {
 } from '../../services/api/wakeApiServer';
 import { authRepository } from '../../services/data/authRepository';
 import { cartRepository } from '../../services/data/cartRepository';
-import { colors } from '../../theme/tokens';
+import { colors, spacing, typography } from '../../theme/tokens';
 
 export function AppBootstrap({ children }: PropsWithChildren) {
   const dispatch = useAppDispatch();
@@ -21,11 +21,10 @@ export function AppBootstrap({ children }: PropsWithChildren) {
     if (appConfig.dataSource !== 'api') return;
     let mounted = true;
     startApiKeepAlive();
-    (async () => {
-      // Wake Render Free before auth/cart so the first real calls hit a warm server.
-      await pingApiHealth();
-      if (!mounted) return;
+    // Wake Render in parallel — do not block the UI on cold start (up to 90s).
+    void pingApiHealth();
 
+    (async () => {
       const hydrated = await hydrateSessionTokensFromSecureStore();
       if (hydrated) {
         const user = await authRepository.me();
@@ -36,6 +35,7 @@ export function AppBootstrap({ children }: PropsWithChildren) {
               email: user.email,
               phone: user.phone,
               avatarUri: user.avatarUrl,
+              runeXp: user.runeXp,
             }),
           );
         }
@@ -43,7 +43,7 @@ export function AppBootstrap({ children }: PropsWithChildren) {
       try {
         await cartRepository.refresh();
       } catch {
-        // API may be offline; allow mock fallback paths
+        // API may still be waking; shop can retry.
       }
       if (mounted) setReady(true);
     })();
@@ -55,11 +55,37 @@ export function AppBootstrap({ children }: PropsWithChildren) {
 
   if (!ready) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator color={colors.text} />
+      <View style={styles.splash}>
+        <Text style={styles.brand}>Niðavellir</Text>
+        <Text style={styles.sub}>Loading your forge…</Text>
+        <ActivityIndicator color={colors.text} style={styles.spinner} />
       </View>
     );
   }
 
   return children;
 }
+
+const styles = StyleSheet.create({
+  brand: {
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  splash: {
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  spinner: {
+    marginTop: spacing.lg,
+  },
+  sub: {
+    color: colors.textMuted,
+    fontSize: typography.body,
+    marginTop: spacing.sm,
+  },
+});

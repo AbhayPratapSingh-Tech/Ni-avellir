@@ -122,6 +122,8 @@ function mapApiProduct(raw: Record<string, unknown>): Product {
     id,
     brand: String(raw.brand ?? franchise),
     franchise,
+    sku: raw.sku ? String(raw.sku) : undefined as unknown as string,
+    runeXp: raw.runeXp !== undefined ? Number(raw.runeXp) : undefined as unknown as number,
   };
   if (raw.compareAtPrice !== undefined) {
     mapped.compareAtPrice = Number(raw.compareAtPrice);
@@ -319,14 +321,44 @@ export class ProductRepository {
     });
   }
 
-  async createOrder(input: CreateOrderInput) {
+  async createOrder(input: CreateOrderInput): Promise<{
+    id: string;
+    _id?: string;
+    orderNumber?: string;
+    status?: string;
+    subtotal?: number;
+    shipping?: number;
+    tax?: number;
+    total?: number;
+    currency?: string;
+    estimatedDelivery?: string;
+    items?: Array<Record<string, unknown>>;
+    shippingAddress?: Record<string, unknown>;
+    customer?: Record<string, unknown>;
+    createdAt?: string;
+  }> {
     return this.withFallback(
       async () => {
         const { data } = await apiClient.post('/orders', input);
-        const order = data.data.order as { id?: string; _id?: string };
+        const order = data.data.order as Record<string, unknown>;
         return {
-          ...order,
+          ...(order as object),
           id: String(order.id ?? order._id),
+          _id: order._id ? String(order._id) : undefined,
+          orderNumber: order.orderNumber ? String(order.orderNumber) : undefined,
+          status: order.status ? String(order.status) : undefined,
+          subtotal: order.subtotal !== undefined ? Number(order.subtotal) : undefined,
+          shipping: order.shipping !== undefined ? Number(order.shipping) : undefined,
+          tax: order.tax !== undefined ? Number(order.tax) : undefined,
+          total: order.total !== undefined ? Number(order.total) : undefined,
+          currency: order.currency ? String(order.currency) : undefined,
+          estimatedDelivery: order.estimatedDelivery
+            ? String(order.estimatedDelivery)
+            : undefined,
+          items: order.items as Array<Record<string, unknown>> | undefined,
+          shippingAddress: order.shippingAddress as Record<string, unknown> | undefined,
+          customer: order.customer as Record<string, unknown> | undefined,
+          createdAt: order.createdAt ? String(order.createdAt) : undefined,
         };
       },
       () => {
@@ -353,6 +385,7 @@ export class ProductRepository {
       const isCod = input.paymentMethod === 'cash_on_delivery';
       return {
         id: `ORD-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
+        _id: undefined,
         orderNumber: `ORD-NDV-${Math.floor(1000 + Math.random() * 9000)}`,
         items: lines,
         subtotal,
@@ -417,14 +450,15 @@ export class ProductRepository {
     providerIntentId: string;
     providerPaymentId: string;
     signature: string;
-  }) {
+  }): Promise<{ id: string; status?: string; [key: string]: unknown }> {
     return this.withFallback(
       async () => {
         const { data } = await apiClient.post('/payments/razorpay/confirm', input);
-        const order = data.data.order as { id?: string; _id?: string };
+        const order = data.data.order as Record<string, unknown>;
         return {
           ...order,
           id: String(order.id ?? order._id ?? input.orderId),
+          status: order.status ? String(order.status) : undefined,
         };
       },
       () => ({

@@ -1,7 +1,7 @@
 import { FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Product } from '@nidavellir/shared';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
@@ -33,6 +33,10 @@ export function CartScreen() {
   );
   const [couponInput, setCouponInput] = useState('');
   const [couponBusy, setCouponBusy] = useState(false);
+
+  useEffect(() => {
+    if (!couponCode) setCouponInput('');
+  }, [couponCode]);
 
   useFocusEffect(
     useCallback(() => {

@@ -15,15 +15,22 @@ export function getProductImages(product: Product): string[] {
 
 export function normalizeProduct(product: Product): Product {
   const imageUrls = [...new Set(getProductImages(product))].slice(0, 6);
+  const sku = product.sku || `nw${String(product.id).replace(/\D/g, '').slice(-5).padStart(5, '0')}`;
+  const runeXp = product.runeXp ?? Math.max(10, Math.round(product.price / 50));
   return {
     ...product,
+    sku,
+    runeXp,
     imageUrls,
     imageUrl: product.imageUrl || imageUrls[0] || '',
     compareAtPrice: product.compareAtPrice ?? Math.round(product.price * 1.32),
-    specifications: product.specifications ?? {
-      SKU: product.id,
-      Brand: product.brand,
-      Franchise: product.franchise,
+    specifications: {
+      SKU: sku.toUpperCase(),
+      'Rune XP': String(runeXp),
+      ...(product.specifications ?? {
+        Brand: product.brand,
+        Franchise: product.franchise,
+      }),
     },
     brand: product.brand ?? product.franchise,
     additionalDetails: product.additionalDetails ?? product.description,

@@ -101,6 +101,7 @@ export function LoginScreen() {
           email: user.email,
           phone: user.phone,
           avatarUri: user.avatarUrl,
+          runeXp: user.runeXp,
         });
       } catch (error) {
         toast.show(authRepository.getApiErrorMessage(error));
