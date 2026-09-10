@@ -9,6 +9,7 @@
     "dev": "tsx watch src/server.ts",
     "lint": "eslint src --ext .ts",
     "seed": "tsx src/scripts/seed.ts",
+    "seed:sku": "tsx src/scripts/backfill-sku-xp.ts",
     "start": "node dist/server.js",
     "test": "echo \"No API tests yet\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"

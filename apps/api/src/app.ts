@@ -43,7 +43,7 @@ export function createApp(env: Env) {
     express.raw({ type: 'application/json' }),
     createPaymentWebhookRouter(env),
   );
-  app.use(express.json({ limit: '1mb' }));
+  app.use(express.json({ limit: '2mb' }));
   app.use(mongoSanitize());
   app.use(guestSessionMiddleware);
 

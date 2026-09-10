@@ -28,6 +28,7 @@ export type AuthStackParamList = {
     email: string;
     phone: string;
     avatarUri?: string;
+    runeXp?: number;
   };
 };
 

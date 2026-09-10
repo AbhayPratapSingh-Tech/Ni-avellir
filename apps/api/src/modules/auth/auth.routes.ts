@@ -1,10 +1,23 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
+import multer from 'multer';
 import type { Env } from '../../config/env.js';
 import { asyncHandler } from '../../common/middleware/async-handler.js';
 import { createRequireAuth } from '../../common/middleware/require-auth.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
+
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 1_200_000 },
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      cb(new Error('Only image uploads are allowed'));
+      return;
+    }
+    cb(null, true);
+  },
+});
 
 export function createAuthRouter(env: Env) {
   const router = Router();
@@ -38,6 +51,12 @@ export function createAuthRouter(env: Env) {
   router.post('/reset-password', authLimiter, asyncHandler(controller.resetPassword));
   router.get('/me', requireAuth, asyncHandler(controller.me));
   router.patch('/me', requireAuth, asyncHandler(controller.updateProfile));
+  router.post(
+    '/me/avatar',
+    requireAuth,
+    avatarUpload.single('avatar'),
+    asyncHandler(controller.uploadAvatar),
+  );
   router.post('/change-password', requireAuth, asyncHandler(controller.changePassword));
   router.get('/sessions', requireAuth, asyncHandler(controller.listSessions));
   router.delete('/sessions/:sessionId', requireAuth, asyncHandler(controller.revokeSession));

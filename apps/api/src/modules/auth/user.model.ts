@@ -9,6 +9,7 @@ export interface UserDocument {
   phoneVerified: boolean;
   role: 'customer' | 'admin';
   avatarUrl?: string;
+  runeXp: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +24,7 @@ const userSchema = new Schema<UserDocument>(
     phoneVerified: { type: Boolean, default: false },
     role: { type: String, enum: ['customer', 'admin'], default: 'customer' },
     avatarUrl: { type: String },
+    runeXp: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true },
 );

@@ -5,6 +5,7 @@ import { Product } from '../products/product.model.js';
 import { serviceabilityService } from '../serviceability/serviceability.service.js';
 import { sendOrderStatusEmail } from './order-email.js';
 import { Order } from './order.model.js';
+import { awardOrderRuneXp } from './rune-xp.js';
 
 export type CreateOrderInput = {
   customer: { name: string; email: string; phone: string };
@@ -106,13 +107,20 @@ export class OrderService {
           Product.updateOne({ _id: item.productId }, { $inc: { stock: -item.quantity } }),
         ),
       );
+      await awardOrderRuneXp(
+        userId,
+        items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
+      );
     }
 
     return order;
   }
 
   async list(userId?: string, email?: string) {
-    const filter: Record<string, unknown> = {};
+    const filter: Record<string, unknown> = {
+      // Abandoned Razorpay checkouts stay pending_payment — hide from My Orders.
+      status: { $nin: ['pending_payment'] },
+    };
     if (userId) filter.userId = userId;
     else if (email) filter['customer.email'] = email;
     return Order.find(filter).sort({ createdAt: -1 }).lean();

@@ -115,7 +115,8 @@ Mobile defaults to **mock** via `apps/mobile/src/config/appConfig.ts`.
 2. `allowMockFallback: false` (strict — no silent demo catalog/order fakes for critical paths)
 3. `apiBaseUrl` → live Render `https://ni-avellir.onrender.com/api/v1` (local laptop API was `http://10.0.2.2:4000/api/v1` on Android / `localhost` on iOS)
 4. Follow the agent checklist in **`AI_AGENT_GUIDE.md`**
-5. Render Free: app silently pings `GET /api/v1/health` on bootstrap and every 20 minutes while foregrounded (`wakeApiServer.ts`) so cold starts are less likely mid-session — not a paid always-on substitute.
+5. Render Free: app fires `GET /api/v1/health` on bootstrap **without blocking** the splash, then pings every 20 minutes while foregrounded (`wakeApiServer.ts`) so cold starts are less likely mid-session — not a paid always-on substitute.
+6. Products carry `sku` (`nw#####`) + `runeXp`; paid/COD orders increment the user’s `runeXp` on the API. Backfill existing Mongo rows with `npm run seed:sku --workspace apps/api`.
 
 **Backend path**
 

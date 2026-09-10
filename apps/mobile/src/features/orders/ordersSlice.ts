@@ -48,6 +48,8 @@ const ordersSlice = createSlice({
   initialState,
   reducers: {
     addOrder(state, action: PayloadAction<OrderHistoryItem>) {
+      const status = action.payload.status.trim().toLowerCase().replace(/\s+/g, '_');
+      if (status === 'pending_payment' || status === 'pending') return;
       const exists = state.items.some((item) => item.id === action.payload.id);
       if (!exists) {
         state.items.unshift(action.payload);
@@ -57,7 +59,10 @@ const ordersSlice = createSlice({
       state.items = [];
     },
     setOrders(state, action: PayloadAction<OrderHistoryItem[]>) {
-      state.items = action.payload;
+      state.items = action.payload.filter((order) => {
+        const status = order.status.trim().toLowerCase().replace(/\s+/g, '_');
+        return status !== 'pending_payment' && status !== 'pending';
+      });
     },
   },
 });

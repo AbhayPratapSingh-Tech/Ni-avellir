@@ -26,6 +26,10 @@ export type Product = {
   imageUrl: string;
   imageUrls: string[];
   isLimitedDrop: boolean;
+  /** Unique store SKU, e.g. nw87509 */
+  sku: string;
+  /** Rune XP awarded per unit purchased */
+  runeXp: number;
   specifications: Record<string, string>;
   additionalDetails: string;
 };

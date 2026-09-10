@@ -29,7 +29,7 @@ File: `apps/mobile/src/config/appConfig.ts`
 | `apiBaseUrl` | emulator host `:4000/api/v1` | `https://ni-avellir.onrender.com/api/v1` (Render) |
 | `apiKeepAliveIntervalMs` | n/a | `20 * 60 * 1000` — silent `/health` while app is foregrounded |
 
-**Render Free cold starts:** `AppBootstrap` awaits `pingApiHealth()` then starts `startApiKeepAlive()` (`wakeApiServer.ts`). That reduces sleep mid-demo; it is not a substitute for a paid always-on plan.
+**Render Free cold starts:** `AppBootstrap` fires `pingApiHealth()` in parallel (non-blocking) and starts `startApiKeepAlive()` (`wakeApiServer.ts`). Spinner only waits for session hydrate + cart refresh.
 
 Also required on the server: Mongo, JWT secrets, Razorpay Test then Live keys (`apps/api/.env.*`).
 

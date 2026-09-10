@@ -9,7 +9,13 @@ import {
   createEmailService,
 } from '../../integrations/email/email.factory.js';
 import type { EmailService } from '../../integrations/email/email.service.js';
+import {
+  isPersistedAvatarUrl,
+  persistAvatarImage,
+} from '../../integrations/media/avatar-upload.js';
 import { SmsService } from '../../integrations/sms/sms.service.js';
+import { Order } from '../orders/order.model.js';
+import { Product } from '../products/product.model.js';
 import { OtpChallenge, type OtpPurpose } from './otp-challenge.model.js';
 import { RefreshToken } from './refresh-token.model.js';
 import { User } from './user.model.js';
@@ -65,6 +71,7 @@ export class AuthService {
     phoneVerified: boolean;
     role: string;
     avatarUrl?: string;
+    runeXp?: number;
   }) {
     return {
       id: String(user._id),
@@ -74,7 +81,8 @@ export class AuthService {
       emailVerified: user.emailVerified,
       phoneVerified: user.phoneVerified,
       role: user.role,
-      avatarUrl: user.avatarUrl,
+      avatarUrl: isPersistedAvatarUrl(user.avatarUrl) ? user.avatarUrl : undefined,
+      runeXp: Number(user.runeXp ?? 0),
     };
   }
 
@@ -249,12 +257,46 @@ export class AuthService {
     if (!user) {
       throw new AppError('User not found', 404);
     }
+    // Recompute XP from completed orders so Profile stays correct after deploys / older orders.
+    const reconciled = await this.reconcileRuneXp(userId);
+    if (reconciled !== Number(user.runeXp ?? 0)) {
+      user.runeXp = reconciled;
+      await user.save();
+    }
     return this.sanitizeUser(user);
+  }
+
+  /** Sum product runeXp × qty for COD/paid/fulfilled orders (idempotent). */
+  private async reconcileRuneXp(userId: string): Promise<number> {
+    const orders = await Order.find({
+      userId,
+      status: { $in: ['confirmed', 'paid', 'packed', 'shipped', 'delivered'] },
+    })
+      .select('items')
+      .lean();
+
+    const productIds = [
+      ...new Set(
+        orders.flatMap((order) => order.items.map((item) => String(item.productId))),
+      ),
+    ];
+    const products = await Product.find({ _id: { $in: productIds } })
+      .select('_id runeXp')
+      .lean();
+    const xpById = new Map(products.map((p) => [String(p._id), Number(p.runeXp ?? 10)]));
+
+    let total = 0;
+    for (const order of orders) {
+      for (const item of order.items) {
+        total += (xpById.get(String(item.productId)) ?? 10) * item.quantity;
+      }
+    }
+    return total;
   }
 
   async updateProfile(
     userId: string,
-    input: Partial<{ name: string; email: string; avatarUrl: string }>,
+    input: Partial<{ name: string; email: string; avatarUrl: string | null }>,
   ) {
     const user = await User.findById(userId);
     if (!user) {
@@ -262,7 +304,30 @@ export class AuthService {
     }
     if (input.name) user.name = input.name.trim();
     if (input.email) user.email = input.email.trim().toLowerCase();
-    if (input.avatarUrl !== undefined) user.avatarUrl = input.avatarUrl;
+    if (input.avatarUrl !== undefined) {
+      if (input.avatarUrl === null || input.avatarUrl === '') {
+        user.avatarUrl = undefined;
+        user.set('avatarUrl', undefined);
+      } else if (isPersistedAvatarUrl(input.avatarUrl)) {
+        user.avatarUrl = input.avatarUrl;
+      } else {
+        throw new AppError(
+          'Local device photos cannot sync. Upload the image so it is stored on your account.',
+          400,
+        );
+      }
+    }
+    await user.save();
+    return this.sanitizeUser(user);
+  }
+
+  async uploadAvatar(userId: string, buffer: Buffer, mimeType: string) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+    const avatarUrl = await persistAvatarImage(buffer, mimeType);
+    user.avatarUrl = avatarUrl;
     await user.save();
     return this.sanitizeUser(user);
   }

@@ -1,12 +1,12 @@
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { colors, spacing } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
 import { useAppSelector } from '../../app/store';
 import { appConfig } from '../../config/appConfig';
-import { orderRepository } from '../../services/data/orderRepository';
+import { isVisibleOrderStatus, orderRepository } from '../../services/data/orderRepository';
 import { formatInr } from '../../lib/productMedia';
 import type { OrderHistoryItem } from './ordersSlice';
 import type { RootStackParamList } from '../../app/navigation/types';
@@ -73,7 +73,11 @@ function OrderCard({
 
 export function OrdersScreen() {
   const navigation = useNavigation<Navigation>();
-  const orders = useAppSelector((state) => state.orders.items);
+  const allOrders = useAppSelector((state) => state.orders.items);
+  const orders = useMemo(
+    () => allOrders.filter((order) => isVisibleOrderStatus(order.status)),
+    [allOrders],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -93,7 +97,9 @@ export function OrdersScreen() {
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>📦</Text>
             <Text style={styles.emptyTitle}>No orders yet</Text>
-            <Text style={styles.emptySub}>Place an order and it will show up here.</Text>
+            <Text style={styles.emptySub}>
+              COD and paid orders show up here. Cancelled Razorpay checkouts do not.
+            </Text>
             <Pressable
               style={styles.cta}
               onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })}

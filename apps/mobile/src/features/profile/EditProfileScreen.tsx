@@ -49,11 +49,26 @@ const PRESET_AVATARS = [
 
 const PICKER_OPTIONS = {
   mediaType: 'photo' as const,
-  quality: 0.8 as const,
-  maxWidth: 800,
-  maxHeight: 800,
+  quality: 0.7 as const,
+  maxWidth: 512,
+  maxHeight: 512,
   selectionLimit: 1,
+  includeBase64: true,
 };
+
+function isRemoteAvatar(uri?: string) {
+  if (!uri) return false;
+  return (
+    uri.startsWith('https://') ||
+    uri.startsWith('http://') ||
+    uri.startsWith('data:image/')
+  );
+}
+
+function isLocalAvatar(uri?: string) {
+  if (!uri) return false;
+  return uri.startsWith('file:') || uri.startsWith('content:') || uri.startsWith('ph://');
+}
 
 type ProfileErrors = Partial<{ name: string; email: string; phone: string }>;
 
@@ -107,9 +122,14 @@ export function EditProfileScreen() {
   const [name, setName] = useState(user?.isGuest ? '' : (user?.name ?? ''));
   const [email, setEmail] = useState(user?.email ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
-  const [avatarUri, setAvatarUri] = useState<string | undefined>(user?.avatarUri);
+  const [avatarUri, setAvatarUri] = useState<string | undefined>(
+    isRemoteAvatar(user?.avatarUri) ? user?.avatarUri : undefined,
+  );
+  const [avatarBase64, setAvatarBase64] = useState<string | undefined>();
+  const [avatarMime, setAvatarMime] = useState('image/jpeg');
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [tried, setTried] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<keyof ProfileErrors, boolean>>>({});
 
   const errors = useMemo(() => validateProfile({ name, email, phone }), [name, email, phone]);
@@ -125,11 +145,15 @@ export function EditProfileScreen() {
     navigation.navigate('MainTabs', { screen: 'Account' });
   };
 
-  const applyPickedUri = (uri?: string | null) => {
-    if (!uri) {
-      return;
+  const applyPickedAsset = (asset?: { uri?: string; type?: string; base64?: string } | null) => {
+    if (!asset?.uri) return;
+    setAvatarUri(asset.uri);
+    setAvatarBase64(asset.base64);
+    if (asset.type?.startsWith('image/')) {
+      setAvatarMime(asset.type);
+    } else {
+      setAvatarMime('image/jpeg');
     }
-    setAvatarUri(uri);
   };
 
   const openLibrary = async () => {
@@ -139,7 +163,7 @@ export function EditProfileScreen() {
       toast.show(result.errorMessage || 'Could not open gallery');
       return;
     }
-    applyPickedUri(result.assets?.[0]?.uri);
+    applyPickedAsset(result.assets?.[0]);
   };
 
   const openCamera = async () => {
@@ -155,7 +179,7 @@ export function EditProfileScreen() {
       toast.show(result.errorMessage || 'Could not open camera');
       return;
     }
-    applyPickedUri(result.assets?.[0]?.uri);
+    applyPickedAsset(result.assets?.[0]);
   };
 
   const openPhotoMenu = () => {
@@ -164,7 +188,10 @@ export function EditProfileScreen() {
       { text: 'Camera', onPress: () => void openCamera() },
       { text: 'Choose avatar', onPress: () => setPresetsOpen(true) },
       ...(avatarUri
-        ? [{ text: 'Remove photo', style: 'destructive' as const, onPress: () => setAvatarUri(undefined) }]
+        ? [{ text: 'Remove photo', style: 'destructive' as const, onPress: () => {
+            setAvatarUri(undefined);
+            setAvatarBase64(undefined);
+          } }]
         : []),
       { text: 'Cancel', style: 'cancel' },
     ]);
@@ -182,23 +209,46 @@ export function EditProfileScreen() {
     }
 
     if (appConfig.dataSource === 'api') {
+      setSaving(true);
       try {
-        const updated = await authRepository.updateProfile({
-          name: name.trim(),
-          email: email.trim(),
-          avatarUrl: avatarUri,
-        });
+        let updated;
+        if (isLocalAvatar(avatarUri)) {
+          // Prefer multipart upload; fall back to PATCH data-URI if Render hasn't redeployed /me/avatar yet.
+          try {
+            await authRepository.uploadAvatar(avatarUri!, avatarMime);
+          } catch (error) {
+            const message = authRepository.getApiErrorMessage(error);
+            if (!avatarBase64 || !/not found|404/i.test(message)) {
+              throw error;
+            }
+            const dataUri = `data:${avatarMime};base64,${avatarBase64}`;
+            await authRepository.updateProfile({ avatarUrl: dataUri });
+          }
+          updated = await authRepository.updateProfile({
+            name: name.trim(),
+            email: email.trim(),
+          });
+        } else {
+          updated = await authRepository.updateProfile({
+            name: name.trim(),
+            email: email.trim(),
+            avatarUrl: avatarUri && isRemoteAvatar(avatarUri) ? avatarUri : null,
+          });
+        }
         dispatch(
           updateProfile({
             name: updated.name,
             email: updated.email,
             phone: updated.phone,
             avatarUri: updated.avatarUrl ?? null,
+            runeXp: updated.runeXp,
           }),
         );
       } catch (error) {
         toast.show(authRepository.getApiErrorMessage(error));
         return;
+      } finally {
+        setSaving(false);
       }
     } else {
       dispatch(
@@ -280,8 +330,8 @@ export function EditProfileScreen() {
           />
           <Text style={styles.fieldHint}>Phone number cannot be changed after signup.</Text>
 
-          <Pressable style={styles.saveBtn} onPress={save}>
-            <Text style={styles.saveText}>Save changes</Text>
+          <Pressable style={[styles.saveBtn, saving && styles.saveBtnDisabled]} onPress={save} disabled={saving}>
+            <Text style={styles.saveText}>{saving ? 'Saving…' : 'Save changes'}</Text>
           </Pressable>
           <Pressable onPress={goBackToAccount} hitSlop={8}>
             <Text style={styles.cancel}>Cancel</Text>
@@ -301,6 +351,7 @@ export function EditProfileScreen() {
                   style={[styles.presetItem, avatarUri === uri && styles.presetItemActive]}
                   onPress={() => {
                     setAvatarUri(uri);
+                    setAvatarBase64(undefined);
                     setPresetsOpen(false);
                   }}
                 >
@@ -471,6 +522,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: spacing.sm,
     paddingVertical: 14,
+  },
+  saveBtnDisabled: {
+    opacity: 0.6,
   },
   saveText: {
     color: colors.onAccent,

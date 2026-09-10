@@ -5,6 +5,7 @@ import { Order } from '../orders/order.model.js';
 import { Product } from '../products/product.model.js';
 import { Payment } from './payment.model.js';
 import { PaymentWebhookEvent } from './payment-webhook-event.model.js';
+import { awardOrderRuneXp } from '../orders/rune-xp.js';
 import type {
   CreatePaymentIntentInput,
   CreatePaymentIntentResult,
@@ -284,6 +285,11 @@ export class PaymentService {
       order.items.map((item) =>
         Product.updateOne({ _id: item.productId }, { $inc: { stock: -item.quantity } }),
       ),
+    );
+
+    await awardOrderRuneXp(
+      order.userId ? String(order.userId) : undefined,
+      order.items.map((item) => ({ productId: String(item.productId), quantity: item.quantity })),
     );
   }
 

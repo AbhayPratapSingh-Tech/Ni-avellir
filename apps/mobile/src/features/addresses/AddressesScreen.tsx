@@ -107,8 +107,12 @@ export function AddressesScreen() {
     useCallback(() => {
       if (appConfig.dataSource === 'api') {
         void addressRepository.syncToStore();
+        return;
       }
-    }, []),
+      if (addresses.length > 0 && !addresses.some((item) => item.isDefault)) {
+        dispatch(setDefaultAddress(addresses[0]!.id));
+      }
+    }, [addresses, dispatch]),
   );
 
   const errors = useMemo(
@@ -213,12 +217,28 @@ export function AddressesScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <Pressable
+            style={[styles.card, item.isDefault && styles.cardSelected]}
+            onPress={() => {
+              if (item.isDefault) {
+                toast.show('This address is already default for checkout');
+                return;
+              }
+              if (appConfig.dataSource === 'api') {
+                void addressRepository.setDefault(item.id).then(() => {
+                  toast.show('Default address updated — used at checkout');
+                });
+                return;
+              }
+              dispatch(setDefaultAddress(item.id));
+              toast.show('Default address updated — used at checkout');
+            }}
+          >
             <View style={styles.cardTop}>
               <Text style={styles.name}>{item.fullName}</Text>
               {item.isDefault ? (
                 <View style={styles.defaultBadge}>
-                  <Text style={styles.defaultText}>Default</Text>
+                  <Text style={styles.defaultText}>Default address</Text>
                 </View>
               ) : null}
             </View>
@@ -230,29 +250,43 @@ export function AddressesScreen() {
             <View style={styles.actions}>
               {!item.isDefault ? (
                 <Pressable
-                  onPress={() => {
+                  onPress={(e) => {
+                    e.stopPropagation?.();
                     if (appConfig.dataSource === 'api') {
-                      void addressRepository.setDefault(item.id);
+                      void addressRepository.setDefault(item.id).then(() => {
+                        toast.show('Default address updated — used at checkout');
+                      });
                       return;
                     }
                     dispatch(setDefaultAddress(item.id));
+                    toast.show('Default address updated — used at checkout');
                   }}
                 >
-                  <Text style={styles.actionLink}>Set default</Text>
+                  <Text style={styles.actionLink}>Set as default</Text>
                 </Pressable>
               ) : (
-                <View />
+                <Text style={styles.hintUse}>Default for checkout</Text>
               )}
               <View style={styles.actionRight}>
-                <Pressable onPress={() => openEdit(item)}>
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    openEdit(item);
+                  }}
+                >
                   <Text style={styles.actionLink}>Edit</Text>
                 </Pressable>
-                <Pressable onPress={() => confirmDelete(item)}>
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    confirmDelete(item);
+                  }}
+                >
                   <Text style={[styles.actionLink, styles.deleteLink]}>Delete</Text>
                 </Pressable>
               </View>
             </View>
-          </View>
+          </Pressable>
         )}
       />
 
@@ -358,6 +392,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     padding: spacing.md,
   },
+  cardSelected: {
+    borderColor: colors.text,
+    borderWidth: 2,
+  },
   cardTop: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -389,6 +427,11 @@ const styles = StyleSheet.create({
   },
   deleteLink: {
     color: colors.danger,
+  },
+  hintUse: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
   },
   empty: {
     alignItems: 'center',

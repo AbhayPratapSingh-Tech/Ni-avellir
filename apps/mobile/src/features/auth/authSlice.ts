@@ -9,6 +9,8 @@ export type AuthUser = {
   phone: string;
   /** Local file URI or remote avatar URL. */
   avatarUri?: string;
+  /** Loyalty points earned from orders. */
+  runeXp?: number;
   isGuest: boolean;
 };
 
@@ -58,6 +60,9 @@ const authSlice = createSlice({
       };
       if (action.payload.avatarUri !== undefined) {
         next.avatarUri = action.payload.avatarUri || undefined;
+      }
+      if (action.payload.runeXp !== undefined) {
+        next.runeXp = action.payload.runeXp;
       }
       state.user = next;
     },

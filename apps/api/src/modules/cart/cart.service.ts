@@ -206,9 +206,10 @@ export class CartService {
 
   async clearCart(userId?: string, guestSessionId?: string) {
     const cart = await this.findOrCreateCart(userId, guestSessionId);
-    cart.items = [];
-    cart.couponCode = undefined;
-    await cart.save();
+    await Cart.updateOne(
+      { _id: cart._id },
+      { $set: { items: [] }, $unset: { couponCode: 1 } },
+    );
     return { ok: true };
   }
 
@@ -231,8 +232,7 @@ export class CartService {
 
   async removeCoupon(userId?: string, guestSessionId?: string, pincode?: string) {
     const cart = await this.findOrCreateCart(userId, guestSessionId);
-    cart.couponCode = undefined;
-    await cart.save();
+    await Cart.updateOne({ _id: cart._id }, { $unset: { couponCode: 1 } });
     return this.getCart(userId, guestSessionId, pincode);
   }
 

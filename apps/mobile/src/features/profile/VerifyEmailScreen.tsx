@@ -12,20 +12,24 @@ import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
+type Step = 'send' | 'code';
+
 export function VerifyEmailScreen() {
   const navigation = useNavigation<Navigation>();
   const dispatch = useAppDispatch();
   const toast = useToast();
   const user = useAppSelector((state) => state.auth.user);
+  const [step, setStep] = useState<Step>('send');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const resend = async () => {
+  const sendCode = async () => {
     setLoading(true);
     try {
       const { data } = await apiClient.post('/auth/verify-email/send');
       if (data.data?.demoCode) toast.show(`Dev verify code: ${data.data.demoCode}`);
       else toast.show('Verification email sent');
+      setStep('code');
     } catch (error) {
       toast.show(getApiErrorMessage(error));
     } finally {
@@ -51,6 +55,7 @@ export function VerifyEmailScreen() {
           email: next.email,
           phone: next.phone,
           avatarUri: next.avatarUrl ?? null,
+          runeXp: next.runeXp,
         }),
       );
       toast.show('Email verified');
@@ -64,25 +69,38 @@ export function VerifyEmailScreen() {
 
   return (
     <Screen edges={[]} style={styles.screen}>
-      <Text style={styles.sub}>
-        We sent a code to {user?.email || 'your email'}. Enter it below, or open the link in the
-        email.
-      </Text>
-      <TextInput
-        style={styles.input}
-        placeholder="4-digit code"
-        placeholderTextColor={colors.textMuted}
-        keyboardType="number-pad"
-        maxLength={4}
-        value={code}
-        onChangeText={setCode}
-      />
-      <Pressable style={styles.cta} onPress={submit} disabled={loading}>
-        <Text style={styles.ctaText}>{loading ? 'Verifying…' : 'Verify email'}</Text>
-      </Pressable>
-      <Pressable onPress={resend} style={styles.linkWrap}>
-        <Text style={styles.link}>Resend email</Text>
-      </Pressable>
+      {step === 'send' ? (
+        <>
+          <Text style={styles.sub}>
+            Verify {user?.email || 'your email'} to secure your account and unlock order updates.
+          </Text>
+          <Pressable style={styles.cta} onPress={sendCode} disabled={loading}>
+            <Text style={styles.ctaText}>{loading ? 'Sending…' : 'Send verification email'}</Text>
+          </Pressable>
+        </>
+      ) : (
+        <>
+          <Text style={styles.sub}>
+            We sent a code to {user?.email || 'your email'}. Enter it below, or open the link in the
+            email.
+          </Text>
+          <TextInput
+            style={styles.input}
+            placeholder="4-digit code"
+            placeholderTextColor={colors.textMuted}
+            keyboardType="number-pad"
+            maxLength={4}
+            value={code}
+            onChangeText={setCode}
+          />
+          <Pressable style={styles.cta} onPress={submit} disabled={loading}>
+            <Text style={styles.ctaText}>{loading ? 'Verifying…' : 'Verify email'}</Text>
+          </Pressable>
+          <Pressable onPress={sendCode} style={styles.linkWrap} disabled={loading}>
+            <Text style={styles.link}>{loading ? 'Sending…' : 'Resend email'}</Text>
+          </Pressable>
+        </>
+      )}
     </Screen>
   );
 }

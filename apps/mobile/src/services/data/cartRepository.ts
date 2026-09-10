@@ -76,8 +76,13 @@ export const cartRepository = {
   },
 
   async clear() {
-    if (appConfig.dataSource !== 'api') return;
-    await apiClient.delete('/cart');
+    if (appConfig.dataSource === 'api') {
+      try {
+        await apiClient.delete('/cart');
+      } catch {
+        // Still wipe local cart so a failed DELETE doesn't leave a paid order in the bag.
+      }
+    }
     store.dispatch(clearCart());
   },
 

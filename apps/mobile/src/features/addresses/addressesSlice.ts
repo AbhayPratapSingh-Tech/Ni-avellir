@@ -117,7 +117,11 @@ const addressesSlice = createSlice({
       });
     },
     setAddresses(state, action: PayloadAction<SavedAddress[]>) {
-      state.items = action.payload;
+      const items = action.payload.map((item) => ({ ...item }));
+      if (items.length > 0 && !items.some((item) => item.isDefault)) {
+        items[0]!.isDefault = true;
+      }
+      state.items = items;
     },
   },
 });

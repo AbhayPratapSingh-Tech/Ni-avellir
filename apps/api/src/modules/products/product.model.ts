@@ -18,6 +18,8 @@ export interface ProductDocument {
   galleryUrls: string[];
   isLimitedDrop: boolean;
   isFeatured: boolean;
+  sku?: string;
+  runeXp: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +42,8 @@ const productSchema = new Schema<ProductDocument>(
     rating: { type: Number, default: 0, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0 },
     stock: { type: Number, default: 0, min: 0 },
+    sku: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
+    runeXp: { type: Number, default: 10, min: 0 },
     tags: { type: [String], default: [] },
     imageUrl: { type: String, required: true },
     galleryUrls: { type: [String], default: [] },
