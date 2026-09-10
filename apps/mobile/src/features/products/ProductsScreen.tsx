@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Product } from '@nidavellir/shared';
@@ -26,6 +34,8 @@ const SORT_LABELS: Record<SortValue, string> = {
   price_desc: 'Price ↓',
 };
 
+const PAGE_SIZE = 20;
+
 export function ProductsScreen() {
   const navigation = useNavigation<Navigation>();
   const route = useRoute();
@@ -46,6 +56,12 @@ export function ProductsScreen() {
   const [search, setSearch] = useState(params.q);
   const [collection, setCollection] = useState(params.collection);
   const [categories, setCategories] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
 
   useEffect(() => {
     setSearch(params.q);
@@ -63,20 +79,64 @@ export function ProductsScreen() {
     productRepository.getCategories().then(setCategories);
   }, []);
 
-  const load = useCallback(async () => {
-    const result = await productRepository.list({
-      sort,
-      category,
-      franchise,
-      search,
-      collection,
-    });
-    setProducts(result.items);
-  }, [sort, category, franchise, search, collection]);
+  const loadPage = useCallback(
+    async (pageToLoad: number, replace: boolean) => {
+      if (!replace) {
+        if (loadingMoreRef.current) return;
+        loadingMoreRef.current = true;
+        setLoadingMore(true);
+      } else {
+        setInitialLoading(true);
+      }
+
+      try {
+        const query = {
+          sort,
+          category,
+          franchise,
+          search,
+          collection,
+          page: pageToLoad,
+          limit: PAGE_SIZE,
+        };
+        const result = await productRepository.list(query);
+        console.log('[PLP] products page', {
+          page: result.page,
+          pages: result.pages,
+          total: result.total,
+          itemCount: result.items.length,
+        });
+
+        setPage(result.page);
+        setPages(result.pages);
+        setTotal(result.total);
+        setProducts((prev) => {
+          if (replace) return result.items;
+          const seen = new Set(prev.map((p) => p.id));
+          return [...prev, ...result.items.filter((p) => !seen.has(p.id))];
+        });
+      } finally {
+        setInitialLoading(false);
+        setLoadingMore(false);
+        loadingMoreRef.current = false;
+      }
+    },
+    [sort, category, franchise, search, collection],
+  );
 
   useEffect(() => {
-    load();
-  }, [load]);
+    setProducts([]);
+    setPage(1);
+    setPages(1);
+    setTotal(0);
+    void loadPage(1, true);
+  }, [loadPage]);
+
+  const loadMore = useCallback(() => {
+    if (initialLoading || loadingMoreRef.current) return;
+    if (page >= pages) return;
+    void loadPage(page + 1, false);
+  }, [initialLoading, loadPage, page, pages]);
 
   const handleAdd = useCallback(
     (product: Product) => {
@@ -88,7 +148,7 @@ export function ProductsScreen() {
   );
 
   const allOutOfStock = products.length > 0 && products.every((item) => item.stock === 0);
-  const empty = products.length === 0;
+  const empty = !initialLoading && products.length === 0;
   const emptyVariant =
     collection === 'restocking' || allOutOfStock
       ? products.length === 0
@@ -99,7 +159,13 @@ export function ProductsScreen() {
   return (
     <Screen edges={[]} style={styles.screen}>
       <View style={styles.toolbar}>
-        <Text style={styles.count}>{products.length} products</Text>
+        <Text style={styles.count}>
+          {initialLoading
+            ? 'Loading…'
+            : total > 0
+              ? `${products.length} of ${total} products`
+              : `${products.length} products`}
+        </Text>
         <Pressable style={styles.searchLink} onPress={() => navigation.navigate('Search', {})} hitSlop={8}>
           <Text style={styles.searchLinkText}>⌕ Search</Text>
         </Pressable>
@@ -177,7 +243,11 @@ export function ProductsScreen() {
         ) : null}
       </View>
 
-      {empty || allOutOfStock ? (
+      {initialLoading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator color={colors.text} />
+        </View>
+      ) : empty || allOutOfStock ? (
         <CatalogEmptyState variant={emptyVariant} />
       ) : (
         <FlatList
@@ -186,6 +256,21 @@ export function ProductsScreen() {
           numColumns={2}
           contentContainerStyle={styles.list}
           columnWrapperStyle={styles.row}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.4}
+          removeClippedSubviews
+          initialNumToRender={6}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={styles.footer}>
+                <ActivityIndicator color={colors.text} />
+              </View>
+            ) : page >= pages && products.length > 0 ? (
+              <Text style={styles.endHint}>All {total} products loaded</Text>
+            ) : null
+          }
           renderItem={({ item }) => (
             <View style={styles.item}>
               <ProductCard
@@ -251,18 +336,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  empty: {
-    paddingVertical: spacing.xl,
-  },
-  emptySub: {
+  endHint: {
     color: colors.textMuted,
-    fontSize: 14,
-    marginTop: 4,
-  },
-  emptyTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 12,
+    paddingVertical: spacing.md,
+    textAlign: 'center',
   },
   filterBanner: {
     alignItems: 'center',
@@ -279,11 +357,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
+  footer: {
+    paddingVertical: spacing.md,
+  },
   item: {
     flex: 1,
   },
   list: {
     paddingBottom: 96,
+  },
+  loadingBox: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
   },
   sortBlock: {
     marginBottom: spacing.sm,
@@ -364,12 +451,6 @@ const styles = StyleSheet.create({
   sortChipTextActive: {
     color: colors.text,
     fontWeight: '700',
-  },
-  sortLabel: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
-    marginRight: spacing.sm,
   },
   toolbar: {
     alignItems: 'center',

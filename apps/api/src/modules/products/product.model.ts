@@ -14,6 +14,9 @@ export interface ProductDocument {
   reviewCount: number;
   stock: number;
   tags: string[];
+  /** Merch bundle code e.g. DEMON_PR */
+  bundleTag?: string;
+  isBundleMain?: boolean;
   imageUrl: string;
   galleryUrls: string[];
   isLimitedDrop: boolean;
@@ -44,7 +47,9 @@ const productSchema = new Schema<ProductDocument>(
     stock: { type: Number, default: 0, min: 0 },
     sku: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
     runeXp: { type: Number, default: 10, min: 0 },
-    tags: { type: [String], default: [] },
+    tags: { type: [String], default: [], index: true },
+    bundleTag: { type: String, trim: true, index: true },
+    isBundleMain: { type: Boolean, default: false, index: true },
     imageUrl: { type: String, required: true },
     galleryUrls: { type: [String], default: [] },
     isLimitedDrop: { type: Boolean, default: false },

@@ -54,11 +54,11 @@ export const appConfig = {
   },
 
   /**
-   * Home video banner under Live Drop.
-   * Paste the clip URL here when you have it (`uri`). Poster shows until then.
+   * Home video banner — plays in-app via WebView (youtubeId). Starts muted autoplay on Home.
    */
   videoBanner: {
-    uri: '',
+    youtubeId: 'xOtGHc0FPmg',
+    uri: 'https://youtu.be/xOtGHc0FPmg?si=s8M-mIjDoYqk56Yv',
     poster:
       'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1400&q=80',
   },

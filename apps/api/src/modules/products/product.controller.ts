@@ -11,6 +11,7 @@ export class ProductController {
       search?: string;
       franchise?: string;
       collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking';
+      bundleTag?: string;
       inStockOnly?: boolean;
       sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
       page?: number;
@@ -27,6 +28,7 @@ export class ProductController {
         | 'also-like'
         | 'restocking'
         | undefined,
+      bundleTag: request.query.bundleTag as string | undefined,
       inStockOnly: request.query.inStockOnly === 'true' ? true : undefined,
       sort: request.query.sort as 'price_asc' | 'price_desc' | 'rating' | 'newest' | undefined,
       page: request.query.page ? Number(request.query.page) : undefined,
@@ -66,6 +68,11 @@ export class ProductController {
   getFeatured = async (_request: Request, response: Response) => {
     const products = await this.service.getFeatured();
     response.json({ data: { products } });
+  };
+
+  listBundles = async (_request: Request, response: Response) => {
+    const bundles = await this.service.listBundles();
+    response.json({ data: { bundles } });
   };
 
   getLimitedDrops = async (_request: Request, response: Response) => {

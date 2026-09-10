@@ -1,4 +1,4 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Product } from '@nidavellir/shared';
 import { colors } from '../../theme/tokens';
 import { getProductImages } from '../../lib/productMedia';
@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from '../../app/store';
 import { addProductToCart } from '../../lib/cartActions';
 import { toggleWishlistForUser } from '../../lib/wishlistActions';
 import { useToast } from '../ui/Toast';
+import { CachedImage } from '../ui/CachedImage';
 import { StarRating } from '../ui/StarRating';
 import { PriceRow } from './PriceRow';
 
@@ -26,7 +27,7 @@ export function SquareProductCard({ product, onPress }: Props) {
     <View style={styles.card}>
       <View style={styles.imageWrap}>
         <Pressable onPress={() => onPress(product)}>
-          <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
+          <CachedImage uri={image} style={styles.image} />
         </Pressable>
         <View style={styles.actions}>
           <Pressable

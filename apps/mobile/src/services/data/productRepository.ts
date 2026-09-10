@@ -19,11 +19,23 @@ export interface ProductListResult {
   pages: number;
 }
 
+/** Live bundle card from GET /products/bundles */
+export type CatalogBundle = {
+  tag: string;
+  name: string;
+  subtitle: string;
+  bannerImage: string;
+  mainProductSlug: string;
+  mainProduct: Product;
+  products: Product[];
+};
+
 export interface ProductListQuery {
   category?: string;
   franchise?: string;
   search?: string;
   collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking';
+  bundleTag?: string;
   sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
   page?: number;
   limit?: number;
@@ -68,6 +80,12 @@ function listFromMock(query: ProductListQuery = {}): ProductListResult {
     const needle = query.franchise.toLowerCase();
     items = items.filter(
       (p) => p.franchise.toLowerCase() === needle || p.brand.toLowerCase() === needle,
+    );
+  }
+  if (query.bundleTag) {
+    const tag = query.bundleTag;
+    items = items.filter(
+      (p) => p.bundleTag === tag || p.tags.includes(tag),
     );
   }
   if (query.search) {
@@ -117,6 +135,7 @@ function listFromMock(query: ProductListQuery = {}): ProductListResult {
 function mapApiProduct(raw: Record<string, unknown>): Product {
   const id = String(raw._id ?? raw.id ?? '');
   const franchise = String(raw.franchise ?? '');
+  const slug = raw.slug ? String(raw.slug) : undefined;
   const mapped: Product = {
     ...(raw as Product),
     id,
@@ -124,11 +143,26 @@ function mapApiProduct(raw: Record<string, unknown>): Product {
     franchise,
     sku: raw.sku ? String(raw.sku) : undefined as unknown as string,
     runeXp: raw.runeXp !== undefined ? Number(raw.runeXp) : undefined as unknown as number,
+    bundleTag: raw.bundleTag ? String(raw.bundleTag) : undefined,
+    isBundleMain: Boolean(raw.isBundleMain),
   };
+  if (slug) {
+    (mapped as Product & { slug?: string }).slug = slug;
+  }
   if (raw.compareAtPrice !== undefined) {
     mapped.compareAtPrice = Number(raw.compareAtPrice);
   }
   return normalizeProduct(mapped);
+}
+
+/** Match catalog prod-* ids to API products (Mongo id + slug). */
+export function productMatchesCatalogId(product: Product, catalogId: string): boolean {
+  if (product.id === catalogId) return true;
+  const slug = catalogId.startsWith('prod-') ? catalogId.slice(5) : catalogId;
+  const productSlug = (product as Product & { slug?: string }).slug;
+  if (productSlug && productSlug === slug) return true;
+  if (product.id === slug) return true;
+  return false;
 }
 
 function mapProducts(items: unknown[] = []): Product[] {
@@ -191,6 +225,7 @@ export class ProductRepository {
   async list(query: ProductListQuery = {}): Promise<ProductListResult> {
     return this.withFallback(async () => {
       const { data } = await apiClient.get('/products', { params: query });
+      console.log('[PLP] /products raw API response', { query, data });
       const payload = data.data as {
         items: unknown[];
         pagination?: { page: number; limit: number; total: number; pages: number };
@@ -267,6 +302,72 @@ export class ProductRepository {
       const { data } = await apiClient.get('/products', { params: { collection: 'also-like', limit } });
       return mapProducts((data.data as ProductListResult).items);
     }, () => listFromMock({ collection: 'also-like', limit }).items);
+  }
+
+  async getByBundleTag(bundleTag: string): Promise<Product[]> {
+    return this.withFallback(
+      async () => {
+        const { data } = await apiClient.get('/products', {
+          params: { bundleTag, limit: 20 },
+        });
+        const payload = data.data as { items?: unknown[] };
+        return mapProducts(payload.items ?? []);
+      },
+      () => listFromMock({ bundleTag, limit: 20 }).items,
+    );
+  }
+
+  async getBundles(): Promise<CatalogBundle[]> {
+    return this.withFallback(
+      async () => {
+        const { data } = await apiClient.get('/products/bundles');
+        const bundles = (data.data?.bundles ?? []) as Array<{
+          tag: string;
+          name: string;
+          subtitle: string;
+          bannerImage: string;
+          mainProductSlug: string;
+          mainProduct: unknown;
+          products: unknown[];
+        }>;
+        return bundles.map((bundle) => ({
+          tag: bundle.tag,
+          name: bundle.name,
+          subtitle: bundle.subtitle,
+          bannerImage: bundle.bannerImage,
+          mainProductSlug: bundle.mainProductSlug,
+          mainProduct: mapApiProduct(bundle.mainProduct as Record<string, unknown>),
+          products: mapProducts(bundle.products ?? []),
+        }));
+      },
+      () => {
+        // College mock only — group demoProducts by bundleTag
+        const byTag = new Map<string, Product[]>();
+        for (const product of demoProducts) {
+          if (!product.bundleTag) continue;
+          const list = byTag.get(product.bundleTag) ?? [];
+          list.push(normalizeProduct(product));
+          byTag.set(product.bundleTag, list);
+        }
+        return [...byTag.entries()].map(([tag, products]) => {
+          const main = products.find((p) => p.isBundleMain) ?? products[0]!;
+          return {
+            tag,
+            name: `${main.franchise} Bundle`,
+            subtitle: `${products.length}-piece set`,
+            bannerImage: main.imageUrl,
+            mainProductSlug: main.id.replace(/^prod-/, ''),
+            mainProduct: main,
+            products,
+          };
+        });
+      },
+    );
+  }
+
+  async getById(productId: string): Promise<Product | undefined> {
+    const slug = productId.startsWith('prod-') ? productId.slice(5) : productId;
+    return this.getBySlug(slug);
   }
 
   async getRelated(product: Product): Promise<{ similar: Product[]; alsoLike: Product[] }> {

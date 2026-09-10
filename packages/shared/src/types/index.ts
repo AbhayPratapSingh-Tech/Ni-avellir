@@ -30,6 +30,10 @@ export type Product = {
   sku: string;
   /** Rune XP awarded per unit purchased */
   runeXp: number;
+  /** Optional merch bundle code (e.g. DEMON_PR) — also present in tags. */
+  bundleTag?: string;
+  /** True on the primary PDP target for a bundle set. */
+  isBundleMain?: boolean;
   specifications: Record<string, string>;
   additionalDetails: string;
 };

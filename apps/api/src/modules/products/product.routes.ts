@@ -9,6 +9,7 @@ export function createProductRouter() {
   const controller = new ProductController(service);
 
   router.get('/', asyncHandler(controller.list));
+  router.get('/bundles', asyncHandler(controller.listBundles));
   router.get('/featured', asyncHandler(controller.getFeatured));
   router.get('/limited-drops', asyncHandler(controller.getLimitedDrops));
   router.get('/deals', asyncHandler(controller.getDeals));

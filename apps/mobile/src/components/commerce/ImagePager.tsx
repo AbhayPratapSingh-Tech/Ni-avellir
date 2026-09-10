@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -9,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { colors } from '../../theme/tokens';
+import { CachedImage } from '../ui/CachedImage';
 
 type Props = {
   images: string[];
@@ -42,7 +42,7 @@ export function ImagePager({ images, height, width, showCount = true, onPressIma
         }}
         renderItem={({ item, index: imageIndex }) => (
           <Pressable onPress={() => onPressImage?.(imageIndex)}>
-            <Image source={{ uri: item }} style={{ height, width: pagerWidth }} resizeMode="cover" />
+            <CachedImage uri={item} style={{ height, width: pagerWidth }} />
           </Pressable>
         )}
       />
