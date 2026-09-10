@@ -39,7 +39,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] **Push notifications (FCM / APNs)** — device tokens + backend fan-out (in-app Notifications API already exists).
 - [ ] **Automated tests** — Jest + RNTL + Supertest.
 - [ ] Coupon admin UI / CMS (API + seed only for now).
-- [ ] Serviceability picker UI on checkout (API exists).
+- [x] **Serviceability picker UI on checkout** — checks pincode from selected/entered address; shows ETA / shipping / COD; hides COD when unavailable (`serviceabilityRepository` + Checkout).
 
 ---
 
@@ -70,11 +70,11 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 ### Merchandising & drops
 - [ ] Today’s Niðavellir drop banner.
 - [ ] Pre-order products.
-- [ ] Bundle products.
+- [x] **Bundle products** — driven by live product `bundleTag` / `isBundleMain` + `GET /products/bundles` (not mock membership). PDP “Complete the bundle”; Home banner slider after bestsellers. Re-seed after catalog changes. Banner art hints are placeholders until creatives land.
 - [ ] Mystery boxes.
 
 ### Loyalty & profile
-- [ ] Loyalty points (XP) + level names / progression UI.
+- [x] **Rune XP (loyalty)** — awarded on paid/COD orders; Profile bar + Apprentice→Master tiers; PDP `+N Rune XP`. Deeper rewards catalog / history can wait.
 
 ### PDP & community
 - [ ] “How they get along” / customer images.
@@ -83,4 +83,5 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 
 ### Notes for implementers
 - Visual search, AI assistant, and smart pushes need backend + privacy / moderation plans.
-- Pre-order, bundles, and mystery boxes need inventory + pricing + cart rules before UI.
+- Pre-order and mystery boxes need inventory + pricing + cart rules before UI.
+- After bundle seed changes on Render, run seed against Atlas (or redeploy with seed job) so live API gets `bundleTag` products.

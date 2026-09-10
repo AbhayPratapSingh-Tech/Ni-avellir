@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Product } from '@nidavellir/shared';
+import { getBundleDisplayHint, resolveProductBundleTag } from '@nidavellir/shared';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { addProductToCart, setCartLineQuantity } from '../../lib/cartActions';
@@ -32,6 +33,7 @@ import { reviewRepository } from '../../services/data/reviewRepository';
 import { appConfig } from '../../config/appConfig';
 import type { ProductReview } from '../../services/data/reviews';
 import { getApiErrorMessage } from '../../services/api/apiClient';
+import { BundleCompleteSection } from '../../components/commerce/BundleCompleteSection';
 import { Accordion } from '../../components/commerce/Accordion';
 import { ImageGalleryModal } from '../../components/commerce/ImageGalleryModal';
 import { ImagePager } from '../../components/commerce/ImagePager';
@@ -76,6 +78,7 @@ export function ProductDetailScreen() {
 
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [bundleBusy, setBundleBusy] = useState(false);
   const [reviewName, setReviewName] = useState('');
   const [reviewBody, setReviewBody] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
@@ -127,6 +130,25 @@ export function ProductDetailScreen() {
   const openProduct = (next: Product) => {
     navigation.push('ProductDetail', { product: next });
   };
+
+  const completeBundle = async (members: Product[]) => {
+    setBundleBusy(true);
+    try {
+      let okCount = 0;
+      for (const item of members) {
+        const ok = await addProductToCart({ product: item, quantity: 1, dispatch, toast });
+        if (ok) okCount += 1;
+      }
+      if (okCount > 0) {
+        toast.show(`Added ${okCount} bundle item${okCount === 1 ? '' : 's'} ⚡`);
+      }
+    } finally {
+      setBundleBusy(false);
+    }
+  };
+
+  const bundleTag = resolveProductBundleTag(product);
+  const bundleHint = getBundleDisplayHint(bundleTag);
 
   const submitReview = async () => {
     if (!reviewName.trim() || !reviewBody.trim()) {
@@ -213,6 +235,14 @@ export function ProductDetailScreen() {
           <Text style={styles.brand}>{product.brand}</Text>
           <Text style={styles.franchise}>{product.franchise}</Text>
           <Text style={styles.name}>{product.name}</Text>
+          {bundleTag ? (
+            <View style={styles.bundleBadge}>
+              <Text style={styles.bundleBadgeText}>
+                {bundleTag}
+                {bundleHint ? ` · ${bundleHint.name}` : ''}
+              </Text>
+            </View>
+          ) : null}
           <Text style={styles.metaLine}>
             SKU {String(product.sku ?? '').toUpperCase()}
             {product.runeXp ? ` · +${product.runeXp} Rune XP` : ''}
@@ -230,6 +260,13 @@ export function ProductDetailScreen() {
           ) : (
             <Text style={styles.outOfStock}>Sold out</Text>
           )}
+
+          <BundleCompleteSection
+            product={product}
+            onPressProduct={openProduct}
+            onCompleteBundle={completeBundle}
+            completing={bundleBusy}
+          />
 
           <View style={styles.bankCard}>
             <View style={styles.bankIcon}>
@@ -663,6 +700,19 @@ const styles = StyleSheet.create({
     fontSize: typography.title,
     fontWeight: '800',
     marginTop: 4,
+  },
+  bundleBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.accentSoft,
+    borderRadius: 8,
+    marginTop: spacing.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  bundleBadgeText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '800',
   },
   metaLine: {
     color: colors.textMuted,

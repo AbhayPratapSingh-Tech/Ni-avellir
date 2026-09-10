@@ -6,6 +6,8 @@ export type ListProductsQuery = {
   search?: string;
   franchise?: string;
   collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking';
+  /** Bundle code e.g. DEMON_PR — matches bundleTag or tags. */
+  bundleTag?: string;
   minPrice?: number;
   maxPrice?: number;
   inStockOnly?: boolean;
@@ -44,6 +46,9 @@ export class ProductService {
     }
     if (query.franchise) {
       filter.franchise = query.franchise;
+    }
+    if (query.bundleTag) {
+      filter.$or = [{ bundleTag: query.bundleTag }, { tags: query.bundleTag }];
     }
     if (query.collection === 'also-like') {
       filter.tags = ALSO_LIKE_TAG;
@@ -91,6 +96,42 @@ export class ProductService {
 
   async getBySlug(slug: string) {
     return Product.findOne({ slug }).lean();
+  }
+
+  /**
+   * Bundles derived from live catalog: products that have `bundleTag`.
+   * Main item = isBundleMain, else first by reviewCount.
+   */
+  async listBundles() {
+    const products = await Product.find({
+      bundleTag: { $exists: true, $nin: [null, ''] },
+    })
+      .sort({ reviewCount: -1 })
+      .lean();
+
+    const byTag = new Map<string, typeof products>();
+    for (const product of products) {
+      const tag = String(product.bundleTag ?? '').trim();
+      if (!tag) continue;
+      const list = byTag.get(tag) ?? [];
+      list.push(product);
+      byTag.set(tag, list);
+    }
+
+    return [...byTag.entries()].map(([tag, items]) => {
+      const main =
+        items.find((item) => item.isBundleMain) ??
+        items.slice().sort((a, b) => b.reviewCount - a.reviewCount)[0]!;
+      return {
+        tag,
+        name: `${main.franchise} Bundle`,
+        subtitle: `${items.length}-piece set`,
+        bannerImage: main.imageUrl,
+        mainProductSlug: main.slug,
+        mainProduct: main,
+        products: items,
+      };
+    });
   }
 
   async getCategories() {

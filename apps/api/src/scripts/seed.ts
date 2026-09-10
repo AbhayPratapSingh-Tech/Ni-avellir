@@ -29,6 +29,8 @@ function toSeedDoc(product: Product) {
     reviewCount: product.reviewCount,
     stock: product.stock,
     tags: product.tags,
+    bundleTag: product.bundleTag,
+    isBundleMain: Boolean(product.isBundleMain),
     imageUrl: product.imageUrl,
     galleryUrls,
     isLimitedDrop: product.isLimitedDrop,
@@ -65,6 +67,14 @@ async function seed() {
       shippingCharge: 79,
       freeShippingThreshold: 999,
       etaDays: 3,
+      active: true,
+    },
+    {
+      pincodePrefix: '500',
+      codAvailable: false,
+      shippingCharge: 129,
+      freeShippingThreshold: 1999,
+      etaDays: 6,
       active: true,
     },
   ]);

@@ -17,6 +17,7 @@ const links = [
   ['@react-native/codegen', '@react-native/codegen'],
   ['@react-native/community-cli-plugin', '@react-native/community-cli-plugin'],
   ['react-native-razorpay', 'react-native-razorpay'],
+  ['react-native-webview', 'react-native-webview'],
 ];
 
 function ensureDir(dir) {

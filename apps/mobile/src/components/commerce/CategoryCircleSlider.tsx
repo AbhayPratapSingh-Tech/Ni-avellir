@@ -1,6 +1,7 @@
-import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { colors, spacing } from '../../theme/tokens';
 import { shopCategories, type ShopCategory } from '../../lib/shopCategories';
+import { CachedImage } from '../ui/CachedImage';
 
 type Props = {
   onPress: (item: ShopCategory) => void;
@@ -20,7 +21,10 @@ export function CategoryCircleSlider({ onPress }: Props) {
     >
       {shopCategories.map((item) => (
         <Pressable key={item.id} style={[styles.item, { width: itemWidth }]} onPress={() => onPress(item)}>
-          <Image source={{ uri: item.image }} style={[styles.circle, { width: itemWidth - 16, height: itemWidth - 16 }]} />
+          <CachedImage
+            uri={item.image}
+            style={[styles.circle, { width: itemWidth - 16, height: itemWidth - 16 }]}
+          />
           <Text style={styles.name} numberOfLines={1}>
             {item.name}
           </Text>

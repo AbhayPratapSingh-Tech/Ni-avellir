@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Product } from '@nidavellir/shared';
 import { colors, spacing } from '../../theme/tokens';
 import { getProductImages } from '../../lib/productMedia';
@@ -7,6 +7,7 @@ import { useAppDispatch, useAppSelector } from '../../app/store';
 import { addProductToCart } from '../../lib/cartActions';
 import { toggleWishlistForUser } from '../../lib/wishlistActions';
 import { StarRating } from '../ui/StarRating';
+import { CachedImage } from '../ui/CachedImage';
 import { useToast } from '../ui/Toast';
 import { ImagePager } from './ImagePager';
 import { PriceRow } from './PriceRow';
@@ -63,11 +64,7 @@ export function ProductCard({ product, compact, large, onPress, onAddToCart }: P
         {width > 0 ? (
           compact ? (
             <Pressable onPress={() => onPress?.(product)}>
-              <Image
-                source={{ uri: images[0] }}
-                style={{ height: imageHeight, width }}
-                resizeMode="cover"
-              />
+              <CachedImage uri={images[0]} style={{ height: imageHeight, width }} />
             </Pressable>
           ) : (
             <ImagePager

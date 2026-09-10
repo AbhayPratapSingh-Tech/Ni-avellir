@@ -46,6 +46,7 @@
     "react-native-safe-area-context": "^5.1.0",
     "react-native-screens": "4.9.2",
     "react-native-svg": "15.11.2",
+    "react-native-webview": "^13.13.5",
     "react-redux": "^9.2.0",
     "redux-persist": "^6.0.0",
     "zod": "^3.24.1"

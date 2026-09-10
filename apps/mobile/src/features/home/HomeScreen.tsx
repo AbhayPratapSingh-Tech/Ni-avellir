@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
-  Image,
+  InteractionManager,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -24,13 +24,16 @@ import { ProductCard } from '../../components/commerce/ProductCard';
 import { SquareProductCard } from '../../components/commerce/SquareProductCard';
 import { CategoryCircleSlider } from '../../components/commerce/CategoryCircleSlider';
 import { VideoBanner } from '../../components/commerce/VideoBanner';
+import { BundleBannerSlider } from '../../components/commerce/BundleBannerSlider';
 import { ShopHeader } from '../../components/layout/ShopHeader';
 import { ShopDrawer } from '../../components/layout/ShopDrawer';
 import { Screen } from '../../components/ui/Screen';
+import { CachedImage } from '../../components/ui/CachedImage';
 import { useDailySale } from '../../lib/saleWindow';
 import { productRepository } from '../../services/data/productRepository';
 import type { ShopCategory } from '../../lib/shopCategories';
 import type { RootStackParamList } from '../../app/navigation/types';
+import { trackEvent } from '../../lib/analytics';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -128,7 +131,7 @@ function HeroCarousel() {
         onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / stride))}
         renderItem={({ item }) => (
           <View style={[styles.heroSlide, { width: slideWidth, marginRight: gap }]}>
-            <Image source={{ uri: item.image }} style={styles.heroImage} resizeMode="cover" />
+            <CachedImage uri={item.image} style={styles.heroImage} priority="high" />
             <View style={styles.heroOverlay}>
               <GlowRing />
               <Text style={styles.heroTitle}>{item.title}</Text>
@@ -181,22 +184,52 @@ export function HomeScreen() {
   const [deals, setDeals] = useState<Product[]>([]);
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [alsoLike, setAlsoLike] = useState<Product[]>([]);
+  const [bundles, setBundles] = useState<
+    Awaited<ReturnType<typeof productRepository.getBundles>>
+  >([]);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const loadShelves = useCallback(() => {
+    // Priority: deals first; defer lower shelves until interactions settle.
     void productRepository.getDeals().then(setDeals);
-    void productRepository.getBestSellers().then(setBestSellers);
-    void productRepository.getAlsoLike(6).then(setAlsoLike);
+    const task = InteractionManager.runAfterInteractions(() => {
+      void productRepository.getBestSellers().then(setBestSellers);
+      void productRepository.getAlsoLike(6).then(setAlsoLike);
+      void productRepository.getBundles().then(setBundles);
+    });
+    return () => task.cancel();
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadShelves();
+      const cancel = loadShelves();
+      return cancel;
     }, [loadShelves]),
   );
 
   const openPlp = useCallback(() => {
+    const payload = {
+      bannerId: 'hero_full',
+      bannerIndex: 1,
+      title: HERO_BANNER.title,
+      destination: 'Products' as const,
+    };
+    console.log('[Home] banner clicked → PLP', payload);
+    trackEvent('home_banner_click', payload);
     navigation.navigate('Products', { title: 'All products' });
+  }, [navigation]);
+
+  /** Closing / bottom home banner → PLP */
+  const openClosingBannerPlp = useCallback(() => {
+    const payload = {
+      bannerId: 'closing',
+      bannerIndex: 2,
+      title: CLOSING_BANNER.title,
+      destination: 'Products' as const,
+    };
+    console.log('[Home] banner clicked → PLP', payload);
+    trackEvent('home_banner_click', payload);
+    navigation.navigate('Products', { title: CLOSING_BANNER.title });
   }, [navigation]);
 
   const openProduct = useCallback(
@@ -233,7 +266,7 @@ export function HomeScreen() {
         </View>
 
         <Pressable onPress={openPlp} style={styles.fullBanner}>
-          <Image source={{ uri: HERO_BANNER.image }} style={[styles.fullBannerImage, { width }]} />
+          <CachedImage uri={HERO_BANNER.image} style={[styles.fullBannerImage, { width }]} priority="high" />
           <View style={styles.fullBannerOverlay} pointerEvents="none">
             <Text style={styles.bannerKicker}>Shop all</Text>
             <Text style={styles.bannerTitle}>{HERO_BANNER.title}</Text>
@@ -288,6 +321,15 @@ export function HomeScreen() {
               ))}
             </ScrollView>
           </View>
+          {bundles.length > 0 ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Anime bundles</Text>
+              <BundleBannerSlider
+                bundles={bundles}
+                onPressBundle={(bundle) => openProduct(bundle.mainProduct)}
+              />
+            </View>
+          ) : null}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>You may also like</Text>
@@ -313,13 +355,18 @@ export function HomeScreen() {
               ))}
             </View>
           </View>
-          <View style={[styles.section, styles.lastBannerWrap]}>
-            <Image source={{ uri: CLOSING_BANNER.image }} style={styles.lastBanner} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={CLOSING_BANNER.title}
+            onPress={openClosingBannerPlp}
+            style={[styles.section, styles.lastBannerWrap]}
+          >
+            <CachedImage uri={CLOSING_BANNER.image} style={styles.lastBanner} />
             <View style={styles.lastBannerOverlay} pointerEvents="none">
               <Text style={styles.bannerTitle}>{CLOSING_BANNER.title}</Text>
               <Text style={styles.bannerSub}>{CLOSING_BANNER.subtitle}</Text>
             </View>
-          </View>
+          </Pressable>
         </View>
       </ScrollView>
     </Screen>

@@ -13,6 +13,24 @@ import { authRepository } from '../../services/data/authRepository';
 import { cartRepository } from '../../services/data/cartRepository';
 import { colors, spacing, typography } from '../../theme/tokens';
 
+/** Never leave the splash hung on cold API / Keychain stalls. */
+const BOOTSTRAP_BUDGET_MS = 8_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | undefined> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(undefined), ms);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        resolve(undefined);
+      });
+  });
+}
+
 export function AppBootstrap({ children }: PropsWithChildren) {
   const dispatch = useAppDispatch();
   const [ready, setReady] = useState(appConfig.dataSource !== 'api');
@@ -21,34 +39,41 @@ export function AppBootstrap({ children }: PropsWithChildren) {
     if (appConfig.dataSource !== 'api') return;
     let mounted = true;
     startApiKeepAlive();
-    // Wake Render in parallel — do not block the UI on cold start (up to 90s).
+    // Wake Render in parallel — do not block the UI on cold start.
     void pingApiHealth();
 
     (async () => {
-      const hydrated = await hydrateSessionTokensFromSecureStore();
-      if (hydrated) {
-        const user = await authRepository.me();
-        if (user && mounted) {
-          dispatch(
-            signIn({
-              name: user.name,
-              email: user.email,
-              phone: user.phone,
-              avatarUri: user.avatarUrl,
-              runeXp: user.runeXp,
-            }),
-          );
-        }
-      }
       try {
-        await cartRepository.refresh();
+        const hydrated = await withTimeout(hydrateSessionTokensFromSecureStore(), 3_000);
+        if (hydrated) {
+          const user = await withTimeout(authRepository.me(), 5_000);
+          if (user && mounted) {
+            dispatch(
+              signIn({
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                avatarUri: user.avatarUrl,
+                runeXp: user.runeXp,
+              }),
+            );
+          }
+        }
+        await withTimeout(cartRepository.refresh(), 5_000);
       } catch {
-        // API may still be waking; shop can retry.
+        // Shop can retry after splash.
+      } finally {
+        if (mounted) setReady(true);
       }
-      if (mounted) setReady(true);
     })();
+
+    const forceReady = setTimeout(() => {
+      if (mounted) setReady(true);
+    }, BOOTSTRAP_BUDGET_MS);
+
     return () => {
       mounted = false;
+      clearTimeout(forceReady);
       stopApiKeepAlive();
     };
   }, [dispatch]);

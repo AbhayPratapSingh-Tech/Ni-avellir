@@ -28,6 +28,8 @@ import { appConfig } from '../../config/appConfig';
 import { addressRepository } from '../../services/data/addressRepository';
 import { cartRepository } from '../../services/data/cartRepository';
 import { productRepository } from '../../services/data/productRepository';
+import { serviceabilityRepository } from '../../services/data/serviceabilityRepository';
+import type { ServiceabilityDto } from '@nidavellir/shared';
 import { openRazorpayCheckout } from '../../services/payments/openRazorpayCheckout';
 import { RazorpayTestCheckout } from '../../components/commerce/RazorpayTestCheckout';
 import {
@@ -113,6 +115,8 @@ export function CheckoutScreen() {
   const [stateName, setStateName] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [payment, setPayment] = useState<string>('cash_on_delivery');
+  const [serviceability, setServiceability] = useState<ServiceabilityDto | null>(null);
+  const [serviceabilityLoading, setServiceabilityLoading] = useState(false);
 
   const hasSavedAddresses = savedAddresses.length > 0;
   const showAddressForm = !hasSavedAddresses || addressPanel === 'form';
@@ -390,6 +394,29 @@ export function CheckoutScreen() {
       postalCode: result.postalCode,
     };
   }, [fullName, phone, line1, city, stateName, postalCode]);
+
+  useEffect(() => {
+    const pin = digitsOnly(postalCode).slice(0, 6);
+    if (pin.length !== 6) {
+      setServiceability(null);
+      return;
+    }
+    let alive = true;
+    setServiceabilityLoading(true);
+    void serviceabilityRepository.check(pin).then((result) => {
+      if (!alive) return;
+      setServiceability(result);
+      setServiceabilityLoading(false);
+      if (!result.codAvailable && payment === 'cash_on_delivery') {
+        setPayment('razorpay_demo');
+      }
+      void cartRepository.refresh(pin).catch(() => undefined);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [postalCode]);
+
   const addressValid = !hasAddressErrors({
     fullName: addressErrors.fullName,
     phone: addressErrors.phone,
@@ -427,6 +454,10 @@ export function CheckoutScreen() {
     setStateName(shipping.state);
     setPostalCode(shipping.postalCode);
     setTriedAddress(false);
+    if (serviceability && !serviceability.serviceable) {
+      toast.show('We cannot deliver to this pincode yet');
+      return;
+    }
     setStep('Payment');
   };
 
@@ -863,13 +894,45 @@ export function CheckoutScreen() {
                 ) : null}
               </View>
             )}
+
+            {digitsOnly(postalCode).length === 6 ? (
+              <View
+                style={[
+                  styles.serviceCard,
+                  serviceability && !serviceability.serviceable && styles.serviceCardBad,
+                ]}
+              >
+                {serviceabilityLoading || !serviceability ? (
+                  <Text style={styles.serviceText}>Checking delivery for {postalCode}…</Text>
+                ) : serviceability.serviceable ? (
+                  <>
+                    <Text style={styles.serviceTitle}>Deliverable to {serviceability.pincode}</Text>
+                    <Text style={styles.serviceText}>
+                      ETA ~{serviceability.etaDays} days · Shipping ₹{serviceability.shippingCharge}
+                      {serviceability.freeShippingThreshold
+                        ? ` (free above ₹${serviceability.freeShippingThreshold})`
+                        : ''}
+                    </Text>
+                    <Text style={styles.serviceText}>
+                      COD {serviceability.codAvailable ? 'available' : 'not available'} for this pin
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={styles.serviceTextBad}>
+                    Not serviceable for pincode {serviceability.pincode}
+                  </Text>
+                )}
+              </View>
+            ) : null}
           </View>
         ) : null}
 
         {step === 'Payment' ? (
           <View>
             <Text style={styles.sectionTitle}>Payment method</Text>
-            {PAYMENT_METHODS.map((m) => (
+            {PAYMENT_METHODS.filter(
+              (m) => m.id !== 'cash_on_delivery' || serviceability?.codAvailable !== false,
+            ).map((m) => (
               <Pressable
                 key={m.id}
                 style={[styles.payCard, payment === m.id && styles.payCardActive]}
@@ -1085,6 +1148,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: spacing.sm,
     padding: spacing.md,
+  },
+  serviceCard: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: 12,
+    marginTop: spacing.md,
+    padding: spacing.md,
+  },
+  serviceCardBad: {
+    backgroundColor: 'rgba(196,92,92,0.15)',
+  },
+  serviceText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    marginTop: 2,
+  },
+  serviceTextBad: {
+    color: colors.danger,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  serviceTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '800',
   },
   payCardActive: {
     borderColor: colors.text,
