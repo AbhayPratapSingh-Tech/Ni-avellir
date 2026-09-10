@@ -292,10 +292,6 @@ export function ProductDetailScreen() {
 
         </View>
 
-        <ProductSlider title="Similar items" products={similar} onPress={openProduct} />
-        <ProductSlider title="You might also like" products={alsoLike} onPress={openProduct} />
-        <ProductSlider title="Recently viewed" products={recentlyViewed} onPress={openProduct} />
-
         <View style={styles.accordions}>
           <Accordion title="Product specifications">
             {Object.entries(product.specifications ?? {}).map(([key, value]) => (
@@ -351,6 +347,10 @@ export function ProductDetailScreen() {
             </View>
           ))}
         </View>
+
+        <ProductSlider title="Similar items" products={similar} onPress={openProduct} />
+        <ProductSlider title="You might also like" products={alsoLike} onPress={openProduct} />
+        <ProductSlider title="Recently viewed" products={recentlyViewed} onPress={openProduct} />
 
         <View style={[styles.body, styles.brands]}>
           <Text style={styles.brandsTitle}>Similar brands on {APP_NAME}</Text>
@@ -612,26 +612,33 @@ const styles = StyleSheet.create({
   confidence: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'space-between',
     marginTop: spacing.sm,
   },
   confidenceIcon: {
     fontSize: 18,
     marginBottom: 6,
+    textAlign: 'center',
   },
   confidenceItem: {
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: spacing.sm,
-    marginRight: '4%',
-    padding: spacing.sm,
-    width: '48%',
+    // 2×2: half row minus gap (RN % is of parent; gap handled separately)
+    flexBasis: '47%',
+    flexGrow: 0,
+    flexShrink: 0,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
   },
   confidenceText: {
     color: colors.text,
     fontSize: 12,
     fontWeight: '600',
+    textAlign: 'center',
   },
   ctaRow: {
     flexDirection: 'row',
