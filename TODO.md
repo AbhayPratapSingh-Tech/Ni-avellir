@@ -23,9 +23,11 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 
 **SMS:** `SMS_DEMO_MODE=true` logs OTP in API console; paid MSG91/Twilio for real SMS.
 
-**Email:** `EMAIL_DEMO_MODE=true` logs mail; set Resend key + `EMAIL_DEMO_MODE=false` for real inbox mail. Smoke: `npm run test:email --workspace apps/api -- you@example.com`.
+**Email (Render live):** `EMAIL_DEMO_MODE=false` + real `RESEND_API_KEY` + `EMAIL_FROM=Niðavellir <onboarding@resend.dev>` — verify / reset / order mail send via Resend. Free onboarding sender only delivers to the Resend account email until a domain is verified. Branded HTML in `integrations/email/email.factory.ts`. Smoke: `npm run test:email --workspace apps/api -- you@example.com`. Local default remains `EMAIL_DEMO_MODE=true` (console only).
 
-**Rune XP:** 100 per completed order; 500 if the order includes 2+ products with the same `bundleTag`.
+**Rune XP:** **100** per completed order; **500** if the order includes **2+ products** with the same `bundleTag`. Confirmation screen shows awarded XP.
+
+**Sessions:** login/register/OTP send `deviceId` / `deviceLabel` / `os`; API stores client IP (`trust proxy`). Devices & sessions UI shows label + OS + IP.
 
 **Cart coupons (seeded):** `FORGE10`, `WELCOME100`.
 
@@ -42,6 +44,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] **Automated tests** — Jest + RNTL + Supertest.
 - [ ] Coupon admin UI / CMS (API + seed only for now).
 - [x] **Serviceability picker UI on checkout** — checks pincode from selected/entered address; shows ETA / shipping / COD; hides COD when unavailable (`serviceabilityRepository` + Checkout).
+- [ ] **Custom Resend domain** — send verify/order mail to any address (currently limited by `onboarding@resend.dev`).
 
 ---
 
@@ -49,7 +52,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 
 > Putting API + Mongo + app on real servers (Railway / Render / AWS + Play Store / TestFlight), with real env secrets — **not your laptop.**
 
-- [x] **API on Render Free** — `https://ni-avellir.onrender.com` (`render.yaml`, `npm run build:api` / `start:api`, Atlas Mongo, Razorpay Test keys). Mobile `apiBaseUrl` + `/health` keep-alive (`wakeApiServer.ts`).
+- [x] **API on Render Free** — `https://ni-avellir.onrender.com` (`render.yaml`, `npm run build:api` / `start:api`, Atlas Mongo, Razorpay Test keys, **Resend verify email live**). Mobile `apiBaseUrl` + `/health` keep-alive (`wakeApiServer.ts`).
 - [ ] **HTTPS / store deploy (remaining)**
   - Paid always-on host if cold starts are unacceptable for store users.
   - Point production builds at HTTPS API; `dataSource: 'api'`, `allowMockFallback: false`.
@@ -76,14 +79,15 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] Mystery boxes.
 
 ### Loyalty & profile
-- [x] **Rune XP (loyalty)** — **100 XP per normal order**, **500 XP when the order has 2+ products sharing a `bundleTag`**. Profile bar + Apprentice→Master tiers. Confirmation screen shows awarded amount.
+- [x] **Rune XP (loyalty)** — **100 XP per normal order**, **500 XP** for bundle orders (2+ SKUs same `bundleTag`). Profile bar + Apprentice→Master tiers; confirmation shows awarded amount.
+- [x] **Devices & sessions** — named device / OS / IP (not “This device”).
+- [x] **Email verify (Resend)** — branded templates; live on Render; Account tracks `emailVerified`.
 
-### Active polish backlog
-- [x] **Session device labels** — mobile sends `deviceId` / `deviceLabel` / `os`; API stores client IP; Sessions UI shows name + OS + IP (not “This device”). Re-login to label sessions.
-- [x] **Verification email plumbing** — Resend errors logged; `npm run test:email --workspace apps/api -- you@example.com`. Real inbox still needs Render env: `EMAIL_DEMO_MODE=false`, real `RESEND_API_KEY`, verified `EMAIL_FROM`.
-- [x] **Blank Unicode icons** — PDP confidence + Account menu use SVG `AppIcon` (Android-safe).
-- [x] **Broken product images** — `CachedImage` placeholder + `onError` fallback.
-- [x] **Home video autoplay** — muted autoplay retries on load / Home focus / AppState active.
+### App polish (shipped)
+- [x] SVG `AppIcon` on PDP confidence + Account menu (Android-safe; no blank Unicode).
+- [x] `CachedImage` placeholder + `onError` fallback.
+- [x] Home `VideoBanner` muted autoplay retries (load / focus / AppState).
+- [x] PDP specs/reviews above recommendation carousels; confidence **2×2** grid.
 
 ### PDP & community
 - [ ] “How they get along” / customer images.
@@ -94,3 +98,4 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - Visual search, AI assistant, and smart pushes need backend + privacy / moderation plans.
 - Pre-order and mystery boxes need inventory + pricing + cart rules before UI.
 - After bundle seed changes on Render, run seed against Atlas (or redeploy with seed job) so live API gets `bundleTag` products.
+- Email template edits: `apps/api/src/integrations/email/email.factory.ts` → push → redeploy Render.

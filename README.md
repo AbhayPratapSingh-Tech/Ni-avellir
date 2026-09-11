@@ -2,15 +2,15 @@
 
 Premium gaming merchandise marketplace — a full-stack mobile commerce app.
 
-**Status: Live API on Render + mobile wired.** Default `dataSource: 'api'` → `https://ni-avellir.onrender.com/api/v1`. Local API still available via `npm run dev:api`. Mock mode via `appConfig.dataSource: 'mock'`.
+**Status: Live API on Render + mobile wired.** Default `dataSource: 'api'` → `https://ni-avellir.onrender.com/api/v1`. Resend verify email live (`EMAIL_DEMO_MODE=false`). Local API via `npm run dev:api`. Mock via `appConfig.dataSource: 'mock'`.
 
 ## What's Included
 
-- **Mobile app** (bare React Native CLI, no Expo): Onboarding, Login, Signup, OTP, Forgot/Reset/Change password, Sessions, Email verify, Forge (Home), Categories, Search, Products, Product Detail (+ reviews), Cart (+ coupons), Checkout, Order Confirmation, Orders, Order Details (cancel/return/exchange), Addresses, Wishlist, Notifications, Account, Edit Profile.
-- **Backend API** (Node.js + Express + MongoDB Atlas): auth/JWT, products, server cart, addresses, wishlist, coupons, reviews, notifications, serviceability, orders, Razorpay Test + COD, webhooks, health, seed script. Hosted on **Render Free** (`ni-avellir.onrender.com`).
-- **Shared package** (`@nidavellir/shared`): contracts, types, constants, Zod validation, and expanded mock catalog (~28 products).
+- **Mobile app** (bare React Native CLI, no Expo): Onboarding, Login, Signup, OTP, Forgot/Reset/Change password, Devices & sessions (device/OS/IP), Email verify, Forge (Home + YouTube banner), Categories, Search, Products, Product Detail (+ reviews, bundles, SVG confidence icons), Cart (+ coupons), Checkout (+ serviceability), Order Confirmation (Rune XP), Orders, Order Details (cancel/return/exchange), Addresses, Wishlist, Notifications, Account, Edit Profile.
+- **Backend API** (Node.js + Express + MongoDB Atlas): auth/JWT, products + bundles, server cart, addresses, wishlist, coupons, reviews, notifications, serviceability, orders, Razorpay Test + COD, webhooks, Resend (branded verify/reset/order mail), health, seed. Hosted on **Render Free** (`ni-avellir.onrender.com`).
+- **Shared package** (`@nidavellir/shared`): contracts, types, constants, Zod validation, mock catalog, bundle display hints.
+- **Loyalty:** Rune XP **100**/order, **500** for bundle orders (2+ SKUs same `bundleTag`).
 - **Payments**: native `react-native-razorpay` when live Test keys return `intent.demoMode === false` (demo sheet only without keys).
-- **Account**: addresses CRUD, edit profile, orders with product images and details.
 - **Keep-alive**: app silently pings `/health` on load + every 20 min while open (Render Free cold starts).
 
 ## Quick Start (clone → run)
@@ -78,7 +78,7 @@ See also `API_DETAILS.example.md`, `DEVELOPER_GUIDE.md`, `AI_AGENT_GUIDE.md`.
 - `API_DETAILS.example.md` — how to generate JWT sheets (local + `--live`).
 - `ARCHITECTURE.md` — full architecture plan.
 - `INSTALLATION.md` — native tooling prerequisites.
-- `TODO.md` / `PROJECT_PROGRESS.md` — project status and roadmap.
+- `TODO.md` / `PROJECT_PROGRESS.md` — project status and roadmap (Resend live, Rune XP 100/500, sessions, polish).
 - `render.yaml` — Render Blueprint (build/start API only, not Metro).
 
 ## Tech Stack

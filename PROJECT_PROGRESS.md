@@ -17,6 +17,12 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 - **Render Free** deploy (`render.yaml`, `build:api` / `start:api`) — health OK at `/health`.
 - Mobile `apiBaseUrl` → Render; silent `/health` keep-alive on bootstrap + every 20 min (`wakeApiServer.ts`).
 - Postman/cURL docs: `API_DETAILS.live.example.md` + `generate-api-details-local.py --live`.
+- **Anime bundles** — `bundleTag` / `isBundleMain`, `GET /products/bundles`, PDP complete-the-bundle, Home banner slider.
+- **Checkout serviceability** — pincode ETA / shipping / COD gate on Checkout.
+- **Resend email (live on Render)** — verify / reset / order templates branded in `email.factory.ts`; `EMAIL_DEMO_MODE=false` + `RESEND_API_KEY`.
+- **Sessions** — `deviceLabel` / `os` / `ip` on refresh tokens; Devices & sessions UI.
+- **Rune XP** — flat **100**/order, **500** for bundle orders (2+ same `bundleTag`); confirmation shows award.
+- **UI polish** — SVG `AppIcon`, `CachedImage` error placeholder, Home YouTube `VideoBanner` autoplay retries, PDP confidence 2×2 + specs/reviews above carousels.
 
 ### Phase 1: Architecture
 - Full architecture plan (monorepo, bare React Native CLI, backend, shared contracts).
@@ -87,7 +93,7 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 
 ## Next Step
 
-Optional: automated tests, FCM push, store builds (Play / TestFlight), paid always-on Render if Free cold starts are unacceptable. Core app + hosted API are demo-ready.
+Optional: custom Resend domain (any recipient), automated tests, FCM push, store builds (Play / TestFlight), paid always-on Render if Free cold starts are unacceptable. Core app + hosted API + live verify email are demo-ready.
 
 ## Approval Log
 
@@ -101,5 +107,6 @@ Optional: automated tests, FCM push, store builds (Play / TestFlight), paid alwa
 - Phase 8 auth gate + shop UI polish: **Complete**.
 - Phase 9 catalog / PDP / Account polish: **Complete**.
 - Live API + Render hosting: **Complete** (Free tier; store deploy remaining).
+- Resend verify + branded templates + session labels + Rune XP 100/500: **Complete**.
 - Phase 10 testing hardening: Not started (optional).
 - Phase 11 store deployment: Not started (optional).

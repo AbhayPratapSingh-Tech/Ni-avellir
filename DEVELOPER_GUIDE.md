@@ -208,6 +208,12 @@ Nidavellir/
 | **Recently viewed** | `features/recent/recentSlice.ts` |
 | **Account + Rune XP + logout** | `features/profile/ProfileScreen.tsx` |
 | **Edit profile + avatar** | `features/profile/EditProfileScreen.tsx` |
+| **Devices & sessions** | `features/profile/SessionsScreen.tsx` |
+| **Verify email** | `features/profile/VerifyEmailScreen.tsx` |
+| **Device label for sessions** | `services/session/deviceLabel.ts` |
+| **Home YouTube video banner** | `components/commerce/VideoBanner.tsx` |
+| **SVG icons (PDP / Account)** | `components/ui/AppIcon.tsx` |
+| **Cached images + placeholder** | `components/ui/CachedImage.tsx` |
 | **Restore RN symlinks after npm hoist** | `scripts/ensure-mobile-node-modules.js` |
 | **Wait for Android package manager** | `scripts/wait-for-android-device.sh` |
 | **Toasts / safe screen / stars / brand mark** | `components/ui/` |
@@ -226,8 +232,10 @@ Nidavellir/
 | **Payment provider abstraction** | `modules/payments/` |
 | **Razorpay provider** | `modules/payments/providers/razorpay.provider.ts` |
 | **COD provider** | `modules/payments/providers/cod.provider.ts` |
-| **Email abstraction** | `integrations/email/` |
+| **Email abstraction + branded HTML** | `integrations/email/email.factory.ts` |
 | **Resend provider** | `integrations/email/providers/resend.provider.ts` |
+| **Email smoke test** | `scripts/test-email.ts` (`npm run test:email --workspace apps/api`) |
+| **Rune XP (100 / 500 bundle)** | `modules/orders/rune-xp.ts` |
 | **Error handler** | `common/middleware/error-handler.ts` |
 | **App errors** | `common/errors/app-error.ts` |
 | **Logger** | `common/logger/logger.ts` |
@@ -256,8 +264,9 @@ Edit `apps/mobile/src/config/appConfig.ts`:
 
 ```ts
 export const appConfig = {
-  dataSource: 'mock', // change to 'api' for the live backend
-  apiBaseUrl: 'http://localhost:4000/api/v1',
+  dataSource: 'api', // 'mock' for offline college demo
+  allowMockFallback: false,
+  apiBaseUrl: 'https://ni-avellir.onrender.com/api/v1',
   ...
 };
 ```
@@ -291,9 +300,10 @@ npx tsc --noEmit -p apps/api/tsconfig.json
 
 ## Notes for the College Demo
 
-- Set `dataSource: 'mock'` in `appConfig.ts` for a **zero-setup** demo that works entirely offline with bundled data.
-- Cold start is **Onboarding → Login / Signup → Forge**. Any email + password works on Login; signup OTP accepts any 4 digits. Session is in-memory (reload returns to onboarding).
+- **Live (default):** `dataSource: 'api'` against Render — no local Mongo required. Free-tier cold starts are normal; keep-alive helps.
+- **Offline mock:** set `dataSource: 'mock'` for a zero-setup demo with bundled catalog.
+- Guest may browse + cart; checkout / wishlist need login.
 - The shop uses a **light esports** theme (mist background, ink type, cobalt accent), not a dark neon look. Onboarding slides stay dark/full-bleed.
-- Tabs after login: **Forge**, **Categories**, **Cart**, **Account**.
-- Talking points: 3-slide onboarding, daily sale 09:00–16:00, PDP gallery / MRP / % off, cart Hit the Anvil bar, Rune XP.
+- Tabs: **Forge**, **Categories**, **Cart**, **Account**.
+- Talking points: live Resend verify email, Rune XP (100 / 500 bundle), anime bundles, Razorpay Test, Devices & sessions, Home video banner.
 - Full commerce flow: Onboarding → Login → Home → Products → Product Detail → Cart → Checkout → Order Confirmation → Orders / Edit Profile.
