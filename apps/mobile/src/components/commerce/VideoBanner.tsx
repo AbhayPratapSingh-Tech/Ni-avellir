@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
+  type AppStateStatus,
   type GestureResponderEvent,
 } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import type { WebView as WebViewType } from 'react-native-webview';
 import { colors, spacing } from '../../theme/tokens';
 import { appConfig } from '../../config/appConfig';
@@ -118,11 +122,15 @@ function embedHtml(videoId: string) {
       function applyMute() {
         post(muted ? 'mute' : 'unMute');
       }
+      function kickPlay() {
+        if (userPaused) return;
+        post('playVideo');
+        applyMute();
+      }
       function restart() {
         if (userPaused) return;
         post('seekTo', [0, true]);
-        post('playVideo');
-        applyMute();
+        kickPlay();
       }
       window.addEventListener('message', function (e) {
         try {
@@ -134,23 +142,25 @@ function embedHtml(videoId: string) {
           if (state === 0) restart();
         } catch (err) {}
       });
-      setTimeout(function () {
+      function arm() {
         post('addEventListener', ['onStateChange']);
         var frame = document.getElementById('player');
         if (frame && frame.contentWindow) {
           frame.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1 }), '*');
         }
-        post('playVideo');
-        applyMute();
-      }, 600);
+        kickPlay();
+      }
+      // Android WebViews often ignore the first autoplay — retry.
+      [400, 900, 1600, 2800].forEach(function (ms) {
+        setTimeout(arm, ms);
+      });
       window.pausePlayer = function () {
         userPaused = true;
         post('pauseVideo');
       };
       window.resumePlayer = function () {
         userPaused = false;
-        post('playVideo');
-        applyMute();
+        kickPlay();
       };
       window.setMute = function (next) {
         muted = !!next;
@@ -175,6 +185,7 @@ function PosterFallback({ title }: { title: string }) {
 
 function InlinePlayer({ videoId }: { videoId: string }) {
   const webRef = useRef<WebViewType>(null);
+  const focused = useIsFocused();
   const [loading, setLoading] = useState(true);
   const [booting, setBooting] = useState(true);
   const [muted, setMuted] = useState(true);
@@ -183,19 +194,43 @@ function InlinePlayer({ videoId }: { videoId: string }) {
   const thumbUri = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
   const hideChrome = booting || paused || loading;
 
+  const run = (js: string) => {
+    webRef.current?.injectJavaScript(`${js}; true;`);
+  };
+
+  const forcePlay = () => {
+    if (paused) return;
+    run('window.resumePlayer && window.resumePlayer()');
+  };
+
   useEffect(() => {
     if (!booting) return;
-    const t = setTimeout(() => setBooting(false), 1800);
+    const t = setTimeout(() => setBooting(false), 1200);
     return () => clearTimeout(t);
   }, [booting]);
+
+  useEffect(() => {
+    if (!focused || paused) return;
+    forcePlay();
+    const timers = [500, 1200, 2200].map((ms) => setTimeout(forcePlay, ms));
+    return () => timers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-kick on focus/pause
+  }, [focused, paused]);
+
+  useEffect(() => {
+    const onAppState = (next: AppStateStatus) => {
+      if (next === 'active' && focused && !paused) {
+        forcePlay();
+      }
+    };
+    const sub = AppState.addEventListener('change', onAppState);
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focused, paused]);
 
   if (!WebView) {
     return <PosterFallback title="Rebuild app to play video" />;
   }
-
-  const run = (js: string) => {
-    webRef.current?.injectJavaScript(`${js}; true;`);
-  };
 
   const onToggleMute = (e: GestureResponderEvent) => {
     e.stopPropagation?.();
@@ -207,7 +242,6 @@ function InlinePlayer({ videoId }: { videoId: string }) {
   const onTogglePlay = () => {
     if (paused) {
       setPaused(false);
-      // Explicit resume — do not toggle (was getting stuck after pause).
       run('window.resumePlayer && window.resumePlayer()');
     } else {
       setPaused(true);
@@ -232,7 +266,13 @@ function InlinePlayer({ videoId }: { videoId: string }) {
         setSupportMultipleWindows={false}
         originWhitelist={['*']}
         mixedContentMode="always"
-        onLoadEnd={() => setLoading(false)}
+        androidLayerType={Platform.OS === 'android' ? 'hardware' : undefined}
+        onLoadEnd={() => {
+          setLoading(false);
+          forcePlay();
+          setTimeout(forcePlay, 400);
+          setTimeout(forcePlay, 1000);
+        }}
         onError={() => {
           setLoading(false);
           setBooting(false);

@@ -40,6 +40,7 @@ import { ImagePager } from '../../components/commerce/ImagePager';
 import { PriceRow } from '../../components/commerce/PriceRow';
 import { ProductSlider } from '../../components/commerce/ProductSlider';
 import { BrandMark } from '../../components/ui/BrandMark';
+import { AppIcon, type AppIconName } from '../../components/ui/AppIcon';
 import { StarRating } from '../../components/ui/StarRating';
 import { useToast } from '../../components/ui/Toast';
 
@@ -48,11 +49,11 @@ type Route = RouteProp<RootStackParamList, 'ProductDetail'>;
 
 const APP_NAME = 'Niðavellir';
 
-const CONFIDENCE = [
-  { icon: '↩', title: '7 days free return' },
-  { icon: '📦', title: 'Free delivery above ₹5000' },
-  { icon: '🔒', title: 'Secure transaction' },
-  { icon: '⚒', title: 'Trusted by the dwarves' },
+const CONFIDENCE: Array<{ icon: AppIconName; title: string }> = [
+  { icon: 'return', title: '7 days free return' },
+  { icon: 'package', title: 'Free delivery above ₹5000' },
+  { icon: 'lock', title: 'Secure transaction' },
+  { icon: 'hammer', title: 'Trusted by the dwarves' },
 ];
 
 export function ProductDetailScreen() {
@@ -284,7 +285,9 @@ export function ProductDetailScreen() {
           <View style={styles.confidence}>
             {CONFIDENCE.map((item) => (
               <View key={item.title} style={styles.confidenceItem}>
-                <Text style={styles.confidenceIcon}>{item.icon}</Text>
+                <View style={styles.confidenceIconWrap}>
+                  <AppIcon name={item.icon} size={22} color={colors.text} />
+                </View>
                 <Text style={styles.confidenceText}>{item.title}</Text>
               </View>
             ))}
@@ -616,10 +619,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: spacing.sm,
   },
-  confidenceIcon: {
-    fontSize: 18,
+  confidenceIconWrap: {
     marginBottom: 6,
-    textAlign: 'center',
   },
   confidenceItem: {
     alignItems: 'center',

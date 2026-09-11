@@ -9,9 +9,19 @@ import { apiClient, getApiErrorMessage } from '../../services/api/apiClient';
 type Session = {
   id: string;
   deviceId?: string;
+  deviceLabel?: string;
+  os?: string;
+  ip?: string;
   createdAt: string;
   expiresAt: string;
 };
+
+function sessionTitle(item: Session) {
+  if (item.deviceLabel?.trim()) return item.deviceLabel.trim();
+  if (item.os?.trim()) return item.os.trim();
+  if (item.deviceId?.trim()) return item.deviceId.trim();
+  return 'Unknown device';
+}
 
 export function SessionsScreen() {
   const toast = useToast();
@@ -59,7 +69,9 @@ export function SessionsScreen() {
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.title}>{item.deviceId || 'This device / session'}</Text>
+            <Text style={styles.title}>{sessionTitle(item)}</Text>
+            {item.os ? <Text style={styles.meta}>OS · {item.os}</Text> : null}
+            {item.ip ? <Text style={styles.meta}>IP · {item.ip}</Text> : null}
             <Text style={styles.meta}>Created {new Date(item.createdAt).toLocaleString()}</Text>
             <Text style={styles.meta}>Expires {new Date(item.expiresAt).toLocaleString()}</Text>
             <Pressable style={styles.revoke} onPress={() => revoke(item.id)}>

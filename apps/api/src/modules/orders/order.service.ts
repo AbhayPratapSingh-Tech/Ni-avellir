@@ -101,19 +101,20 @@ export class OrderService {
       // email failure must not block checkout
     }
 
+    let awardedXp = 0;
     if (isCod) {
       await Promise.all(
         items.map((item) =>
           Product.updateOne({ _id: item.productId }, { $inc: { stock: -item.quantity } }),
         ),
       );
-      await awardOrderRuneXp(
+      awardedXp = await awardOrderRuneXp(
         userId,
         items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
       );
     }
 
-    return order;
+    return { order, awardedXp };
   }
 
   async list(userId?: string, email?: string) {

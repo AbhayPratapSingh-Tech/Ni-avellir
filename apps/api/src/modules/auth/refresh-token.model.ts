@@ -4,6 +4,9 @@ export interface RefreshTokenDocument {
   userId: Types.ObjectId;
   tokenHash: string;
   deviceId?: string;
+  deviceLabel?: string;
+  os?: string;
+  ip?: string;
   expiresAt: Date;
   revokedAt?: Date;
   createdAt: Date;
@@ -14,6 +17,9 @@ const refreshTokenSchema = new Schema<RefreshTokenDocument>(
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     tokenHash: { type: String, required: true, unique: true },
     deviceId: { type: String },
+    deviceLabel: { type: String },
+    os: { type: String },
+    ip: { type: String },
     expiresAt: { type: Date, required: true },
     revokedAt: { type: Date },
   },

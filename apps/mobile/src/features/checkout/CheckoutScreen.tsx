@@ -489,6 +489,7 @@ export function CheckoutScreen() {
       postalCode?: string;
     };
     createdAt?: string;
+    awardedXp?: number;
   }) => {
     const orderId = String(order.id ?? order._id ?? order.orderNumber);
     const shippingAddress = {
@@ -560,7 +561,10 @@ export function CheckoutScreen() {
       );
     });
     setRazorpayPending(null);
-    navigation.replace('OrderConfirmation', { orderId: order.orderNumber ?? orderId });
+    navigation.replace('OrderConfirmation', {
+      orderId: order.orderNumber ?? orderId,
+      awardedXp: order.awardedXp ?? 100,
+    });
   };
 
   const placeOrder = async () => {

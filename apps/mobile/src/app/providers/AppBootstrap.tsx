@@ -55,6 +55,7 @@ export function AppBootstrap({ children }: PropsWithChildren) {
                 phone: user.phone,
                 avatarUri: user.avatarUrl,
                 runeXp: user.runeXp,
+                emailVerified: user.emailVerified,
               }),
             );
           }

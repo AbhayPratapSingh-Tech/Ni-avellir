@@ -1,12 +1,34 @@
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import type { AuthenticatedRequest } from '../../common/middleware/require-auth.js';
 import { AuthService } from './auth.service.js';
+
+function clientIp(request: Request): string | undefined {
+  const forwarded = request.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0]?.trim();
+  }
+  if (Array.isArray(forwarded) && forwarded[0]) {
+    return forwarded[0].split(',')[0]?.trim();
+  }
+  return request.ip || request.socket.remoteAddress || undefined;
+}
+
+function withDeviceMeta(request: Request) {
+  const body = (request.body ?? {}) as Record<string, unknown>;
+  return {
+    ...body,
+    deviceId: typeof body.deviceId === 'string' ? body.deviceId : undefined,
+    deviceLabel: typeof body.deviceLabel === 'string' ? body.deviceLabel : undefined,
+    os: typeof body.os === 'string' ? body.os : undefined,
+    ip: clientIp(request),
+  };
+}
 
 export class AuthController {
   constructor(private readonly service: AuthService) {}
 
   register = async (request: AuthenticatedRequest, response: Response) => {
-    const result = await this.service.register(request.body);
+    const result = await this.service.register(withDeviceMeta(request) as never);
     response.status(201).json({ data: result });
   };
 
@@ -16,7 +38,7 @@ export class AuthController {
   };
 
   login = async (request: AuthenticatedRequest, response: Response) => {
-    const result = await this.service.login(request.body);
+    const result = await this.service.login(withDeviceMeta(request) as never);
     response.json({ data: result });
   };
 
@@ -26,7 +48,7 @@ export class AuthController {
   };
 
   verifyOtp = async (request: AuthenticatedRequest, response: Response) => {
-    const result = await this.service.verifyOtp(request.body);
+    const result = await this.service.verifyOtp(withDeviceMeta(request) as never);
     response.json({ data: result });
   };
 

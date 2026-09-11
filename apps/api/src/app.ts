@@ -28,6 +28,8 @@ export function createApp(env: Env) {
   const app = express();
 
   app.disable('x-powered-by');
+  // Render / reverse proxies — needed for accurate client IP on sessions.
+  app.set('trust proxy', 1);
   app.use(pinoHttp({ logger }));
   app.use(helmet());
   app.use(

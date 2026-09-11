@@ -23,7 +23,9 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 
 **SMS:** `SMS_DEMO_MODE=true` logs OTP in API console; paid MSG91/Twilio for real SMS.
 
-**Email:** `EMAIL_DEMO_MODE=true` logs mail; set Resend key + `EMAIL_DEMO_MODE=false` for real inbox mail.
+**Email:** `EMAIL_DEMO_MODE=true` logs mail; set Resend key + `EMAIL_DEMO_MODE=false` for real inbox mail. Smoke: `npm run test:email --workspace apps/api -- you@example.com`.
+
+**Rune XP:** 100 per completed order; 500 if the order includes 2+ products with the same `bundleTag`.
 
 **Cart coupons (seeded):** `FORGE10`, `WELCOME100`.
 
@@ -74,7 +76,14 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] Mystery boxes.
 
 ### Loyalty & profile
-- [x] **Rune XP (loyalty)** — awarded on paid/COD orders; Profile bar + Apprentice→Master tiers; PDP `+N Rune XP`. Deeper rewards catalog / history can wait.
+- [x] **Rune XP (loyalty)** — **100 XP per normal order**, **500 XP when the order has 2+ products sharing a `bundleTag`**. Profile bar + Apprentice→Master tiers. Confirmation screen shows awarded amount.
+
+### Active polish backlog
+- [x] **Session device labels** — mobile sends `deviceId` / `deviceLabel` / `os`; API stores client IP; Sessions UI shows name + OS + IP (not “This device”). Re-login to label sessions.
+- [x] **Verification email plumbing** — Resend errors logged; `npm run test:email --workspace apps/api -- you@example.com`. Real inbox still needs Render env: `EMAIL_DEMO_MODE=false`, real `RESEND_API_KEY`, verified `EMAIL_FROM`.
+- [x] **Blank Unicode icons** — PDP confidence + Account menu use SVG `AppIcon` (Android-safe).
+- [x] **Broken product images** — `CachedImage` placeholder + `onError` fallback.
+- [x] **Home video autoplay** — muted autoplay retries on load / Home focus / AppState active.
 
 ### PDP & community
 - [ ] “How they get along” / customer images.

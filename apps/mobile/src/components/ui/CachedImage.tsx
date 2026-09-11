@@ -1,4 +1,7 @@
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import FastImage, { type FastImageProps, type Source } from 'react-native-fast-image';
+import { colors } from '../../theme/tokens';
 
 type Props = {
   uri?: string | null;
@@ -9,12 +12,15 @@ type Props = {
 
 /** Cached remote image — preferred over RN Image for home/PLP scroll performance. */
 export function CachedImage({ uri, style, resizeMode = 'cover', priority = 'normal' }: Props) {
-  if (!uri) {
-    return <FastImage style={style} />;
+  const [failed, setFailed] = useState(false);
+  const resolved = uri?.trim() && !failed ? uri.trim() : null;
+
+  if (!resolved) {
+    return <View style={[styles.placeholder, style]} />;
   }
 
   const source: Source = {
-    uri,
+    uri: resolved,
     priority: FastImage.priority[priority],
     cache: FastImage.cacheControl.immutable,
   };
@@ -24,6 +30,13 @@ export function CachedImage({ uri, style, resizeMode = 'cover', priority = 'norm
       source={source}
       style={style}
       resizeMode={FastImage.resizeMode[resizeMode]}
+      onError={() => setFailed(true)}
     />
   );
 }
+
+const styles = StyleSheet.create({
+  placeholder: {
+    backgroundColor: colors.border,
+  },
+});
