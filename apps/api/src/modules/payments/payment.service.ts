@@ -108,7 +108,7 @@ export class PaymentService {
       throw new AppError('Payment does not belong to this order', 400);
     }
     if (payment.status === 'paid') {
-      return { order, payment, alreadyPaid: true };
+      return { order, payment, alreadyPaid: true, awardedXp: 0 };
     }
 
     const ok = await this.razorpay.verifyPayment({
@@ -262,7 +262,7 @@ export class PaymentService {
       throw new AppError('Order not found', 404);
     }
     if (payment.status === 'paid') {
-      return { order, payment, alreadyPaid: true };
+      return { order, payment, alreadyPaid: true, awardedXp: 0 };
     }
 
     payment.status = 'paid';
@@ -270,11 +270,12 @@ export class PaymentService {
     if (raw) payment.raw = raw;
     await payment.save();
 
+    let awardedXp = 0;
     if (order.status === 'pending_payment') {
-      await this.finalizePaidOrder(order);
+      awardedXp = await this.finalizePaidOrder(order);
     }
 
-    return { order, payment, alreadyPaid: false };
+    return { order, payment, alreadyPaid: false, awardedXp };
   }
 
   private async finalizePaidOrder(order: InstanceType<typeof Order>) {
@@ -287,7 +288,7 @@ export class PaymentService {
       ),
     );
 
-    await awardOrderRuneXp(
+    return awardOrderRuneXp(
       order.userId ? String(order.userId) : undefined,
       order.items.map((item) => ({ productId: String(item.productId), quantity: item.quantity })),
     );

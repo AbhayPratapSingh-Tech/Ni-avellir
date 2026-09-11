@@ -437,11 +437,14 @@ export class ProductRepository {
     shippingAddress?: Record<string, unknown>;
     customer?: Record<string, unknown>;
     createdAt?: string;
+    awardedXp?: number;
   }> {
     return this.withFallback(
       async () => {
         const { data } = await apiClient.post('/orders', input);
         const order = data.data.order as Record<string, unknown>;
+        const awardedXp =
+          data.data.awardedXp !== undefined ? Number(data.data.awardedXp) : undefined;
         return {
           ...(order as object),
           id: String(order.id ?? order._id),
@@ -460,6 +463,7 @@ export class ProductRepository {
           shippingAddress: order.shippingAddress as Record<string, unknown> | undefined,
           customer: order.customer as Record<string, unknown> | undefined,
           createdAt: order.createdAt ? String(order.createdAt) : undefined,
+          awardedXp,
         };
       },
       () => {
@@ -499,6 +503,7 @@ export class ProductRepository {
         shippingAddress: input.shippingAddress,
         customer: input.customer,
         createdAt: new Date().toISOString(),
+        awardedXp: isCod ? 100 : 0,
       };
     },
       { critical: true },
@@ -536,11 +541,19 @@ export class ProductRepository {
     return this.withFallback(
       async () => {
         const { data } = await apiClient.post('/payments/razorpay/demo-complete', { orderId });
-        return data.data.order;
+        const order = data.data.order as Record<string, unknown>;
+        return {
+          ...order,
+          id: String(order.id ?? order._id ?? orderId),
+          status: order.status ? String(order.status) : 'paid',
+          awardedXp:
+            data.data.awardedXp !== undefined ? Number(data.data.awardedXp) : undefined,
+        };
       },
       () => ({
         id: orderId,
         status: 'paid',
+        awardedXp: 100,
       }),
       { critical: true },
     );
@@ -551,7 +564,7 @@ export class ProductRepository {
     providerIntentId: string;
     providerPaymentId: string;
     signature: string;
-  }): Promise<{ id: string; status?: string; [key: string]: unknown }> {
+  }): Promise<{ id: string; status?: string; awardedXp?: number; [key: string]: unknown }> {
     return this.withFallback(
       async () => {
         const { data } = await apiClient.post('/payments/razorpay/confirm', input);
@@ -560,11 +573,14 @@ export class ProductRepository {
           ...order,
           id: String(order.id ?? order._id ?? input.orderId),
           status: order.status ? String(order.status) : undefined,
+          awardedXp:
+            data.data.awardedXp !== undefined ? Number(data.data.awardedXp) : undefined,
         };
       },
       () => ({
         id: input.orderId,
         status: 'paid',
+        awardedXp: 100,
       }),
       { critical: true },
     );

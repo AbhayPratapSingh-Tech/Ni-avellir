@@ -7,6 +7,7 @@ import {
   buildResetPasswordHtml,
   buildVerifyEmailHtml,
   createEmailService,
+  publicApiOrigin,
 } from '../../integrations/email/email.factory.js';
 import type { EmailService } from '../../integrations/email/email.service.js';
 import {
@@ -15,7 +16,7 @@ import {
 } from '../../integrations/media/avatar-upload.js';
 import { SmsService } from '../../integrations/sms/sms.service.js';
 import { Order } from '../orders/order.model.js';
-import { Product } from '../products/product.model.js';
+import { computeOrderRuneXp } from '../orders/rune-xp.js';
 import { OtpChallenge, type OtpPurpose } from './otp-challenge.model.js';
 import { RefreshToken } from './refresh-token.model.js';
 import { User } from './user.model.js';
@@ -36,6 +37,23 @@ function generateOtpCode() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
+export type SessionDeviceMeta = {
+  deviceId?: string;
+  deviceLabel?: string;
+  os?: string;
+  ip?: string;
+};
+
+function pickDeviceMeta(input?: SessionDeviceMeta): SessionDeviceMeta {
+  if (!input) return {};
+  return {
+    deviceId: input.deviceId?.trim() || undefined,
+    deviceLabel: input.deviceLabel?.trim() || undefined,
+    os: input.os?.trim() || undefined,
+    ip: input.ip?.trim() || undefined,
+  };
+}
+
 export class AuthService {
   private readonly sms: SmsService;
   private readonly email: EmailService;
@@ -52,12 +70,17 @@ export class AuthService {
     return { accessToken, refreshToken, deviceId };
   }
 
-  private async persistRefreshToken(userId: string, refreshToken: string, deviceId?: string) {
+  private async persistRefreshToken(
+    userId: string,
+    refreshToken: string,
+    meta?: SessionDeviceMeta,
+  ) {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const device = pickDeviceMeta(meta);
     await RefreshToken.create({
       userId,
       tokenHash: hashToken(refreshToken),
-      deviceId,
+      ...device,
       expiresAt,
     });
   }
@@ -91,8 +114,7 @@ export class AuthService {
     email: string;
     phone: string;
     password: string;
-    deviceId?: string;
-  }) {
+  } & SessionDeviceMeta) {
     const email = input.email.trim().toLowerCase();
     const phone = normalizePhone(input.phone);
     await this.assertRegistrationAvailable(email, phone);
@@ -105,8 +127,9 @@ export class AuthService {
       emailVerified: false,
       phoneVerified: false,
     });
-    const tokens = this.issueTokens(user, input.deviceId);
-    await this.persistRefreshToken(String(user._id), tokens.refreshToken, input.deviceId);
+    const device = pickDeviceMeta(input);
+    const tokens = this.issueTokens(user, device.deviceId);
+    await this.persistRefreshToken(String(user._id), tokens.refreshToken, device);
     const emailVerification = await this.sendEmailVerification(String(user._id));
     return { user: this.sanitizeUser(user), ...tokens, emailVerification };
   }
@@ -139,7 +162,7 @@ export class AuthService {
     }
   }
 
-  async login(input: { email: string; password: string; deviceId?: string }) {
+  async login(input: { email: string; password: string } & SessionDeviceMeta) {
     const email = input.email.trim().toLowerCase();
     const user = await User.findOne({ email });
     if (!user?.passwordHash) {
@@ -149,8 +172,9 @@ export class AuthService {
     if (!ok) {
       throw new AppError('Invalid email or password', 401);
     }
-    const tokens = this.issueTokens(user, input.deviceId);
-    await this.persistRefreshToken(String(user._id), tokens.refreshToken, input.deviceId);
+    const device = pickDeviceMeta(input);
+    const tokens = this.issueTokens(user, device.deviceId);
+    await this.persistRefreshToken(String(user._id), tokens.refreshToken, device);
     return { user: this.sanitizeUser(user), ...tokens };
   }
 
@@ -175,8 +199,7 @@ export class AuthService {
     purpose?: OtpPurpose;
     name?: string;
     email?: string;
-    deviceId?: string;
-  }) {
+  } & SessionDeviceMeta) {
     const phone = normalizePhone(input.phone);
     const purpose = input.purpose ?? 'login';
     const challenge = await OtpChallenge.findOne({ phone, purpose }).sort({ createdAt: -1 });
@@ -213,8 +236,9 @@ export class AuthService {
       throw new AppError('User not found for OTP verification', 404);
     }
 
-    const tokens = this.issueTokens(user, input.deviceId);
-    await this.persistRefreshToken(String(user._id), tokens.refreshToken, input.deviceId);
+    const device = pickDeviceMeta(input);
+    const tokens = this.issueTokens(user, device.deviceId);
+    await this.persistRefreshToken(String(user._id), tokens.refreshToken, device);
     return { user: this.sanitizeUser(user), ...tokens };
   }
 
@@ -236,10 +260,15 @@ export class AuthService {
     if (!user) {
       throw new AppError('User not found', 404);
     }
-    const tokens = this.issueTokens(user);
+    const tokens = this.issueTokens(user, stored.deviceId);
     stored.revokedAt = new Date();
     await stored.save();
-    await this.persistRefreshToken(String(user._id), tokens.refreshToken);
+    await this.persistRefreshToken(String(user._id), tokens.refreshToken, {
+      deviceId: stored.deviceId,
+      deviceLabel: stored.deviceLabel,
+      os: stored.os,
+      ip: stored.ip,
+    });
     return { user: this.sanitizeUser(user), ...tokens };
   }
 
@@ -266,7 +295,7 @@ export class AuthService {
     return this.sanitizeUser(user);
   }
 
-  /** Sum product runeXp × qty for COD/paid/fulfilled orders (idempotent). */
+  /** Flat XP per completed order (100) or bundle order (500) — matches awardOrderRuneXp. */
   private async reconcileRuneXp(userId: string): Promise<number> {
     const orders = await Order.find({
       userId,
@@ -275,21 +304,14 @@ export class AuthService {
       .select('items')
       .lean();
 
-    const productIds = [
-      ...new Set(
-        orders.flatMap((order) => order.items.map((item) => String(item.productId))),
-      ),
-    ];
-    const products = await Product.find({ _id: { $in: productIds } })
-      .select('_id runeXp')
-      .lean();
-    const xpById = new Map(products.map((p) => [String(p._id), Number(p.runeXp ?? 10)]));
-
     let total = 0;
     for (const order of orders) {
-      for (const item of order.items) {
-        total += (xpById.get(String(item.productId)) ?? 10) * item.quantity;
-      }
+      total += await computeOrderRuneXp(
+        order.items.map((item) => ({
+          productId: String(item.productId),
+          quantity: item.quantity,
+        })),
+      );
     }
     return total;
   }
@@ -413,6 +435,9 @@ export class AuthService {
     return sessions.map((s) => ({
       id: String(s._id),
       deviceId: s.deviceId,
+      deviceLabel: s.deviceLabel,
+      os: s.os,
+      ip: s.ip,
       createdAt: s.createdAt,
       expiresAt: s.expiresAt,
     }));
@@ -453,12 +478,12 @@ export class AuthService {
       expiresAt,
     });
 
-    const verifyUrl = `${this.env.apiBaseUrl}/api/v1/auth/verify-email?token=${token}&email=${encodeURIComponent(user.email)}`;
+    const verifyUrl = `${publicApiOrigin(this.env.apiBaseUrl)}/api/v1/auth/verify-email?token=${token}&email=${encodeURIComponent(user.email)}`;
     await this.email.send({
       to: user.email,
       subject: 'Verify your Niðavellir email',
       html: buildVerifyEmailHtml(verifyUrl, code),
-      text: `Verify: ${verifyUrl} or code ${code}`,
+      text: `Your Niðavellir verification code is ${code}. Or open: ${verifyUrl}`,
     });
 
     return {

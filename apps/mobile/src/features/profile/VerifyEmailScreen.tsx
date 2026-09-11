@@ -19,6 +19,7 @@ export function VerifyEmailScreen() {
   const dispatch = useAppDispatch();
   const toast = useToast();
   const user = useAppSelector((state) => state.auth.user);
+  const alreadyVerified = Boolean(user?.emailVerified);
   const [step, setStep] = useState<Step>('send');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,8 +28,17 @@ export function VerifyEmailScreen() {
     setLoading(true);
     try {
       const { data } = await apiClient.post('/auth/verify-email/send');
-      if (data.data?.demoCode) toast.show(`Dev verify code: ${data.data.demoCode}`);
-      else toast.show('Verification email sent');
+      if (data.data?.alreadyVerified) {
+        dispatch(updateProfile({ emailVerified: true }));
+        toast.show('Email is already verified');
+        navigation.goBack();
+        return;
+      }
+      if (data.data?.demoCode) {
+        toast.show(`Dev code (email demo mode): ${data.data.demoCode}`);
+      } else {
+        toast.show('Email sent — check inbox and spam');
+      }
       setStep('code');
     } catch (error) {
       toast.show(getApiErrorMessage(error));
@@ -56,6 +66,7 @@ export function VerifyEmailScreen() {
           phone: next.phone,
           avatarUri: next.avatarUrl ?? null,
           runeXp: next.runeXp,
+          emailVerified: next.emailVerified ?? true,
         }),
       );
       toast.show('Email verified');
@@ -67,12 +78,29 @@ export function VerifyEmailScreen() {
     }
   };
 
+  if (alreadyVerified) {
+    return (
+      <Screen edges={[]} style={styles.screen}>
+        <Text style={styles.sub}>
+          {user?.email || 'Your email'} is already verified. You’re all set for order updates.
+        </Text>
+        <Pressable style={styles.cta} onPress={() => navigation.goBack()}>
+          <Text style={styles.ctaText}>Done</Text>
+        </Pressable>
+      </Screen>
+    );
+  }
+
   return (
     <Screen edges={[]} style={styles.screen}>
       {step === 'send' ? (
         <>
           <Text style={styles.sub}>
-            Verify {user?.email || 'your email'} to secure your account and unlock order updates.
+            We’ll email a 4-digit code to {user?.email || 'your address'}. Check inbox and spam.
+          </Text>
+          <Text style={styles.hint}>
+            With Resend’s free onboarding sender, mail may only arrive if this address matches your
+            Resend account email.
           </Text>
           <Pressable style={styles.cta} onPress={sendCode} disabled={loading}>
             <Text style={styles.ctaText}>{loading ? 'Sending…' : 'Send verification email'}</Text>
@@ -81,8 +109,7 @@ export function VerifyEmailScreen() {
       ) : (
         <>
           <Text style={styles.sub}>
-            We sent a code to {user?.email || 'your email'}. Enter it below, or open the link in the
-            email.
+            Enter the code we sent to {user?.email || 'your email'}, or open the link in the email.
           </Text>
           <TextInput
             style={styles.input}
@@ -92,6 +119,7 @@ export function VerifyEmailScreen() {
             maxLength={4}
             value={code}
             onChangeText={setCode}
+            autoFocus
           />
           <Pressable style={styles.cta} onPress={submit} disabled={loading}>
             <Text style={styles.ctaText}>{loading ? 'Verifying…' : 'Verify email'}</Text>
@@ -114,6 +142,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   ctaText: { color: colors.onAccent, fontSize: 16, fontWeight: '800' },
+  hint: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: spacing.sm,
+  },
   input: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -133,5 +167,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
-  sub: { color: colors.textMuted, fontSize: 15, lineHeight: 22, marginBottom: spacing.lg },
+  sub: { color: colors.textMuted, fontSize: 15, lineHeight: 22, marginBottom: spacing.md },
 });

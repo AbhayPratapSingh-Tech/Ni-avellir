@@ -2,6 +2,7 @@ import { apiClient, getApiErrorMessage } from '../api/apiClient';
 import { setSessionTokens, clearSessionTokens, getRefreshToken } from '../api/sessionTokens';
 import { appConfig } from '../../config/appConfig';
 import { getGuestSessionId } from '../session/guestSession';
+import { getDeviceSessionMeta } from '../session/deviceLabel';
 import { cartRepository } from './cartRepository';
 import { addressRepository } from './addressRepository';
 import { orderRepository } from './orderRepository';
@@ -41,7 +42,8 @@ export const authRepository = {
     user: ApiUser;
     emailVerification?: { sent?: boolean; demoCode?: string };
   }> {
-    const { data } = await apiClient.post('/auth/register', input);
+    const device = await getDeviceSessionMeta();
+    const { data } = await apiClient.post('/auth/register', { ...input, ...device });
     return {
       user: data.data.user,
       emailVerification: data.data.emailVerification,
@@ -69,7 +71,8 @@ export const authRepository = {
   },
 
   async login(email: string, password: string): Promise<ApiUser> {
-    const { data } = await apiClient.post('/auth/login', { email, password });
+    const device = await getDeviceSessionMeta();
+    const { data } = await apiClient.post('/auth/login', { email, password, ...device });
     await setSessionTokens({
       accessToken: data.data.accessToken,
       refreshToken: data.data.refreshToken,
@@ -89,7 +92,8 @@ export const authRepository = {
     name?: string;
     email?: string;
   }): Promise<ApiUser> {
-    const { data } = await apiClient.post('/auth/otp/verify', input);
+    const device = await getDeviceSessionMeta();
+    const { data } = await apiClient.post('/auth/otp/verify', { ...input, ...device });
     await setSessionTokens({
       accessToken: data.data.accessToken,
       refreshToken: data.data.refreshToken,

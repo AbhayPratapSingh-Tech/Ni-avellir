@@ -11,6 +11,7 @@ export type AuthUser = {
   avatarUri?: string;
   /** Loyalty points earned from orders. */
   runeXp?: number;
+  emailVerified?: boolean;
   isGuest: boolean;
 };
 
@@ -63,6 +64,9 @@ const authSlice = createSlice({
       }
       if (action.payload.runeXp !== undefined) {
         next.runeXp = action.payload.runeXp;
+      }
+      if (action.payload.emailVerified !== undefined) {
+        next.emailVerified = action.payload.emailVerified;
       }
       state.user = next;
     },

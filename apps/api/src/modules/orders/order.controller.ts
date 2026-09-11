@@ -10,8 +10,10 @@ export class OrderController {
 
   create = async (request: OrderRequest, response: Response) => {
     const input = request.body as CreateOrderInput;
-    const order = await this.service.create(input, request.userId);
-    response.status(201).json({ data: { order } });
+    const result = await this.service.create(input, request.userId);
+    response.status(201).json({
+      data: { order: result.order, awardedXp: result.awardedXp },
+    });
   };
 
   list = async (request: OrderRequest, response: Response) => {

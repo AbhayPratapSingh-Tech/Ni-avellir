@@ -2,9 +2,12 @@ import { createApp } from './app.js';
 import { loadEnv } from './config/env.js';
 import { logger } from './common/logger/logger.js';
 import { connectDatabase } from './database/connect.js';
+import { createEmailService } from './integrations/email/email.factory.js';
 
 async function main() {
   const env = loadEnv();
+  // Initialize email provider early so boot logs show Resend vs demo.
+  createEmailService(env);
   const app = createApp(env);
 
   try {

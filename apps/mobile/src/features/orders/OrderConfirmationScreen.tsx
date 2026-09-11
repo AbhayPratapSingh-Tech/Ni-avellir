@@ -12,23 +12,26 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
 import { resetToMainTabs, resetToOrders } from '../../lib/navigation';
+import { useAppSelector } from '../../app/store';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'OrderConfirmation'>;
 
-const LEVELS = [
-  'Apprentice',
-  'Forgehand',
-  'Runecarver',
-  'Dwarven Lord',
-  'Elder of Niðavellir',
-];
+function xpTier(xp: number) {
+  if (xp >= 2000) return 'Master';
+  if (xp >= 1000) return 'Journeyman';
+  if (xp >= 250) return 'Adept';
+  return 'Apprentice';
+}
 
 export function OrderConfirmationScreen() {
   const route = useRoute<Route>();
   const navigation = useNavigation<Navigation>();
-  const { orderId } = route.params;
+  const { orderId, awardedXp = 100 } = route.params;
+  const user = useAppSelector((state) => state.auth.user);
+  const totalXp = Number(user?.runeXp ?? awardedXp);
+  const level = xpTier(totalXp);
 
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
@@ -61,8 +64,6 @@ export function OrderConfirmationScreen() {
     opacity: 1 - ring.value,
   }));
 
-  const level = LEVELS[Math.floor(Math.random() * LEVELS.length)];
-
   return (
     <Screen edges={['top', 'bottom']} style={styles.screen}>
       <View style={styles.hero}>
@@ -93,9 +94,10 @@ export function OrderConfirmationScreen() {
       </View>
 
       <View style={styles.xpCard}>
-        <Text style={styles.xpTitle}>⚒︎ Rune XP</Text>
+        <Text style={styles.xpTitle}>Rune XP</Text>
         <Text style={styles.xpText}>
-          You earned 120 XP for this order. New rank: <Text style={styles.xpStrong}>{level}</Text>
+          You earned {awardedXp} XP for this order. Rank:{' '}
+          <Text style={styles.xpStrong}>{level}</Text>
         </Text>
       </View>
 

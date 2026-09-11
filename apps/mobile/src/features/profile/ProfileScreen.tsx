@@ -8,20 +8,21 @@ import { Screen } from '../../components/ui/Screen';
 import { openLogin, signOutAndClearSession, updateProfile } from '../auth/authSlice';
 import { appConfig } from '../../config/appConfig';
 import { authRepository } from '../../services/data/authRepository';
+import { AppIcon, type AppIconName } from '../../components/ui/AppIcon';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
-const MENU = [
-  { key: 'edit', label: 'Edit profile', icon: '✎' },
-  { key: 'orders', label: 'My Orders', icon: '📦' },
-  { key: 'addresses', label: 'Addresses', icon: '📍' },
-  { key: 'notifications', label: 'Notifications', icon: '🔔' },
-  { key: 'password', label: 'Change password', icon: '🔑' },
-  { key: 'sessions', label: 'Devices & sessions', icon: '📱' },
-  { key: 'verify', label: 'Verify email', icon: '✉' },
-  { key: 'support', label: 'Support', icon: '💬' },
-] as const;
+const MENU: Array<{ key: string; label: string; icon: AppIconName }> = [
+  { key: 'edit', label: 'Edit profile', icon: 'edit' },
+  { key: 'orders', label: 'My Orders', icon: 'package' },
+  { key: 'addresses', label: 'Addresses', icon: 'mapPin' },
+  { key: 'notifications', label: 'Notifications', icon: 'bell' },
+  { key: 'password', label: 'Change password', icon: 'key' },
+  { key: 'sessions', label: 'Devices & sessions', icon: 'phone' },
+  { key: 'verify', label: 'Verify email', icon: 'mail' },
+  { key: 'support', label: 'Support', icon: 'chat' },
+];
 
 function isDisplayableAvatar(uri?: string) {
   if (!uri) return false;
@@ -62,6 +63,7 @@ export function ProfileScreen() {
             phone: next.phone,
             avatarUri: next.avatarUrl ?? null,
             runeXp: next.runeXp,
+            emailVerified: next.emailVerified,
           }),
         );
       });
@@ -166,8 +168,12 @@ export function ProfileScreen() {
                 }
               }}
             >
-              <Text style={styles.menuIcon}>{item.icon}</Text>
-              <Text style={styles.menuLabel}>{item.label}</Text>
+              <View style={styles.menuIcon}>
+                <AppIcon name={item.icon} size={20} color={colors.text} />
+              </View>
+              <Text style={styles.menuLabel}>
+                {item.key === 'verify' && user?.emailVerified ? 'Email verified' : item.label}
+              </Text>
               <Text style={styles.menuChevron}>›</Text>
             </Pressable>
           ))}
@@ -285,8 +291,8 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   menuIcon: {
-    fontSize: 18,
     marginRight: spacing.md,
+    width: 24,
   },
   menuLabel: {
     color: colors.text,

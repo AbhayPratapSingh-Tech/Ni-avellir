@@ -29,6 +29,7 @@ export type AuthStackParamList = {
     phone: string;
     avatarUri?: string;
     runeXp?: number;
+    emailVerified?: boolean;
   };
 };
 
@@ -44,7 +45,7 @@ export type RootStackParamList = {
   Search: { q?: string } | undefined;
   ProductDetail: { product: Product };
   Checkout: undefined;
-  OrderConfirmation: { orderId: string };
+  OrderConfirmation: { orderId: string; awardedXp?: number };
   Orders: undefined;
   OrderDetails: { orderId: string };
   Wishlist: undefined;

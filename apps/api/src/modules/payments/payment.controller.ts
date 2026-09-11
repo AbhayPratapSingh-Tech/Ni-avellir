@@ -38,6 +38,7 @@ export class PaymentController {
         order: result.order,
         payment: result.payment,
         alreadyPaid: result.alreadyPaid,
+        awardedXp: result.awardedXp ?? 0,
       },
     });
   };
@@ -55,6 +56,7 @@ export class PaymentController {
         order: result.order,
         payment: result.payment,
         alreadyPaid: result.alreadyPaid,
+        awardedXp: result.awardedXp ?? 0,
         demo: true,
       },
     });

@@ -21,7 +21,8 @@ services:
       # Set these in the Render dashboard (do not commit secrets):
       # MONGODB_URI, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET,
       # RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET,
-      # API_BASE_URL, CORS_ORIGINS, EMAIL_DEMO_MODE, SMS_DEMO_MODE
+      # API_BASE_URL, CORS_ORIGINS, EMAIL_DEMO_MODE=false, SMS_DEMO_MODE,
+      # RESEND_API_KEY, EMAIL_FROM (verified domain for real inbox mail)
       - key: MONGODB_URI
         sync: false
       - key: JWT_ACCESS_SECRET
@@ -37,4 +38,10 @@ services:
       - key: API_BASE_URL
         sync: false
       - key: CORS_ORIGINS
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: EMAIL_DEMO_MODE
         sync: false

@@ -136,7 +136,9 @@ Mobile defaults to **mock** via `apps/mobile/src/config/appConfig.ts`.
 - `GET/POST/PATCH/DELETE /api/v1/cart/*` — persisted cart, guest `X-Guest-Session`, merge on login, coupons (`FORGE10` / `WELCOME100`).
 - `GET /api/v1/serviceability?pincode=` — COD, shipping, ETA by pincode prefix.
 - `GET/POST /api/v1/reviews`, `GET /api/v1/notifications` — PDP reviews + in-app inbox (FCM still deferred).
-- Order status emails via Resend (`EMAIL_DEMO_MODE` / console fallback).
+- Order status emails via Resend (`EMAIL_DEMO_MODE` / console fallback). Test: `npm run test:email --workspace apps/api -- you@example.com`. Live inbox needs `EMAIL_DEMO_MODE=false` + real `RESEND_API_KEY` + verified `EMAIL_FROM`.
+- Rune XP: **100** per completed order, **500** when 2+ line products share a `bundleTag`.
+- Auth sessions store `deviceLabel` / `os` / `ip` (mobile sends device meta on login).
 - Mobile: `dataSource: 'api'`, `allowMockFallback: false`; repositories in `services/data/*`.
 - Guest may browse + cart; checkout / wishlist / write-review require login.
 
