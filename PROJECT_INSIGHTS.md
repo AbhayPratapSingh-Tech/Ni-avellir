@@ -103,11 +103,11 @@ Nidavellir is intended to become a real premium gaming merchandise marketplace, 
 
 ## Current Status
 
-Phases 1–9 are complete for the college demo (architecture through catalog / PDP / Account polish). Optional next work is session persistence, automated tests, and store deployment. Live tracking: `PROJECT_PROGRESS.md` and `TODO.md`.
+Phases 1–9 are complete for the college demo. **Live default:** mobile `dataSource: 'api'` → Render Free + Atlas. Resend verify email is live on Render (`EMAIL_DEMO_MODE=false`). Optional next: custom email domain, FCM, automated tests, store builds. Tracking: `PROJECT_PROGRESS.md` and `TODO.md`.
 
 ## Live Database + API (how to go beyond mock)
 
-Mobile defaults to **mock** via `apps/mobile/src/config/appConfig.ts`.
+Mobile defaults to **`api`** via `apps/mobile/src/config/appConfig.ts` (set `'mock'` for offline college demos).
 
 **Flip to live**
 
@@ -116,19 +116,19 @@ Mobile defaults to **mock** via `apps/mobile/src/config/appConfig.ts`.
 3. `apiBaseUrl` → live Render `https://ni-avellir.onrender.com/api/v1` (local laptop API was `http://10.0.2.2:4000/api/v1` on Android / `localhost` on iOS)
 4. Follow the agent checklist in **`AI_AGENT_GUIDE.md`**
 5. Render Free: app fires `GET /api/v1/health` on bootstrap **without blocking** the splash, then pings every 20 minutes while foregrounded (`wakeApiServer.ts`) so cold starts are less likely mid-session — not a paid always-on substitute.
-6. Products carry `sku` (`nw#####`) + `runeXp`; paid/COD orders increment the user’s `runeXp` on the API. Backfill existing Mongo rows with `npm run seed:sku --workspace apps/api`.
+6. Rune XP is **flat per order** (100 / 500 bundle), not per-SKU sum. Product `sku` / `runeXp` fields remain for display / backfill (`npm run seed:sku --workspace apps/api`).
 
 **Backend path**
 
 1. Install MongoDB locally (or Atlas) and set `MONGODB_URI` in `apps/api/.env.development`.
 2. Copy `apps/api/.env.development.example` → `.env.development`, set JWT secrets.
-3. From repo root: start API (`npm run dev --workspace apps/api` or the package script in docs).
-4. Seed products if a seed script exists; otherwise create catalog via admin/product routes.
-5. Auth (next): register/login → `setSessionTokens` → Bearer on `apiClient` (Keychain hydrate stub in `sessionTokens.ts`).
+3. From repo root: start API (`npm run dev:api`).
+4. Seed: `npm run seed --workspace apps/api`.
+5. Auth: register/login → `setSessionTokens` → Bearer on `apiClient` (Keychain hydrate in `AppBootstrap`).
 
 **Core collections (Mongoose)**
 
-- Users, OtpChallenges (TTL), RefreshTokens, Products, Carts, Addresses, Orders, Payments, Wishlists, Coupons, Reviews, Notifications, ServiceabilityRules.
+- Users, OtpChallenges (TTL), RefreshTokens (optional `deviceLabel` / `os` / `ip`), Products, Carts, Addresses, Orders, Payments, Wishlists, Coupons, Reviews, Notifications, ServiceabilityRules.
 
 **Auth + cart (live)**
 
@@ -136,12 +136,11 @@ Mobile defaults to **mock** via `apps/mobile/src/config/appConfig.ts`.
 - `GET/POST/PATCH/DELETE /api/v1/cart/*` — persisted cart, guest `X-Guest-Session`, merge on login, coupons (`FORGE10` / `WELCOME100`).
 - `GET /api/v1/serviceability?pincode=` — COD, shipping, ETA by pincode prefix.
 - `GET/POST /api/v1/reviews`, `GET /api/v1/notifications` — PDP reviews + in-app inbox (FCM still deferred).
-- Order status emails via Resend (`EMAIL_DEMO_MODE` / console fallback). Test: `npm run test:email --workspace apps/api -- you@example.com`. Live inbox needs `EMAIL_DEMO_MODE=false` + real `RESEND_API_KEY` + verified `EMAIL_FROM`.
+- Order / verify / reset emails via Resend — branded HTML in `integrations/email/email.factory.ts`. Test: `npm run test:email --workspace apps/api -- you@example.com`. Live inbox: `EMAIL_DEMO_MODE=false` + real `RESEND_API_KEY` + `EMAIL_FROM` (onboarding sender → Resend account email only).
 - Rune XP: **100** per completed order, **500** when 2+ line products share a `bundleTag`.
-- Auth sessions store `deviceLabel` / `os` / `ip` (mobile sends device meta on login).
+- Auth sessions store `deviceLabel` / `os` / `ip` (mobile `deviceLabel.ts` on login/register/OTP).
 - Mobile: `dataSource: 'api'`, `allowMockFallback: false`; repositories in `services/data/*`.
 - Guest may browse + cart; checkout / wishlist / write-review require login.
-
 **Orders + payments flow**
 
 - `POST /api/v1/orders` — COD → `confirmed` + stock decrement; Razorpay (`razorpay_demo`) → `pending_payment` (stock held until pay).

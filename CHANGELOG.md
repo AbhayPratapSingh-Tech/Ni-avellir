@@ -4,6 +4,14 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Sessions, Resend, Rune XP, icons, video
+
+- Session labels: mobile sends `deviceId` / `deviceLabel` / `os`; API stores client IP; Devices & sessions UI.
+- Resend live on Render (`EMAIL_DEMO_MODE=false`); branded verify / reset / order HTML in `email.factory.ts`; `npm run test:email`.
+- Rune XP: **100** per order, **500** for bundle orders (2+ same `bundleTag`); confirmation shows award.
+- SVG `AppIcon` (PDP confidence + Account); `CachedImage` placeholder/`onError`; Home `VideoBanner` autoplay retries.
+- Anime bundles + checkout serviceability already shipped; docs synced (`TODO`, `PROJECT_PROGRESS`, `PROJECT_INSIGHTS`, `AI_AGENT_GUIDE`, `DEVELOPER_GUIDE`, `README`).
+
 ### Live Render API + Postman docs + keep-alive
 
 - Hosted API on Render Free (`https://ni-avellir.onrender.com`); mobile `apiBaseUrl` points at live `/api/v1`.

@@ -141,6 +141,12 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 | Cart + coupons + serviceability | `cart/*`, `coupons/*`, `serviceability/*` |
 | Reviews / notifications | `reviews/*`, `notifications/*` |
 | Order emails (Resend / console) | `orders/order-email.ts`, `integrations/email/*` |
+| Branded email HTML (verify / reset / order) | `integrations/email/email.factory.ts` |
+| Rune XP award (100 / 500 bundle) | `modules/orders/rune-xp.ts` |
+| Device session label (mobile) | `services/session/deviceLabel.ts` |
+| SVG icons (PDP / Account) | `components/ui/AppIcon.tsx` |
+| Home YouTube banner | `components/commerce/VideoBanner.tsx` |
+| Cached images + placeholder | `components/ui/CachedImage.tsx` |
 | Razorpay native open | `apps/mobile/src/services/payments/openRazorpayCheckout.ts` |
 | Orders list / details | `features/orders/*` |
 | Addresses | `features/addresses/*` |
@@ -174,8 +180,9 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 
 Most auth/cart/orders live paths are implemented. Still deferred (see `TODO.md`):
 
-- Razorpay **webhooks** implemented (`POST /payments/razorpay/webhook`, idempotent) beside client `/confirm`.
 - **FCM / APNs** push (in-app notifications inbox already works).
+- Custom Resend domain (any recipient beyond `onboarding@resend.dev`).
 - Shipment tracking, invoice PDF, automated tests.
-- **HTTPS / production deploy** (Railway/Render/AWS + store builds) with real secrets. Render: `render.yaml` + `npm run build:api` / `npm run start:api` (not Metro).
+- Store builds (Play / TestFlight); paid always-on host if Free cold starts hurt demos.
+- Razorpay webhooks + Render Free API + Resend verify email are already shipped (`render.yaml`, `EMAIL_DEMO_MODE=false`).
 - Strict `allowMockFallback: false` on staging/prod store builds.
