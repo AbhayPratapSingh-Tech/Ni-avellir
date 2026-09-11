@@ -16,7 +16,7 @@ Premium gaming merchandise marketplace — a full-stack mobile commerce app.
 ## Quick Start (clone → run)
 
 ```bash
-git clone <your-repo-url> Ni-avellir
+git clone <url> Ni-avellir
 cd Ni-avellir
 git checkout <your-branch>   # if not main
 
