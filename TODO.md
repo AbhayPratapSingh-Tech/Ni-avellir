@@ -70,7 +70,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] Frictionless visual search.
 - [ ] Personalized home feed.
 - [ ] Find with character / franchise UI.
-- [ ] AI Merch Assistant.
+- [x] **AI Merch Assistant** — `POST /api/v1/ai/chat` (tools over live catalog/cart/wishlist/orders + FAQ RAG); mobile hub/chat UI + Search mic (`@react-native-voice/voice`); stub without LLM key, Groq/OpenAI via env.
 
 ### Merchandising & drops
 - [ ] Today’s Niðavellir drop banner.
@@ -95,7 +95,8 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] Community blog.
 
 ### Notes for implementers
-- Visual search, AI assistant, and smart pushes need backend + privacy / moderation plans.
+- Visual search and smart pushes need backend + privacy / moderation plans.
+- AI assistant: set `AI_ENABLED` + optional `OPENAI_*` on Render; without a key the API uses stub intents + real commerce tools.
 - Pre-order and mystery boxes need inventory + pricing + cart rules before UI.
 - After bundle seed changes on Render, run seed against Atlas (or redeploy with seed job) so live API gets `bundleTag` products.
 - Email template edits: `apps/api/src/integrations/email/email.factory.ts` → push → redeploy Render.

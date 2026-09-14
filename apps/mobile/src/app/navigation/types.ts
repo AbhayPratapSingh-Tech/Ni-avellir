@@ -43,6 +43,7 @@ export type RootStackParamList = {
     title?: string;
   } | undefined;
   Search: { q?: string } | undefined;
+  AIAssistant: { mode?: 'talk' | 'chat' } | undefined;
   ProductDetail: { product: Product };
   Checkout: undefined;
   OrderConfirmation: { orderId: string; awardedXp?: number };

@@ -4,6 +4,12 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### AI Merch Assistant
+
+- API: `POST /api/v1/ai/chat` with tool runners over products/cart/wishlist/orders + FAQ/returns/shipping knowledge; Groq/OpenAI via `OPENAI_*` env, stub without key.
+- Mobile: Ask Niðavellir hub/chat (Curio-style), product cards in thread, Home **AI** chip + Account entry; Search + chat mic (`@react-native-voice/voice`, `react-native-tts`).
+- Flags: `appConfig.features.aiAssistant` / `voiceInput`. Contract: `apps/api/src/modules/ai/AI_BACKEND_CONTRACT.md`.
+
 ### Sessions, Resend, Rune XP, icons, video
 
 - Session labels: mobile sends `deviceId` / `deviceLabel` / `os`; API stores client IP; Devices & sessions UI.

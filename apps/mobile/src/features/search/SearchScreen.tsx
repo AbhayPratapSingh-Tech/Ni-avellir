@@ -8,11 +8,14 @@ import { ProductCard } from '../../components/commerce/ProductCard';
 import { CatalogEmptyState } from '../../components/commerce/CatalogEmptyState';
 import { FloatingCartButton } from '../../components/commerce/FloatingCartButton';
 import { Screen } from '../../components/ui/Screen';
+import { MicButton } from '../../components/ui/MicButton';
 import { productRepository, type SearchSuggestions } from '../../services/data/productRepository';
 import { useAppDispatch } from '../../app/store';
 import { addProductToCart } from '../../lib/cartActions';
 import { useToast } from '../../components/ui/Toast';
 import { goBackOrHome } from '../../lib/navigation';
+import { useSpeechToText } from '../../hooks/useSpeechToText';
+import { appConfig } from '../../config/appConfig';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -32,6 +35,11 @@ export function SearchScreen() {
     brands: [],
   });
 
+  const speech = useSpeechToText({
+    onFinal: ({ transcript }) => setQuery(transcript),
+    onError: (message) => toast.show(message),
+  });
+
   useEffect(() => {
     productRepository.getSearchSuggestions().then(setSuggestions);
   }, []);
@@ -44,6 +52,12 @@ export function SearchScreen() {
     }
     productRepository.list({ search: q, limit: 40 }).then((result) => setProducts(result.items));
   }, [query]);
+
+  useEffect(() => {
+    if (speech.listening && speech.partial) {
+      setQuery(speech.partial);
+    }
+  }, [speech.listening, speech.partial]);
 
   const handleAdd = useCallback(
     (product: Product) => {
@@ -74,6 +88,15 @@ export function SearchScreen() {
           autoFocus
           returnKeyType="search"
         />
+        {appConfig.features.voiceInput ? (
+          <MicButton
+            listening={speech.listening}
+            onPress={() => {
+              void speech.toggle();
+            }}
+            size={40}
+          />
+        ) : null}
       </View>
 
       {emptyQuery ? (

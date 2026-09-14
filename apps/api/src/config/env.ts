@@ -38,6 +38,13 @@ const envSchema = z.object({
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_FROM_NUMBER: z.string().optional(),
+  AI_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === undefined || v === 'true' || v === '1'),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_BASE_URL: z.string().optional().default('https://api.openai.com/v1'),
+  OPENAI_MODEL: z.string().optional().default('gpt-4o-mini'),
 });
 
 export type Env = ReturnType<typeof loadEnv>;
@@ -77,5 +84,14 @@ export function loadEnv() {
     twilioAccountSid: parsed.TWILIO_ACCOUNT_SID,
     twilioAuthToken: parsed.TWILIO_AUTH_TOKEN,
     twilioFromNumber: parsed.TWILIO_FROM_NUMBER,
+    aiEnabled:
+      process.env.AI_ENABLED !== undefined
+        ? Boolean(parsed.AI_ENABLED)
+        : parsed.NODE_ENV !== 'production' || Boolean(parsed.OPENAI_API_KEY),
+    openaiApiKey: parsed.OPENAI_API_KEY?.startsWith('replace-with')
+      ? undefined
+      : parsed.OPENAI_API_KEY,
+    openaiBaseUrl: parsed.OPENAI_BASE_URL,
+    openaiModel: parsed.OPENAI_MODEL,
   };
 }

@@ -141,6 +141,7 @@ Mobile defaults to **`api`** via `apps/mobile/src/config/appConfig.ts` (set `'mo
 - Auth sessions store `deviceLabel` / `os` / `ip` (mobile `deviceLabel.ts` on login/register/OTP).
 - Mobile: `dataSource: 'api'`, `allowMockFallback: false`; repositories in `services/data/*`.
 - Guest may browse + cart; checkout / wishlist / write-review require login.
+- **AI Merch Assistant:** `POST /api/v1/ai/chat` — LLM optional (`OPENAI_API_KEY` / Groq `OPENAI_BASE_URL`); tools always use live Mongo services. Mobile `AIAssistant` screen + Search mic. Never put LLM keys in RN. Rebuild native after voice/TTS deps (`pod install`).
 **Orders + payments flow**
 
 - `POST /api/v1/orders` — COD → `confirmed` + stock decrement; Razorpay (`razorpay_demo`) → `pending_payment` (stock held until pay).

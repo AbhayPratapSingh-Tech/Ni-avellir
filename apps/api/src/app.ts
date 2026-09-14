@@ -23,6 +23,7 @@ import { createCouponRouter } from './modules/coupons/coupon.routes.js';
 import { createReviewRouter } from './modules/reviews/review.routes.js';
 import { createNotificationRouter } from './modules/notifications/notification.routes.js';
 import { createServiceabilityRouter } from './modules/serviceability/serviceability.routes.js';
+import { createAiRouter } from './modules/ai/ai.routes.js';
 
 export function createApp(env: Env) {
   const app = express();
@@ -62,6 +63,7 @@ export function createApp(env: Env) {
   app.use('/api/v1/reviews', createReviewRouter(env));
   app.use('/api/v1/notifications', createNotificationRouter(env));
   app.use('/api/v1/serviceability', createServiceabilityRouter());
+  app.use('/api/v1/ai', createAiRouter(env));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

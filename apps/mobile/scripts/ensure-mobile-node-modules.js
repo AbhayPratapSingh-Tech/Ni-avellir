@@ -18,6 +18,8 @@ const links = [
   ['@react-native/community-cli-plugin', '@react-native/community-cli-plugin'],
   ['react-native-razorpay', 'react-native-razorpay'],
   ['react-native-webview', 'react-native-webview'],
+  ['@react-native-voice/voice', '@react-native-voice/voice'],
+  ['react-native-tts', 'react-native-tts'],
 ];
 
 function ensureDir(dir) {
