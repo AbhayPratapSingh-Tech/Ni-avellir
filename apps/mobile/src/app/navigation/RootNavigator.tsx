@@ -32,6 +32,7 @@ import { ChangePasswordScreen } from '../../features/profile/ChangePasswordScree
 import { SessionsScreen } from '../../features/profile/SessionsScreen';
 import { VerifyEmailScreen } from '../../features/profile/VerifyEmailScreen';
 import { NotificationsScreen } from '../../features/profile/NotificationsScreen';
+import { AIAssistantScreen } from '../../features/ai/AIAssistantScreen';
 import { useAppSelector } from '../store';
 import type { AuthStackParamList, MainTabParamList, RootStackParamList } from './types';
 
@@ -176,6 +177,11 @@ function ShopNavigator() {
         options={({ route }) => ({ title: route.params?.title ?? 'Products' })}
       />
       <RootStack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
+      <RootStack.Screen
+        name="AIAssistant"
+        component={AIAssistantScreen}
+        options={{ headerShown: false }}
+      />
       <RootStack.Screen
         name="ProductDetail"
         component={ProductDetailScreen}

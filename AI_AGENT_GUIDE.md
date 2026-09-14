@@ -33,6 +33,8 @@ File: `apps/mobile/src/config/appConfig.ts`
 
 Also required on the server: Mongo, JWT secrets, Razorpay Test then Live keys (`apps/api/.env.*`).
 
+**AI assistant env (optional LLM):** `AI_ENABLED=true`, `OPENAI_API_KEY` (Groq or OpenAI), `OPENAI_BASE_URL` (e.g. `https://api.groq.com/openai/v1`), `OPENAI_MODEL`. Without a key, stub intents still call real commerce tools. See `apps/api/src/modules/ai/AI_BACKEND_CONTRACT.md`.
+
 ### Fresh clone must run
 
 ```bash
@@ -74,6 +76,7 @@ Checklist when flipping live:
 5. SMS: `SMS_PROVIDER` + MSG91/Twilio keys, or `SMS_DEMO_MODE=true` for dev.
 6. Razorpay: real keys → `demoMode: false` → native Checkout → `/confirm`.
 7. Rebuild native app after native dependency changes; run `ensure-mobile-node-modules.js` + `pod install` when needed.
+8. AI assistant (optional): `AI_ENABLED` + `OPENAI_*` on API; mobile Home **AI** / Account **Ask Niðavellir**; voice needs mic permission + native rebuild.
 
 ---
 
@@ -153,6 +156,7 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 | Address validation | `lib/addressValidation.ts` |
 | Navigation | `app/navigation/*` |
 | Express app | `apps/api/src/app.ts` |
+| AI assistant API | `apps/api/src/modules/ai/*` (`POST /ai/chat`) |
 | Payments API | `apps/api/src/modules/payments/*` |
 
 ---

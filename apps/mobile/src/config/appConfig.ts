@@ -51,6 +51,8 @@ export const appConfig = {
     runeXp: true,
     heroCarousel: true,
     flashSale: true,
+    aiAssistant: true,
+    voiceInput: true,
   },
 
   /**

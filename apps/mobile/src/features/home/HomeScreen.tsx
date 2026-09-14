@@ -29,11 +29,13 @@ import { ShopHeader } from '../../components/layout/ShopHeader';
 import { ShopDrawer } from '../../components/layout/ShopDrawer';
 import { Screen } from '../../components/ui/Screen';
 import { CachedImage } from '../../components/ui/CachedImage';
+import { appConfig } from '../../config/appConfig';
 import { useDailySale } from '../../lib/saleWindow';
 import { productRepository } from '../../services/data/productRepository';
 import type { ShopCategory } from '../../lib/shopCategories';
 import type { RootStackParamList } from '../../app/navigation/types';
 import { trackEvent } from '../../lib/analytics';
+import { FloatingAIWidget } from '../ai/AIAssistantScreen';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -258,10 +260,22 @@ export function HomeScreen() {
         <ShopDrawer visible={menuOpen} onClose={() => setMenuOpen(false)} />
 
         <View style={styles.padded}>
-          <Pressable style={styles.searchBar} onPress={() => navigation.navigate('Search', {})}>
-            <Text style={styles.searchIcon}>⌕</Text>
-            <Text style={styles.searchPlaceholder}>Search kits, desks, drops...</Text>
-          </Pressable>
+          <View style={styles.searchRow}>
+            <Pressable style={styles.searchBar} onPress={() => navigation.navigate('Search', {})}>
+              <Text style={styles.searchIcon}>⌕</Text>
+              <Text style={styles.searchPlaceholder}>Search kits, desks, drops...</Text>
+            </Pressable>
+            {appConfig.features.aiAssistant ? (
+              <Pressable
+                style={styles.aiChip}
+                onPress={() => navigation.navigate('AIAssistant', {})}
+                hitSlop={8}
+                accessibilityLabel="Open Heimdall full screen"
+              >
+                <Text style={styles.aiChipText}>AI</Text>
+              </Pressable>
+            ) : null}
+          </View>
           <HeroCarousel />
         </View>
 
@@ -369,6 +383,7 @@ export function HomeScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      <FloatingAIWidget />
     </Screen>
   );
 }
@@ -573,10 +588,29 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
+    flex: 1,
     flexDirection: 'row',
-    marginBottom: spacing.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 12,
+  },
+  searchRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: spacing.md,
+  },
+  aiChip: {
+    alignItems: 'center',
+    backgroundColor: colors.accentSoft,
+    borderRadius: 12,
+    height: 46,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  aiChipText: {
+    color: colors.accent,
+    fontSize: 14,
+    fontWeight: '800',
   },
   searchIcon: {
     color: colors.textMuted,

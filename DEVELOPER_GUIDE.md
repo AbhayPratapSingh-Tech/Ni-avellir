@@ -207,6 +207,9 @@ Nidavellir/
 | **Wishlist state (Redux slice)** | `features/wishlist/wishlistSlice.ts` |
 | **Recently viewed** | `features/recent/recentSlice.ts` |
 | **Account + Rune XP + logout** | `features/profile/ProfileScreen.tsx` |
+| **AI Merch Assistant** | `features/ai/AIAssistantScreen.tsx` |
+| **AI API client** | `services/ai/aiApi.ts` |
+| **Voice STT hook** | `hooks/useSpeechToText.ts` |
 | **Edit profile + avatar** | `features/profile/EditProfileScreen.tsx` |
 | **Devices & sessions** | `features/profile/SessionsScreen.tsx` |
 | **Verify email** | `features/profile/VerifyEmailScreen.tsx` |
@@ -223,6 +226,7 @@ Nidavellir/
 | Feature | File |
 |---|---|
 | **Express app (middleware wiring)** | `app.ts` |
+| **AI Merch Assistant** | `modules/ai/` (`POST /api/v1/ai/chat`) |
 | **Server entry** | `server.ts` |
 | **Environment config** | `config/env.ts` |
 | **Health route** | `modules/health/health.routes.ts` |

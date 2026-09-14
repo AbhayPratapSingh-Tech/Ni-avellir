@@ -14,6 +14,7 @@ import type { RootStackParamList } from '../../app/navigation/types';
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 const MENU: Array<{ key: string; label: string; icon: AppIconName }> = [
+  { key: 'assistant', label: 'Heimdall', icon: 'chat' },
   { key: 'edit', label: 'Edit profile', icon: 'edit' },
   { key: 'orders', label: 'My Orders', icon: 'package' },
   { key: 'addresses', label: 'Addresses', icon: 'mapPin' },
@@ -135,6 +136,10 @@ export function ProfileScreen() {
               key={item.key}
               style={styles.menuRow}
               onPress={() => {
+                if (item.key === 'assistant') {
+                  navigation.navigate('AIAssistant', {});
+                  return;
+                }
                 if (item.key === 'edit') {
                   openEditProfile();
                   return;
