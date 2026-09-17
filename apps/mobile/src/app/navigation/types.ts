@@ -50,6 +50,7 @@ export type RootStackParamList = {
   Orders: undefined;
   OrderDetails: { orderId: string };
   Wishlist: undefined;
+  StoreLocator: undefined;
   EditProfile: undefined;
   ChangePassword: undefined;
   Sessions: undefined;

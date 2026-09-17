@@ -3,9 +3,11 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing } from '../../theme/tokens';
 import { BrandMark } from '../ui/BrandMark';
+import { AppIcon } from '../ui/AppIcon';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { requireLogin } from '../../lib/authGates';
 import { useToast } from '../ui/Toast';
+import { appConfig } from '../../config/appConfig';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -40,15 +42,15 @@ export function ShopHeader({ onMenuPress }: Props) {
     <View style={styles.row}>
       <Pressable
         onPress={onMenuPress}
-        style={styles.sideBtn}
-        hitSlop={8}
+        style={styles.menuBtn}
+        hitSlop={10}
         accessibilityRole="button"
         accessibilityLabel="Open menu"
       >
-        <Text style={styles.menuIcon}>≡</Text>
+        <AppIcon name="menu" size={26} color={colors.text} />
       </Pressable>
       <View style={styles.logo}>
-        <BrandMark size={48} />
+        <BrandMark size={40} />
       </View>
       <View style={styles.rightActions}>
         <Pressable
@@ -58,13 +60,24 @@ export function ShopHeader({ onMenuPress }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Open wishlist"
         >
-          <Text style={styles.wishIcon}>♡</Text>
+          <AppIcon name="heart" size={22} color={colors.text} />
           {wishBadge ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{wishBadge}</Text>
             </View>
           ) : null}
         </Pressable>
+        {appConfig.features.storeLocator ? (
+          <Pressable
+            onPress={() => navigation.navigate('StoreLocator')}
+            style={styles.sideBtn}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Store locator"
+          >
+            <AppIcon name="mapPin" size={22} color={colors.text} />
+          </Pressable>
+        ) : null}
         <Pressable
           onPress={() => navigation.navigate('MainTabs', { screen: 'Cart' })}
           style={styles.sideBtn}
@@ -72,7 +85,7 @@ export function ShopHeader({ onMenuPress }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Open cart"
         >
-          <Text style={styles.cartIcon}>🛒</Text>
+          <AppIcon name="bag" size={22} color={colors.text} />
           {cartBadge ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{cartBadge}</Text>
@@ -102,18 +115,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
   },
-  cartIcon: {
-    fontSize: 20,
-  },
   logo: {
     alignItems: 'center',
     flex: 1,
   },
-  menuIcon: {
-    color: colors.text,
-    fontSize: 24,
-    fontWeight: '800',
-    lineHeight: 24,
+  menuBtn: {
+    alignItems: 'center',
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
   },
   rightActions: {
     alignItems: 'center',
@@ -122,7 +132,7 @@ const styles = StyleSheet.create({
   row: {
     alignItems: 'center',
     flexDirection: 'row',
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
     paddingHorizontal: spacing.xs,
     paddingTop: spacing.sm,
   },
@@ -131,11 +141,5 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: 'center',
     width: 40,
-  },
-  wishIcon: {
-    color: colors.text,
-    fontSize: 22,
-    fontWeight: '700',
-    lineHeight: 24,
   },
 });

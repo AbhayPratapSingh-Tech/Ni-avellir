@@ -285,8 +285,13 @@ features: {
   runeXp: true,        // Rune XP loyalty widget
   heroCarousel: true,  // animated hero carousel
   flashSale: true,     // flash-sale countdown
+  aiAssistant: true,   // Heimdall chat
+  voiceInput: true,    // mic on Search / Heimdall
+  storeLocator: true,  // header pin → StoreLocator (OSM WebView map)
 }
 ```
+
+**Store locator:** `ShopHeader` location icon → `StoreLocator` route. Area search geocodes via `GET /api/v1/stores/geocode` (Nominatim proxy). Store cards from `GET /api/v1/stores` (empty until you seed Mongo). Map uses existing `react-native-webview` + Leaflet/OSM (no Google Maps key). Replace `apps/mobile/assets/brand/logo.png` for a real header mark (`BrandMark` falls back to letter N).
 
 ---
 

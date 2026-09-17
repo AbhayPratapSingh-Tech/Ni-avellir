@@ -33,6 +33,7 @@ import { SessionsScreen } from '../../features/profile/SessionsScreen';
 import { VerifyEmailScreen } from '../../features/profile/VerifyEmailScreen';
 import { NotificationsScreen } from '../../features/profile/NotificationsScreen';
 import { AIAssistantScreen } from '../../features/ai/AIAssistantScreen';
+import { StoreLocatorScreen } from '../../features/stores/StoreLocatorScreen';
 import { useAppSelector } from '../store';
 import type { AuthStackParamList, MainTabParamList, RootStackParamList } from './types';
 
@@ -200,6 +201,11 @@ function ShopNavigator() {
         options={{ title: 'Order details' }}
       />
       <RootStack.Screen name="Wishlist" component={WishlistScreen} options={{ title: 'Wishlist' }} />
+      <RootStack.Screen
+        name="StoreLocator"
+        component={StoreLocatorScreen}
+        options={{ title: 'Store locator' }}
+      />
       <RootStack.Screen
         name="EditProfile"
         component={EditProfileScreen}

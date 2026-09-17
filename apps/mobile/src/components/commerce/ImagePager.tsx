@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -23,6 +23,11 @@ export function ImagePager({ images, height, width, showCount = true, onPressIma
   const pagerWidth = width ?? window.width;
   const [index, setIndex] = useState(0);
   const data = images.length ? images : [];
+  const imagesKey = data.join('|');
+
+  useEffect(() => {
+    setIndex(0);
+  }, [imagesKey]);
 
   if (!data.length) {
     return <View style={[styles.frame, { height, width: pagerWidth }]} />;
@@ -31,6 +36,7 @@ export function ImagePager({ images, height, width, showCount = true, onPressIma
   return (
     <View style={{ width: pagerWidth }}>
       <FlatList
+        key={imagesKey}
         data={data}
         keyExtractor={(item, i) => `${item}-${i}`}
         horizontal

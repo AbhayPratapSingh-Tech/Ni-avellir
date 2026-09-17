@@ -362,6 +362,7 @@ const styles = StyleSheet.create({
   },
   item: {
     flex: 1,
+    maxWidth: '50%',
   },
   list: {
     paddingBottom: 96,

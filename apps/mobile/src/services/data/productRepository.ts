@@ -133,7 +133,10 @@ function listFromMock(query: ProductListQuery = {}): ProductListResult {
 }
 
 function mapApiProduct(raw: Record<string, unknown>): Product {
-  const id = String(raw._id ?? raw.id ?? '');
+  // Prefer Mongo `_id` so cart/orders resolve; never let a bare slug overwrite id.
+  const mongoId = raw._id != null ? String(raw._id) : '';
+  const fallbackId = raw.id != null ? String(raw.id) : '';
+  const id = mongoId || fallbackId;
   const franchise = String(raw.franchise ?? '');
   const slug = raw.slug ? String(raw.slug) : undefined;
   const mapped: Product = {
@@ -141,8 +144,8 @@ function mapApiProduct(raw: Record<string, unknown>): Product {
     id,
     brand: String(raw.brand ?? franchise),
     franchise,
-    sku: raw.sku ? String(raw.sku) : undefined as unknown as string,
-    runeXp: raw.runeXp !== undefined ? Number(raw.runeXp) : undefined as unknown as number,
+    sku: raw.sku ? String(raw.sku) : (undefined as unknown as string),
+    runeXp: raw.runeXp !== undefined ? Number(raw.runeXp) : (undefined as unknown as number),
     bundleTag: raw.bundleTag ? String(raw.bundleTag) : undefined,
     isBundleMain: Boolean(raw.isBundleMain),
   };

@@ -77,6 +77,7 @@ Checklist when flipping live:
 6. Razorpay: real keys → `demoMode: false` → native Checkout → `/confirm`.
 7. Rebuild native app after native dependency changes; run `ensure-mobile-node-modules.js` + `pod install` when needed.
 8. AI assistant (optional): `AI_ENABLED` + `OPENAI_*` on API; mobile Home **AI** / Account **Ask Niðavellir**; voice needs mic permission + native rebuild.
+9. Store locator: `features.storeLocator` in `appConfig`; header pin → `StoreLocator`; API `GET /api/v1/stores` + `GET /api/v1/stores/geocode`; logo at `apps/mobile/assets/brand/logo.png` (BrandMark fallback). WebView already linked — no native rebuild for map.
 
 ---
 
@@ -157,6 +158,10 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 | Navigation | `app/navigation/*` |
 | Express app | `apps/api/src/app.ts` |
 | AI assistant API | `apps/api/src/modules/ai/*` (`POST /ai/chat`) |
+| Store locator screen | `features/stores/StoreLocatorScreen.tsx` |
+| Stores API | `apps/api/src/modules/stores/*` (`GET /stores`, `GET /stores/geocode`) |
+| Store repository | `services/data/storeRepository.ts` |
+| Header brand logo | `assets/brand/logo.png` + `components/ui/BrandMark.tsx` |
 | Payments API | `apps/api/src/modules/payments/*` |
 
 ---

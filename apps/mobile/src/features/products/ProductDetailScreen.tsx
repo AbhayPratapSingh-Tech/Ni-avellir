@@ -100,6 +100,8 @@ export function ProductDetailScreen() {
     const slug = (routeProduct as Product & { slug?: string }).slug ?? routeProduct.id;
     productRepository.getBySlug(slug).then((live) => {
       if (live) setProduct(live);
+    }).catch(() => {
+      // Keep route product — avoid wiping PDP if refresh 404s
     });
   }, [routeProduct]);
 
