@@ -13,7 +13,11 @@ export type AppIconName =
   | 'phone'
   | 'mail'
   | 'chat'
-  | 'chevron';
+  | 'chevron'
+  | 'menu'
+  | 'bag'
+  | 'heart'
+  | 'search';
 
 type Props = {
   name: AppIconName;
@@ -186,6 +190,49 @@ export function AppIcon({ name, size = 20, color = colors.text }: Props) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
+        </Svg>
+      );
+    case 'menu':
+      return (
+        <Svg {...common}>
+          <Path d="M4 7h16" stroke={stroke} strokeWidth={2.5} strokeLinecap="round" />
+          <Path d="M4 12h16" stroke={stroke} strokeWidth={2.5} strokeLinecap="round" />
+          <Path d="M4 17h16" stroke={stroke} strokeWidth={2.5} strokeLinecap="round" />
+        </Svg>
+      );
+    case 'bag':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M6 8h12l-1 13H7L6 8Z"
+            stroke={stroke}
+            strokeWidth={2}
+            strokeLinejoin="round"
+          />
+          <Path
+            d="M9 8V7a3 3 0 0 1 6 0v1"
+            stroke={stroke}
+            strokeWidth={2}
+            strokeLinecap="round"
+          />
+        </Svg>
+      );
+    case 'heart':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1L12 21.4l8.8-8.7a5 5 0 0 0 0-7.1Z"
+            stroke={stroke}
+            strokeWidth={2}
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case 'search':
+      return (
+        <Svg {...common}>
+          <Circle cx={11} cy={11} r={7} stroke={stroke} strokeWidth={2} />
+          <Path d="m20 20-3.5-3.5" stroke={stroke} strokeWidth={2} strokeLinecap="round" />
         </Svg>
       );
     default:

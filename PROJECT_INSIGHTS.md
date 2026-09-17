@@ -103,7 +103,7 @@ Nidavellir is intended to become a real premium gaming merchandise marketplace, 
 
 ## Current Status
 
-Phases 1–9 are complete for the college demo. **Live default:** mobile `dataSource: 'api'` → Render Free + Atlas. Resend verify email is live on Render (`EMAIL_DEMO_MODE=false`). Optional next: custom email domain, FCM, automated tests, store builds. Tracking: `PROJECT_PROGRESS.md` and `TODO.md`.
+Phases 1–9 are complete for the college demo. **Live default:** mobile `dataSource: 'api'` → Render Free + Atlas. Resend verify email is live on Render (`EMAIL_DEMO_MODE=false`). Store locator: header pin → OSM WebView map + `GET /stores` (seed later). Optional next: custom email domain, FCM, automated tests, store builds. Tracking: `PROJECT_PROGRESS.md` and `TODO.md`.
 
 ## Live Database + API (how to go beyond mock)
 
@@ -128,7 +128,7 @@ Mobile defaults to **`api`** via `apps/mobile/src/config/appConfig.ts` (set `'mo
 
 **Core collections (Mongoose)**
 
-- Users, OtpChallenges (TTL), RefreshTokens (optional `deviceLabel` / `os` / `ip`), Products, Carts, Addresses, Orders, Payments, Wishlists, Coupons, Reviews, Notifications, ServiceabilityRules.
+- Users, OtpChallenges (TTL), RefreshTokens (optional `deviceLabel` / `os` / `ip`), Products, Carts, Addresses, Orders, Payments, Wishlists, Coupons, Reviews, Notifications, ServiceabilityRules, Stores (optional — empty until seeded; `GET /stores` + Nominatim geocode proxy).
 
 **Auth + cart (live)**
 

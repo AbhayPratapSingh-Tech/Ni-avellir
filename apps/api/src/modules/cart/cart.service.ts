@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { AppError } from '../../common/errors/app-error.js';
 import { Coupon } from '../coupons/coupon.model.js';
 import { Product } from '../products/product.model.js';
@@ -44,6 +45,10 @@ export type CartSession = {
 
 const TAX_RATE = 0.05;
 
+function isMongoObjectId(value: string): boolean {
+  return Types.ObjectId.isValid(value) && String(new Types.ObjectId(value)) === value;
+}
+
 export class CartService {
   private async findOrCreateCart(userId?: string, guestSessionId?: string) {
     if (userId) {
@@ -57,6 +62,31 @@ export class CartService {
       return cart;
     }
     throw new AppError('Cart session required', 400);
+  }
+
+  /** Resolve catalog products by Mongo `_id` and/or `slug` (Home sometimes sent slug historically). */
+  private async loadProductsByRefs(refs: string[]): Promise<Map<string, LeanProduct>> {
+    const unique = [...new Set(refs.map(String).filter(Boolean))];
+    if (!unique.length) return new Map();
+
+    const objectIds = unique.filter(isMongoObjectId);
+    const filter =
+      objectIds.length > 0
+        ? { $or: [{ _id: { $in: objectIds } }, { slug: { $in: unique } }] }
+        : { slug: { $in: unique } };
+
+    const products = (await Product.find(filter).lean()) as LeanProduct[];
+    const map = new Map<string, LeanProduct>();
+    for (const product of products) {
+      map.set(String(product._id), product);
+      if (product.slug) map.set(product.slug, product);
+    }
+    return map;
+  }
+
+  private async resolveProduct(ref: string): Promise<LeanProduct | null> {
+    const map = await this.loadProductsByRefs([ref]);
+    return map.get(ref) ?? null;
   }
 
   private async computeQuote(
@@ -79,9 +109,7 @@ export class CartService {
       };
     }
 
-    const productIds = items.map((item) => item.productId);
-    const products = (await Product.find({ _id: { $in: productIds } }).lean()) as LeanProduct[];
-    const productMap = new Map(products.map((p) => [String(p._id), p]));
+    const productMap = await this.loadProductsByRefs(items.map((item) => item.productId));
 
     const lines = items.map((item) => {
       const product = productMap.get(String(item.productId));
@@ -151,8 +179,44 @@ export class CartService {
     return this.computeQuote(items, undefined, pincode);
   }
 
+  /** Drop cart lines that no longer resolve (deleted products / old mock ids). */
+  private async sanitizeCartItems(cart: Awaited<ReturnType<CartService['findOrCreateCart']>>) {
+    if (!cart.items.length) return cart;
+    const productMap = await this.loadProductsByRefs(cart.items.map((i) => i.productId));
+    const next: CartItem[] = [];
+    let changed = false;
+    for (const item of cart.items) {
+      const product = productMap.get(String(item.productId));
+      if (!product) {
+        changed = true;
+        continue;
+      }
+      const canonicalId = String(product._id);
+      if (item.productId !== canonicalId) {
+        changed = true;
+        const existing = next.find((row) => row.productId === canonicalId);
+        if (existing) existing.quantity += item.quantity;
+        else next.push({ productId: canonicalId, quantity: item.quantity });
+      } else {
+        const existing = next.find((row) => row.productId === canonicalId);
+        if (existing) {
+          changed = true;
+          existing.quantity += item.quantity;
+        } else {
+          next.push(item);
+        }
+      }
+    }
+    if (changed) {
+      cart.items = next;
+      cart.updatedAt = new Date();
+      await cart.save();
+    }
+    return cart;
+  }
+
   async getCart(userId?: string, guestSessionId?: string, pincode?: string) {
-    const cart = await this.findOrCreateCart(userId, guestSessionId);
+    const cart = await this.sanitizeCartItems(await this.findOrCreateCart(userId, guestSessionId));
     const quote = await this.computeQuote(cart.items, cart.couponCode, pincode);
     return { cart: { items: cart.items, couponCode: cart.couponCode }, quote };
   }
@@ -164,10 +228,15 @@ export class CartService {
     quantity = 1,
     pincode?: string,
   ) {
-    const cart = await this.findOrCreateCart(userId, guestSessionId);
-    const existing = cart.items.find((i) => i.productId === productId);
+    const product = await this.resolveProduct(productId);
+    if (!product) {
+      throw new AppError('Product not found', 404);
+    }
+    const canonicalId = String(product._id);
+    const cart = await this.sanitizeCartItems(await this.findOrCreateCart(userId, guestSessionId));
+    const existing = cart.items.find((i) => i.productId === canonicalId);
     if (existing) existing.quantity += quantity;
-    else cart.items.push({ productId, quantity });
+    else cart.items.push({ productId: canonicalId, quantity });
     cart.updatedAt = new Date();
     await cart.save();
     return this.getCart(userId, guestSessionId, pincode);
@@ -180,13 +249,20 @@ export class CartService {
     quantity: number,
     pincode?: string,
   ) {
-    const cart = await this.findOrCreateCart(userId, guestSessionId);
+    const product = await this.resolveProduct(productId);
+    if (!product && quantity > 0) {
+      throw new AppError('Product not found', 404);
+    }
+    const canonicalId = product ? String(product._id) : productId;
+    const cart = await this.sanitizeCartItems(await this.findOrCreateCart(userId, guestSessionId));
     if (quantity <= 0) {
-      cart.items = cart.items.filter((i) => i.productId !== productId);
+      cart.items = cart.items.filter((i) => i.productId !== canonicalId && i.productId !== productId);
     } else {
-      const item = cart.items.find((i) => i.productId === productId);
-      if (item) item.quantity = quantity;
-      else cart.items.push({ productId, quantity });
+      const item = cart.items.find((i) => i.productId === canonicalId || i.productId === productId);
+      if (item) {
+        item.productId = canonicalId;
+        item.quantity = quantity;
+      } else cart.items.push({ productId: canonicalId, quantity });
     }
     await cart.save();
     return this.getCart(userId, guestSessionId, pincode);
@@ -198,8 +274,10 @@ export class CartService {
     productId: string,
     pincode?: string,
   ) {
+    const product = await this.resolveProduct(productId);
+    const canonicalId = product ? String(product._id) : productId;
     const cart = await this.findOrCreateCart(userId, guestSessionId);
-    cart.items = cart.items.filter((i) => i.productId !== productId);
+    cart.items = cart.items.filter((i) => i.productId !== canonicalId && i.productId !== productId);
     await cart.save();
     return this.getCart(userId, guestSessionId, pincode);
   }
@@ -242,10 +320,14 @@ export class CartService {
       Cart.findOne({ guestSessionId }),
     ]);
     if (guestCart?.items.length) {
+      const productMap = await this.loadProductsByRefs(guestCart.items.map((i) => i.productId));
       for (const item of guestCart.items) {
-        const existing = userCart.items.find((i) => i.productId === item.productId);
+        const product = productMap.get(String(item.productId));
+        if (!product) continue;
+        const canonicalId = String(product._id);
+        const existing = userCart.items.find((i) => i.productId === canonicalId);
         if (existing) existing.quantity += item.quantity;
-        else userCart.items.push({ ...item });
+        else userCart.items.push({ productId: canonicalId, quantity: item.quantity });
       }
       await userCart.save();
       await Cart.deleteOne({ _id: guestCart._id });

@@ -53,6 +53,7 @@ export const appConfig = {
     flashSale: true,
     aiAssistant: true,
     voiceInput: true,
+    storeLocator: true,
   },
 
   /**

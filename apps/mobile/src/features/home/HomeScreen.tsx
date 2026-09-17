@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   },
   gridItem3: {
     marginBottom: 8,
-    paddingHorizontal: 4,
+    paddingHorizontal: 3,
     width: '33.333%',
   },
   heroImage: {
@@ -598,6 +598,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginBottom: spacing.md,
+    marginTop: spacing.xs,
   },
   aiChip: {
     alignItems: 'center',

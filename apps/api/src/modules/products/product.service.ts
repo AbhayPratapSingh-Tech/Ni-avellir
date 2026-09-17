@@ -1,4 +1,5 @@
 import { ALSO_LIKE_TAG } from '@nidavellir/shared';
+import { Types } from 'mongoose';
 import { Product } from './product.model.js';
 
 export type ListProductsQuery = {
@@ -95,6 +96,10 @@ export class ProductService {
   }
 
   async getBySlug(slug: string) {
+    if (Types.ObjectId.isValid(slug) && String(new Types.ObjectId(slug)) === slug) {
+      const byId = await Product.findById(slug).lean();
+      if (byId) return byId;
+    }
     return Product.findOne({ slug }).lean();
   }
 
@@ -196,15 +201,23 @@ export class ProductService {
   }
 
   async getRelated(slug: string, limit = 8) {
-    const product = await Product.findOne({ slug }).lean();
+    let product = await Product.findOne({ slug }).lean();
+    if (
+      !product &&
+      Types.ObjectId.isValid(slug) &&
+      String(new Types.ObjectId(slug)) === slug
+    ) {
+      product = await Product.findById(slug).lean();
+    }
     if (!product) {
       return { similar: [], alsoLike: [] };
     }
+    const productSlug = product.slug;
     const [similar, alsoLike] = await Promise.all([
-      Product.find({ category: product.category, slug: { $ne: slug }, stock: { $gt: 0 } })
+      Product.find({ category: product.category, slug: { $ne: productSlug }, stock: { $gt: 0 } })
         .limit(limit)
         .lean(),
-      Product.find({ franchise: product.franchise, slug: { $ne: slug }, stock: { $gt: 0 } })
+      Product.find({ franchise: product.franchise, slug: { $ne: productSlug }, stock: { $gt: 0 } })
         .limit(limit)
         .lean(),
     ]);
