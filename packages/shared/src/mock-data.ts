@@ -129,6 +129,8 @@ type ProductSeed = Omit<
   isBundleMain?: boolean;
   specifications?: Record<string, string>;
   additionalDetails?: string;
+  /** Real franchise art gallery. When set, skips Unsplash product-type pools. */
+  imageUrls?: string[];
 };
 
 const CATEGORY_SPECS: Record<
@@ -188,6 +190,7 @@ const FRANCHISE_BRANDS: Record<string, string> = {
   'Chainsaw Man': 'MAPPA',
   'My Hero Academia': 'Funimation',
   'Death Note': 'Viz Media',
+  'Kengan Ashura': 'Netflix',
 };
 
 const FRANCHISE_PUBLISHERS: Record<string, string> = {
@@ -210,6 +213,7 @@ const FRANCHISE_PUBLISHERS: Record<string, string> = {
   'Chainsaw Man': 'MAPPA',
   'My Hero Academia': 'Bones',
   'Death Note': 'Madhouse',
+  'Kengan Ashura': 'Larx Entertainment',
 };
 
 const ANIME_FRANCHISES = new Set(Object.keys(FRANCHISE_PUBLISHERS).filter((key) =>
@@ -225,8 +229,24 @@ const ANIME_FRANCHISES = new Set(Object.keys(FRANCHISE_PUBLISHERS).filter((key) 
     'Chainsaw Man',
     'My Hero Academia',
     'Death Note',
+    'Kengan Ashura',
   ].includes(key),
 ));
+
+/** Official-style Kengan Ashura art from AniList CDN (anime covers + character stills). */
+const KENGAN_MEDIA = {
+  coverPart1: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx100891-vPfnfkzizYFe.jpg',
+  coverPart2: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx111048-eN50zZM0YqkL.jpg',
+  bannerPart1: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/100891-ykOVRCdJGNhi.jpg',
+  bannerPart2: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/111048-BPc3ZWPcjUVA.jpg',
+  ohma: 'https://s4.anilist.co/file/anilistcdn/character/large/b137446-umIgsem3URij.png',
+  yamashita: 'https://s4.anilist.co/file/anilistcdn/character/large/b143838-1bMajQ35FKh9.png',
+  cosmo: 'https://s4.anilist.co/file/anilistcdn/character/large/b137447-wKRjmEss598q.png',
+  raian: 'https://s4.anilist.co/file/anilistcdn/character/large/b143862-QxhyYjAR5niI.jpg',
+  agito: 'https://s4.anilist.co/file/anilistcdn/character/large/b169178-vqrzdtSCfU4d.png',
+  gaolang: 'https://s4.anilist.co/file/anilistcdn/character/large/b143861-2X70Iq8Uo7js.jpg',
+  wakatsuki: 'https://s4.anilist.co/file/anilistcdn/character/large/b143859-rMvR9SoGLKXf.jpg',
+} as const;
 
 function resolveBrand(seed: ProductSeed): string {
   return seed.brand ?? FRANCHISE_BRANDS[seed.franchise] ?? 'Niðavellir';
@@ -289,6 +309,16 @@ function inferMediaKind(seed: ProductSeed): MediaKind {
 }
 
 function resolveProductImages(seed: ProductSeed): { imageUrl: string; imageUrls: string[] } {
+  if (seed.imageUrls?.length) {
+    const urls = [...new Set(seed.imageUrls.filter(Boolean))];
+    const primary =
+      seed.imageUrl && urls.includes(seed.imageUrl) ? seed.imageUrl : urls[0]!;
+    return { imageUrl: primary, imageUrls: [primary, ...urls.filter((url) => url !== primary)] };
+  }
+  // Keep real anime / franchise art (AniList, etc.) instead of swapping to Unsplash pools.
+  if (seed.imageUrl && !seed.imageUrl.includes('images.unsplash.com')) {
+    return { imageUrl: seed.imageUrl, imageUrls: [seed.imageUrl] };
+  }
   const kind = inferMediaKind(seed);
   const pool = MEDIA[kind];
   const start = hashId(seed.id) % pool.length;
@@ -2044,6 +2074,165 @@ const seeds: ProductSeed[] = [
     imageUrl: GALLERY[27],
     isLimitedDrop: false,
     specifications: { Pages: '192', Size: 'A5' },
+  },
+
+  // —— Kengan Ashura (real anime cover + character art via AniList CDN) ——
+  {
+    id: 'prod-kengan-ohma-tee',
+    name: 'Tokita Ohma Asura Tee',
+    category: 'apparel',
+    franchise: 'Kengan Ashura',
+    description:
+      'Heavyweight black tee featuring Tokita Ohma — The Asura — from the Kengan Ashura anime. Arena-ready street fit.',
+    price: 1499,
+    compareAtPrice: 1899,
+    currency: 'INR',
+    rating: 4.9,
+    reviewCount: 318,
+    stock: 56,
+    tags: ['Tee', 'Shirt', 'anime', 'kengan-ashura', 'ohma', ALSO_LIKE_TAG],
+    bundleTag: 'KENGAN_PR',
+    isBundleMain: true,
+    imageUrl: KENGAN_MEDIA.ohma,
+    imageUrls: [KENGAN_MEDIA.ohma, KENGAN_MEDIA.coverPart1, KENGAN_MEDIA.bannerPart1],
+    isLimitedDrop: false,
+    specifications: { Fit: 'Regular', GSM: '250', Character: 'Tokita Ohma' },
+  },
+  {
+    id: 'prod-kengan-raian-hoodie',
+    name: 'Kure Raian Devil Hoodie',
+    category: 'apparel',
+    franchise: 'Kengan Ashura',
+    description:
+      'Fleece hoodie with Kure Raian portrait art — Removal-mode energy for cold gym nights and binge sessions.',
+    price: 3299,
+    compareAtPrice: 3999,
+    currency: 'INR',
+    rating: 4.8,
+    reviewCount: 204,
+    stock: 34,
+    tags: ['Hoodie', 'Shirt', 'anime', 'kengan-ashura', 'raian', ALSO_LIKE_TAG],
+    bundleTag: 'KENGAN_PR',
+    imageUrl: KENGAN_MEDIA.raian,
+    imageUrls: [KENGAN_MEDIA.raian, KENGAN_MEDIA.coverPart2, KENGAN_MEDIA.bannerPart2],
+    isLimitedDrop: false,
+    specifications: { Fit: 'Regular', Character: 'Kure Raian' },
+  },
+  {
+    id: 'prod-kengan-cover-poster',
+    name: 'Kengan Ashura Part I Key Art Poster',
+    category: 'collectibles',
+    franchise: 'Kengan Ashura',
+    description:
+      'A2 matte poster of the official Part I anime cover art. Ships flat in a rigid mailer.',
+    price: 999,
+    compareAtPrice: 1399,
+    currency: 'INR',
+    rating: 4.9,
+    reviewCount: 267,
+    stock: 62,
+    tags: ['Poster', 'Print', 'anime', 'kengan-ashura', ALSO_LIKE_TAG],
+    bundleTag: 'KENGAN_PR',
+    imageUrl: KENGAN_MEDIA.coverPart1,
+    imageUrls: [KENGAN_MEDIA.coverPart1, KENGAN_MEDIA.bannerPart1, KENGAN_MEDIA.ohma],
+    isLimitedDrop: false,
+    specifications: { Size: 'A2', Finish: 'Matte', Art: 'Part I cover' },
+  },
+  {
+    id: 'prod-kengan-part2-poster',
+    name: 'Kengan Ashura Part II Key Art Poster',
+    category: 'collectibles',
+    franchise: 'Kengan Ashura',
+    description:
+      'A2 poster of the Part II anime key art — tournament heat for your wall.',
+    price: 999,
+    compareAtPrice: 1399,
+    currency: 'INR',
+    rating: 4.8,
+    reviewCount: 191,
+    stock: 48,
+    tags: ['Poster', 'Print', 'anime', 'kengan-ashura'],
+    imageUrl: KENGAN_MEDIA.coverPart2,
+    imageUrls: [KENGAN_MEDIA.coverPart2, KENGAN_MEDIA.bannerPart2, KENGAN_MEDIA.raian],
+    isLimitedDrop: true,
+    specifications: { Size: 'A2', Finish: 'Satin', Art: 'Part II cover' },
+  },
+  {
+    id: 'prod-kengan-agito-stand',
+    name: 'Kanoh Agito Acrylic Stand',
+    category: 'collectibles',
+    franchise: 'Kengan Ashura',
+    description:
+      'Clear acrylic desk stand of Kanoh Agito (The Second Fang) — tournament shelf piece.',
+    price: 1299,
+    compareAtPrice: 1699,
+    currency: 'INR',
+    rating: 4.7,
+    reviewCount: 142,
+    stock: 41,
+    tags: ['Acrylic', 'anime', 'kengan-ashura', 'agito', 'gift'],
+    imageUrl: KENGAN_MEDIA.agito,
+    imageUrls: [KENGAN_MEDIA.agito, KENGAN_MEDIA.coverPart1],
+    isLimitedDrop: false,
+    specifications: { Height: '15 cm', Material: 'Acrylic', Character: 'Kanoh Agito' },
+  },
+  {
+    id: 'prod-kengan-gaolang-deskmat',
+    name: 'Gaolang God of War Deskmat',
+    category: 'desk-gear',
+    franchise: 'Kengan Ashura',
+    description:
+      'XL deskmat with Gaolang Wongsawat art over the Part I arena banner — smooth tracking for ranked sessions.',
+    price: 2199,
+    compareAtPrice: 2799,
+    currency: 'INR',
+    rating: 4.8,
+    reviewCount: 156,
+    stock: 37,
+    tags: ['Deskmat', 'desk', 'anime', 'kengan-ashura', 'gaolang', ALSO_LIKE_TAG],
+    imageUrl: KENGAN_MEDIA.gaolang,
+    imageUrls: [KENGAN_MEDIA.gaolang, KENGAN_MEDIA.bannerPart1, KENGAN_MEDIA.coverPart1],
+    isLimitedDrop: false,
+    specifications: { Size: '900 × 400 mm', Character: 'Gaolang Wongsawat' },
+  },
+  {
+    id: 'prod-kengan-cosmo-keychain',
+    name: 'Cosmo Imai Keychain',
+    category: 'desk-gear',
+    franchise: 'Kengan Ashura',
+    description:
+      'Metal + acrylic keychain of Cosmo Imai — The King of Stranglers — for bags and desk hooks.',
+    price: 549,
+    compareAtPrice: 799,
+    currency: 'INR',
+    rating: 4.6,
+    reviewCount: 223,
+    stock: 88,
+    tags: ['Keychain', 'anime', 'kengan-ashura', 'cosmo', 'gift'],
+    bundleTag: 'KENGAN_PR',
+    imageUrl: KENGAN_MEDIA.cosmo,
+    imageUrls: [KENGAN_MEDIA.cosmo, KENGAN_MEDIA.coverPart1],
+    isLimitedDrop: false,
+    specifications: { Length: '6 cm', Character: 'Cosmo Imai' },
+  },
+  {
+    id: 'prod-kengan-wakatsuki-mug',
+    name: 'Wakatsuki The Wild Tiger Mug',
+    category: 'desk-gear',
+    franchise: 'Kengan Ashura',
+    description:
+      'Ceramic mug featuring Takeshi Wakatsuki art — fuel for late-night Kengan match rewatches.',
+    price: 799,
+    compareAtPrice: 1099,
+    currency: 'INR',
+    rating: 4.7,
+    reviewCount: 178,
+    stock: 64,
+    tags: ['Mug', 'desk', 'anime', 'kengan-ashura', 'wakatsuki', 'gift'],
+    imageUrl: KENGAN_MEDIA.wakatsuki,
+    imageUrls: [KENGAN_MEDIA.wakatsuki, KENGAN_MEDIA.bannerPart2],
+    isLimitedDrop: false,
+    specifications: { Capacity: '350 ml', Character: 'Takeshi Wakatsuki' },
   },
 ];
 

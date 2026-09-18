@@ -77,7 +77,7 @@ Checklist when flipping live:
 6. Razorpay: real keys → `demoMode: false` → native Checkout → `/confirm`.
 7. Rebuild native app after native dependency changes; run `ensure-mobile-node-modules.js` + `pod install` when needed.
 8. AI assistant (optional): `AI_ENABLED` + `OPENAI_*` on API; mobile Home **AI** / Account **Ask Niðavellir**; voice needs mic permission + native rebuild.
-9. Store locator: `features.storeLocator` in `appConfig`; header pin → `StoreLocator`; API `GET /api/v1/stores` + `GET /api/v1/stores/geocode`; logo at `apps/mobile/assets/brand/logo.png` (BrandMark fallback). WebView already linked — no native rebuild for map.
+9. Store locator: `features.storeLocator` in `appConfig`; header pin → `StoreLocator`; API `GET /api/v1/stores` + `GET /api/v1/stores/geocode` (free chain: Open-Meteo → Photon → builtin cities → Nominatim). Mobile falls back to Open-Meteo/builtin if API geocode fails. Logo at `apps/mobile/assets/brand/logo.png` (BrandMark letter-N until `USE_BRAND_LOGO_PNG`). WebView + Leaflet/OSM — no paid map key / no native rebuild for map.
 
 ---
 
