@@ -291,7 +291,7 @@ features: {
 }
 ```
 
-**Store locator:** `ShopHeader` location icon → `StoreLocator` route. Area search geocodes via `GET /api/v1/stores/geocode` (Nominatim proxy). Store cards from `GET /api/v1/stores` (empty until you seed Mongo). Map uses existing `react-native-webview` + Leaflet/OSM (no Google Maps key). Replace `apps/mobile/assets/brand/logo.png` for a real header mark (`BrandMark` falls back to letter N).
+**Store locator:** `ShopHeader` location icon → `StoreLocator` route. Area search uses `GET /api/v1/stores/geocode` with a **free** provider chain (Open-Meteo → Photon → builtin city centroids → Nominatim). The app also geocodes via Open-Meteo on-device if the API fails. Store cards come from `GET /api/v1/stores` (empty until you seed Mongo). Map: `react-native-webview` + Leaflet/OSM tiles (no Google/Mapbox key). Replace `apps/mobile/assets/brand/logo.png` and set `USE_BRAND_LOGO_PNG` in `BrandMark` for a real header mark.
 
 ---
 

@@ -173,7 +173,7 @@ export function StoreLocatorScreen() {
     const result = await storeRepository.geocode(q);
     setGeocoding(false);
     if (!result) {
-      toast.show('Area not found — redeploy API if /stores/geocode is missing');
+      toast.show('Could not find that area');
       return;
     }
     const zoom = /india/i.test(q) && !/,/.test(q) ? 5 : 12;
