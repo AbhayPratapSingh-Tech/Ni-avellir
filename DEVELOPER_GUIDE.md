@@ -129,7 +129,7 @@ npm run dev
 ```
 
 - `dev:api` — Express + Mongo on `http://localhost:4000` (`/api/v1/...`)
-- `seed` — products, coupons (`FORGE10`, `WELCOME100`), serviceability rules
+- `seed` — products, coupons (`FORGE10`, `WELCOME100` public; `SUMMER10`, `JUSTFORYOU` assigned to phone `8750996351`), serviceability rules
 - `dev` — Metro for the mobile app
 
 Health check: `curl -s http://localhost:4000/health`
@@ -198,6 +198,7 @@ Nidavellir/
 | **Product list (PLP)** | `features/products/ProductsScreen.tsx` |
 | **Product detail (PDP) + review modal** | `features/products/ProductDetailScreen.tsx` |
 | **Cart (address card, stock chips, Hit the Anvil)** | `features/cart/CartScreen.tsx` |
+| **Coupon offers modal (empty Apply)** | `features/cart/CouponOffersModal.tsx` — `GET /coupons` filtered by public or `userIds` (Mongo id / phone) |
 | **Cart state (Redux slice)** | `features/cart/cartSlice.ts` |
 | **Checkout flow** | `features/checkout/CheckoutScreen.tsx` |
 | **Order confirmation** | `features/orders/OrderConfirmationScreen.tsx` |

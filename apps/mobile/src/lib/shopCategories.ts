@@ -77,7 +77,7 @@ export const shopCategories: ShopCategory[] = [
   {
     id: 'anime',
     name: 'Anime',
-    image: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=400&q=80',
+    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx100891-vPfnfkzizYFe.jpg',
     q: 'anime',
   },
   {

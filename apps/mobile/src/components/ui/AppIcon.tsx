@@ -17,7 +17,8 @@ export type AppIconName =
   | 'menu'
   | 'bag'
   | 'heart'
-  | 'search';
+  | 'search'
+  | 'trash';
 
 type Props = {
   name: AppIconName;
@@ -233,6 +234,21 @@ export function AppIcon({ name, size = 20, color = colors.text }: Props) {
         <Svg {...common}>
           <Circle cx={11} cy={11} r={7} stroke={stroke} strokeWidth={2} />
           <Path d="m20 20-3.5-3.5" stroke={stroke} strokeWidth={2} strokeLinecap="round" />
+        </Svg>
+      );
+    case 'trash':
+      return (
+        <Svg {...common}>
+          <Path d="M9 4h6" stroke={stroke} strokeWidth={2.2} strokeLinecap="round" />
+          <Path d="M4 7h16" stroke={stroke} strokeWidth={2.2} strokeLinecap="round" />
+          <Path
+            d="M7 7v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7"
+            stroke={stroke}
+            strokeWidth={2.2}
+            strokeLinejoin="round"
+          />
+          <Path d="M10 11v6" stroke={stroke} strokeWidth={2.2} strokeLinecap="round" />
+          <Path d="M14 11v6" stroke={stroke} strokeWidth={2.2} strokeLinecap="round" />
         </Svg>
       );
     default:

@@ -5,18 +5,21 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Product } from '@nidavellir/shared';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
-import { removeItem, updateQuantity, type CartItem } from './cartSlice';
+import { removeItem, type CartItem } from './cartSlice';
 import { toggleItem } from '../wishlist/wishlistSlice';
 import { Screen } from '../../components/ui/Screen';
+import { AppIcon } from '../../components/ui/AppIcon';
 import { useToast } from '../../components/ui/Toast';
 import { appConfig } from '../../config/appConfig';
 import { cartRepository } from '../../services/data/cartRepository';
 import { wishlistRepository } from '../../services/data/wishlistRepository';
 import { requireLogin } from '../../lib/authGates';
 import { toggleWishlistForUser } from '../../lib/wishlistActions';
+import { setCartLineQuantity } from '../../lib/cartActions';
 import { discountPercent, formatInr, getProductImages } from '../../lib/productMedia';
 import { getApiErrorMessage } from '../../services/api/apiClient';
 import type { RootStackParamList } from '../../app/navigation/types';
+import { CouponOffersModal } from './CouponOffersModal';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -33,6 +36,23 @@ export function CartScreen() {
   );
   const [couponInput, setCouponInput] = useState('');
   const [couponBusy, setCouponBusy] = useState(false);
+  const [offersOpen, setOffersOpen] = useState(false);
+
+  const applyCouponCode = async (code: string) => {
+    const trimmed = code.trim().toUpperCase();
+    setCouponInput(trimmed);
+    setCouponBusy(true);
+    try {
+      await cartRepository.applyCoupon(trimmed, defaultAddress?.postalCode);
+      toast.show('Coupon applied');
+      setCouponInput('');
+      setOffersOpen(false);
+    } catch (error) {
+      toast.show(getApiErrorMessage(error));
+    } finally {
+      setCouponBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!couponCode) setCouponInput('');
@@ -160,24 +180,12 @@ export function CartScreen() {
                   <Pressable
                     style={styles.couponBtn}
                     disabled={couponBusy}
-                    onPress={async () => {
+                    onPress={() => {
                       if (!couponInput.trim()) {
-                        toast.show('Enter a coupon code');
+                        setOffersOpen(true);
                         return;
                       }
-                      setCouponBusy(true);
-                      try {
-                        await cartRepository.applyCoupon(
-                          couponInput.trim(),
-                          defaultAddress?.postalCode,
-                        );
-                        toast.show('Coupon applied');
-                        setCouponInput('');
-                      } catch (error) {
-                        toast.show(getApiErrorMessage(error));
-                      } finally {
-                        setCouponBusy(false);
-                      }
+                      void applyCouponCode(couponInput);
                     }}
                   >
                     <Text style={styles.couponBtnText}>Apply</Text>
@@ -196,12 +204,14 @@ export function CartScreen() {
             wishlisted={wishlistItems.some((wish) => wish.id === item.product.id)}
             onOpen={() => navigation.navigate('ProductDetail', { product: item.product })}
             onQty={(quantity) => {
-              if (appConfig.dataSource === 'api') {
-                void cartRepository.updateItem(item.product.id, quantity, defaultAddress?.postalCode);
-              } else {
-                dispatch(updateQuantity({ productId: item.product.id, quantity }));
-              }
               toast.show(quantity <= 0 ? 'Removed from cart' : 'Updated cart');
+              void setCartLineQuantity({
+                product: item.product,
+                quantity,
+                dispatch,
+                toast,
+                pincode: defaultAddress?.postalCode,
+              });
             }}
             onWish={() => {
               const already = wishlistItems.some((wish) => wish.id === item.product.id);
@@ -226,28 +236,34 @@ export function CartScreen() {
                   });
                   return;
                 }
-                // Move to wishlist: add wish + remove cart line
+                // Move to wishlist: wish + remove cart line (optimistic UI).
                 dispatch(toggleItem(item.product));
+                dispatch(removeItem(item.product.id));
+                toast.show('Moved to wishlist');
                 if (appConfig.dataSource === 'api') {
                   try {
                     await wishlistRepository.toggle(item.product.id);
                   } catch {
                     // ignore sync error
                   }
-                  void cartRepository.removeItem(item.product.id, defaultAddress?.postalCode);
-                } else {
-                  dispatch(removeItem(item.product.id));
+                  try {
+                    await cartRepository.removeItem(item.product.id, defaultAddress?.postalCode);
+                  } catch (error) {
+                    toast.show(getApiErrorMessage(error));
+                    void cartRepository.refresh(defaultAddress?.postalCode);
+                  }
                 }
-                toast.show('Moved to wishlist');
               })();
             }}
             onRemove={() => {
-              if (appConfig.dataSource === 'api') {
-                void cartRepository.removeItem(item.product.id, defaultAddress?.postalCode);
-              } else {
-                dispatch(removeItem(item.product.id));
-              }
               toast.show('Removed from cart');
+              void setCartLineQuantity({
+                product: item.product,
+                quantity: 0,
+                dispatch,
+                toast,
+                pincode: defaultAddress?.postalCode,
+              });
             }}
           />
         )}
@@ -285,6 +301,13 @@ export function CartScreen() {
           <Text style={styles.anvilBtnText}>Hit the Anvil</Text>
         </Pressable>
       </View>
+      <CouponOffersModal
+        visible={offersOpen}
+        busy={couponBusy}
+        onClose={() => setOffersOpen(false)}
+        onCodeFill={setCouponInput}
+        onApply={applyCouponCode}
+      />
     </Screen>
   );
 }
@@ -311,13 +334,18 @@ function CartLineCard({
 
   return (
     <View style={styles.card}>
+      {off > 0 ? (
+        <View style={styles.offBadge} pointerEvents="none">
+          <Text style={styles.offBadgeText}>{off}% off</Text>
+        </View>
+      ) : null}
       <Pressable style={styles.cardTop} onPress={onOpen}>
         <Image source={{ uri: image }} style={styles.image} />
         <View style={styles.cardInfo}>
-          <Text style={styles.name} numberOfLines={2}>
+          <Text style={[styles.name, off > 0 && styles.nameWithBadge]} numberOfLines={2}>
             {product.name}
           </Text>
-          <PriceOffer product={product} off={off} />
+          <PriceOffer product={product} />
           <View style={[styles.stockChip, inStock ? styles.stockIn : styles.stockOut]}>
             <Text style={[styles.stockText, inStock ? styles.stockInText : styles.stockOutText]}>
               {inStock ? 'IN STOCK' : 'OUT OF STOCK'}
@@ -344,8 +372,14 @@ function CartLineCard({
           <Pressable style={styles.iconBtn} onPress={onWish} hitSlop={8}>
             <Text style={[styles.heart, wishlisted && styles.heartOn]}>{wishlisted ? '♥' : '♡'}</Text>
           </Pressable>
-          <Pressable style={styles.iconBtn} onPress={onRemove} hitSlop={8}>
-            <Text style={styles.trash}>🗑</Text>
+          <Pressable
+            style={styles.iconBtn}
+            onPress={onRemove}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Remove from cart"
+          >
+            <AppIcon name="trash" size={22} color={colors.text} />
           </Pressable>
         </View>
       </View>
@@ -353,14 +387,9 @@ function CartLineCard({
   );
 }
 
-function PriceOffer({ product, off }: { product: Product; off: number }) {
+function PriceOffer({ product }: { product: Product }) {
   return (
     <View style={styles.priceRow}>
-      {off > 0 ? (
-        <View style={styles.offBox}>
-          <Text style={styles.offBoxText}>{off}% off</Text>
-        </View>
-      ) : null}
       {product.compareAtPrice > product.price ? (
         <Text style={styles.mrp}>{formatInr(product.compareAtPrice)}</Text>
       ) : null}
@@ -554,15 +583,23 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 14,
     fontWeight: '700',
+    paddingRight: 4,
   },
-  offBox: {
+  nameWithBadge: {
+    paddingRight: 64,
+  },
+  offBadge: {
     backgroundColor: colors.danger,
-    borderRadius: 4,
-    marginRight: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    borderBottomLeftRadius: 8,
+    borderTopRightRadius: 13,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    zIndex: 2,
   },
-  offBoxText: {
+  offBadgeText: {
     color: colors.onAccent,
     fontSize: 10,
     fontWeight: '800',
@@ -703,8 +740,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textDecorationLine: 'line-through',
-  },
-  trash: {
-    fontSize: 16,
   },
 });

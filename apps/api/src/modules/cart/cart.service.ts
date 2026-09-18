@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { AppError } from '../../common/errors/app-error.js';
 import { Coupon } from '../coupons/coupon.model.js';
+import { CouponService } from '../coupons/coupon.service.js';
 import { Product } from '../products/product.model.js';
 import { serviceabilityService } from '../serviceability/serviceability.service.js';
 import { Cart, type CartItem } from './cart.model.js';
@@ -297,11 +298,7 @@ export class CartService {
     code: string,
     pincode?: string,
   ) {
-    const coupon = await Coupon.findOne({ code: code.toUpperCase(), active: true });
-    if (!coupon) throw new AppError('Invalid coupon', 404);
-    if (coupon.expiresAt && coupon.expiresAt.getTime() < Date.now()) {
-      throw new AppError('Coupon expired', 422);
-    }
+    const coupon = await new CouponService().assertUsable(code, userId);
     const cart = await this.findOrCreateCart(userId, guestSessionId);
     cart.couponCode = coupon.code;
     await cart.save();
