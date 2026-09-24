@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing } from '../../theme/tokens';
@@ -22,6 +22,7 @@ export function OtpScreen() {
   const [resending, setResending] = useState(false);
   const [devCode, setDevCode] = useState<string | undefined>(devVerifyCode);
   const inputs = useRef<Array<TextInput | null>>([]);
+  const verifyingRef = useRef(false);
 
   useEffect(() => {
     if (appConfig.dataSource !== 'api' || purpose !== 'login' || !phone) return;
@@ -71,20 +72,23 @@ export function OtpScreen() {
     }
   };
 
-  const submit = async () => {
-    if (otp.join('').length < 4) {
-      toast.show('Enter the 4-digit code');
-      return;
-    }
-    const code = otp.join('');
+  const resetOtp = () => {
+    setOtp(['', '', '', '']);
+    requestAnimationFrame(() => inputs.current[0]?.focus());
+  };
 
-    if (appConfig.dataSource === 'api' && purpose === 'verify_email') {
-      if (!password?.trim()) {
-        toast.show('Missing signup session — go back and try again');
-        return;
-      }
-      setLoading(true);
-      try {
+  const submit = async (code: string) => {
+    if (verifyingRef.current || code.length < 4) return;
+    verifyingRef.current = true;
+    setLoading(true);
+
+    try {
+      if (appConfig.dataSource === 'api' && purpose === 'verify_email') {
+        if (!password?.trim()) {
+          toast.show('Missing signup session — go back and try again');
+          resetOtp();
+          return;
+        }
         const user = await authRepository.verifyEmailAndLogin(email.trim(), code, password);
         navigation.replace('AuthSuccess', {
           name: user.name,
@@ -92,18 +96,12 @@ export function OtpScreen() {
           phone: user.phone,
           avatarUri: user.avatarUrl,
           runeXp: user.runeXp,
+          emailVerified: user.emailVerified ?? true,
         });
-      } catch (error) {
-        toast.show(authRepository.getApiErrorMessage(error));
-      } finally {
-        setLoading(false);
+        return;
       }
-      return;
-    }
 
-    if (appConfig.dataSource === 'api' && phone) {
-      setLoading(true);
-      try {
+      if (appConfig.dataSource === 'api' && phone) {
         const user = await authRepository.verifyOtp({
           phone,
           code,
@@ -116,16 +114,36 @@ export function OtpScreen() {
           phone: user.phone,
           avatarUri: user.avatarUrl,
           runeXp: user.runeXp,
+          emailVerified: user.emailVerified,
         });
-      } catch (error) {
-        toast.show(authRepository.getApiErrorMessage(error));
-      } finally {
-        setLoading(false);
+        return;
       }
-      return;
+
+      navigation.replace('AuthSuccess', { name, email, phone });
+    } catch (error) {
+      toast.show(authRepository.getApiErrorMessage(error));
+      resetOtp();
+    } finally {
+      verifyingRef.current = false;
+      setLoading(false);
+    }
+  };
+
+  const applyDigit = (index: number, raw: string) => {
+    const digit = raw.replace(/\D/g, '').slice(-1);
+    const next = [...otp];
+    next[index] = digit;
+    setOtp(next);
+
+    if (digit && index < 3) {
+      inputs.current[index + 1]?.focus();
     }
 
-    navigation.replace('AuthSuccess', { name, email, phone });
+    const code = next.join('');
+    if (code.length === 4 && next.every(Boolean)) {
+      inputs.current[index]?.blur();
+      void submit(code);
+    }
   };
 
   const destination =
@@ -161,28 +179,29 @@ export function OtpScreen() {
             ref={(node) => {
               inputs.current[index] = node;
             }}
-            style={styles.box}
+            style={[styles.box, loading && styles.boxDisabled]}
             keyboardType="number-pad"
             maxLength={1}
             value={digit}
-            onChangeText={(value) => {
-              const next = [...otp];
-              next[index] = value.replace(/\D/g, '').slice(-1);
-              setOtp(next);
-              if (next[index] && index < 3) {
-                inputs.current[index + 1]?.focus();
+            editable={!loading}
+            autoFocus={index === 0}
+            onChangeText={(value) => applyDigit(index, value)}
+            onKeyPress={({ nativeEvent }) => {
+              if (nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
+                inputs.current[index - 1]?.focus();
               }
             }}
           />
         ))}
       </View>
-      <Pressable style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]} onPress={submit}>
-        {({ pressed }) => (
-          <Text style={[styles.ctaText, pressed && styles.ctaTextPressed]}>
-            {loading ? 'Verifying…' : purpose === 'verify_email' ? 'Verify email' : 'Verify'}
-          </Text>
-        )}
-      </Pressable>
+      {loading ? (
+        <View style={styles.statusRow}>
+          <ActivityIndicator color={colors.text} />
+          <Text style={styles.statusText}>Verifying…</Text>
+        </View>
+      ) : (
+        <Text style={styles.hint}>Code verifies automatically when all 4 digits are entered.</Text>
+      )}
       {appConfig.dataSource === 'api' ? (
         <Pressable onPress={resend} disabled={resending || loading} style={styles.resendWrap}>
           <Text style={styles.resend}>
@@ -207,23 +226,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: 56,
   },
-  cta: {
-    alignItems: 'center',
-    backgroundColor: colors.text,
-    borderRadius: 12,
-    marginTop: spacing.xl,
-    paddingVertical: 14,
-  },
-  ctaPressed: {
-    backgroundColor: colors.accent,
-  },
-  ctaText: {
-    color: colors.onAccent,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  ctaTextPressed: {
-    color: colors.onAccent,
+  boxDisabled: {
+    opacity: 0.6,
   },
   devBanner: {
     backgroundColor: colors.surface,
@@ -263,6 +267,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textTransform: 'uppercase',
   },
+  hint: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: spacing.lg,
+    textAlign: 'center',
+  },
   row: {
     flexDirection: 'row',
     gap: 12,
@@ -282,6 +293,18 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
+  },
+  statusRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'center',
+    marginTop: spacing.lg,
+  },
+  statusText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '700',
   },
   sub: {
     color: colors.textMuted,

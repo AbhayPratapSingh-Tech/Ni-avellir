@@ -9,7 +9,7 @@ import {
   startApiKeepAlive,
   stopApiKeepAlive,
 } from '../../services/api/wakeApiServer';
-import { authRepository } from '../../services/data/authRepository';
+import { authRepository, syncLoggedInStores } from '../../services/data/authRepository';
 import { cartRepository } from '../../services/data/cartRepository';
 import { colors, spacing, typography } from '../../theme/tokens';
 
@@ -58,6 +58,8 @@ export function AppBootstrap({ children }: PropsWithChildren) {
                 emailVerified: user.emailVerified,
               }),
             );
+            // Orders / addresses / wishlist must hydrate with the session (not only on login).
+            await withTimeout(syncLoggedInStores(), 5_000);
           }
         }
         await withTimeout(cartRepository.refresh(), 5_000);

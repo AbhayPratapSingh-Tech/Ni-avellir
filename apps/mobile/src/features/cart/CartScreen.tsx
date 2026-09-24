@@ -18,6 +18,7 @@ import { toggleWishlistForUser } from '../../lib/wishlistActions';
 import { setCartLineQuantity } from '../../lib/cartActions';
 import { discountPercent, formatInr, getProductImages } from '../../lib/productMedia';
 import { getApiErrorMessage } from '../../services/api/apiClient';
+import { productMatchesCatalogId } from '../../services/data/productRepository';
 import type { RootStackParamList } from '../../app/navigation/types';
 import { CouponOffersModal } from './CouponOffersModal';
 
@@ -201,7 +202,7 @@ export function CartScreen() {
         renderItem={({ item }) => (
           <CartLineCard
             item={item}
-            wishlisted={wishlistItems.some((wish) => wish.id === item.product.id)}
+            wishlisted={wishlistItems.some((wish) => productMatchesCatalogId(wish, item.product.id))}
             onOpen={() => navigation.navigate('ProductDetail', { product: item.product })}
             onQty={(quantity) => {
               toast.show(quantity <= 0 ? 'Removed from cart' : 'Updated cart');
@@ -214,7 +215,7 @@ export function CartScreen() {
               });
             }}
             onWish={() => {
-              const already = wishlistItems.some((wish) => wish.id === item.product.id);
+              const already = wishlistItems.some((wish) => productMatchesCatalogId(wish, item.product.id));
               if (
                 !requireLogin({
                   user,

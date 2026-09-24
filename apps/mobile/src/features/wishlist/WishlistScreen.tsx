@@ -41,10 +41,18 @@ export function WishlistScreen() {
   );
 
   const handleAdd = (product: Product) => {
-    void addProductToCart({ product, dispatch, toast }).then((ok) => {
+    void addProductToCart({ product, dispatch, toast }).then(async (ok) => {
       if (!ok) return;
       dispatch(removeItem(product.id));
       toast.show('Struck the cart ⚡');
+      if (appConfig.dataSource === 'api') {
+        try {
+          await wishlistRepository.remove(product.id);
+        } catch {
+          // Local remove already applied; next successful sync will reconcile.
+          void wishlistRepository.syncToStore();
+        }
+      }
     });
   };
 

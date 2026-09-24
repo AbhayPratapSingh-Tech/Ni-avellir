@@ -11,6 +11,7 @@ type ToastLike = { show: (message: string) => void };
 /**
  * Heart / wishlist actions — guests must log in first.
  * Logged-in users update Redux and sync to API when live.
+ * On API failure, Redux is rolled back so removed items cannot “come back” on next sync.
  */
 export async function toggleWishlistForUser(options: {
   product: Product;
@@ -39,7 +40,11 @@ export async function toggleWishlistForUser(options: {
     try {
       await wishlistRepository.toggle(options.product.id);
     } catch {
-      // Redux already updated; next sync will reconcile
+      // Revert optimistic update so focus-sync cannot resurrect a “removed” item incorrectly,
+      // and failed adds do not linger as ghosts.
+      options.dispatch(toggleItem(options.product));
+      options.toast.show('Could not update wishlist — try again');
+      return false;
     }
   }
   return true;

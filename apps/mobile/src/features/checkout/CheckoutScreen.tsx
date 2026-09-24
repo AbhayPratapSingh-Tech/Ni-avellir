@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Platform,
   Pressable,
@@ -107,6 +108,10 @@ export function CheckoutScreen() {
   /** Prevents empty→sync race from trapping checkout on the Add address form. */
   const addressFormIntentRef = useRef<'none' | 'add' | 'edit'>('none');
   const scrollRef = useRef<ScrollView>(null);
+  /** Avoid flashing the blank address form while saved addresses load from API. */
+  const [addressesHydrating, setAddressesHydrating] = useState(
+    () => appConfig.dataSource === 'api' && savedAddresses.length === 0,
+  );
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -119,7 +124,8 @@ export function CheckoutScreen() {
   const [serviceabilityLoading, setServiceabilityLoading] = useState(false);
 
   const hasSavedAddresses = savedAddresses.length > 0;
-  const showAddressForm = !hasSavedAddresses || addressPanel === 'form';
+  const showAddressForm =
+    !addressesHydrating && (!hasSavedAddresses || addressPanel === 'form');
 
   const applySavedAddress = useCallback((address: SavedAddress) => {
     setSelectedAddressId(address.id);
@@ -147,13 +153,27 @@ export function CheckoutScreen() {
         goBackOrHome(navigation);
         return;
       }
-      if (appConfig.dataSource === 'api') {
-        void addressRepository.syncToStore();
+      if (appConfig.dataSource !== 'api') {
+        setAddressesHydrating(false);
+        return;
       }
-    }, [dispatch, navigation, toast, user]),
+      let cancelled = false;
+      // Only show a loader when we don't already have addresses in memory.
+      if (savedAddresses.length === 0) {
+        setAddressesHydrating(true);
+      }
+      void addressRepository.syncToStore().finally(() => {
+        if (!cancelled) setAddressesHydrating(false);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [dispatch, navigation, savedAddresses.length, toast, user]),
   );
 
   useEffect(() => {
+    if (addressesHydrating) return;
+
     if (!hasSavedAddresses) {
       addressFormIntentRef.current = 'none';
       setAddressPanel('form');
@@ -197,6 +217,7 @@ export function CheckoutScreen() {
     }
   }, [
     addressPanel,
+    addressesHydrating,
     dispatch,
     hasSavedAddresses,
     savedAddresses,
@@ -770,7 +791,12 @@ export function CheckoutScreen() {
               ) : null}
             </View>
 
-            {!showAddressForm ? (
+            {addressesHydrating ? (
+              <View style={styles.addressLoading}>
+                <ActivityIndicator color={colors.text} />
+                <Text style={styles.addressLoadingText}>Loading saved addresses…</Text>
+              </View>
+            ) : !showAddressForm ? (
               <View style={styles.savedBlock}>
                 <Text style={styles.savedLabel}>Saved addresses — tap to use</Text>
                 {savedAddresses.map((address) => {
@@ -1383,6 +1409,23 @@ const styles = StyleSheet.create({
   },
   savedBlock: {
     marginBottom: spacing.md,
+  },
+  addressLoading: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: spacing.sm,
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+    minHeight: 120,
+    padding: spacing.lg,
+  },
+  addressLoadingText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
   },
   savedCard: {
     backgroundColor: colors.surface,

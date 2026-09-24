@@ -7,7 +7,7 @@ import { useAppDispatch, useAppSelector } from '../../app/store';
 import { Screen } from '../../components/ui/Screen';
 import { openLogin, signOutAndClearSession, updateProfile } from '../auth/authSlice';
 import { appConfig } from '../../config/appConfig';
-import { authRepository } from '../../services/data/authRepository';
+import { authRepository, syncLoggedInStores } from '../../services/data/authRepository';
 import { AppIcon, type AppIconName } from '../../components/ui/AppIcon';
 import type { RootStackParamList } from '../../app/navigation/types';
 
@@ -51,23 +51,29 @@ export function ProfileScreen() {
   const xpTier =
     runeXp >= 2000 ? 'Master' : runeXp >= 1000 ? 'Journeyman' : runeXp >= 250 ? 'Adept' : 'Apprentice';
   const avatarUri = isDisplayableAvatar(user?.avatarUri) ? user?.avatarUri : undefined;
+  const emailVerified = Boolean(!user?.isGuest && user?.emailVerified);
+  const menuItems = MENU.filter((item) => !(item.key === 'verify' && emailVerified));
 
   useFocusEffect(
     useCallback(() => {
       if (appConfig.dataSource !== 'api' || !user || user.isGuest) return;
-      void authRepository.me().then((next) => {
-        if (!next) return;
-        dispatch(
-          updateProfile({
-            name: next.name,
-            email: next.email,
-            phone: next.phone,
-            avatarUri: next.avatarUrl ?? null,
-            runeXp: next.runeXp,
-            emailVerified: next.emailVerified,
-          }),
-        );
-      });
+      void (async () => {
+        const next = await authRepository.me();
+        if (next) {
+          dispatch(
+            updateProfile({
+              name: next.name,
+              email: next.email,
+              phone: next.phone,
+              avatarUri: next.avatarUrl ?? null,
+              runeXp: next.runeXp,
+              emailVerified: next.emailVerified,
+            }),
+          );
+        }
+        // Keep Orders / Addresses / Wishlist stats in sync after relaunch.
+        await syncLoggedInStores();
+      })();
     }, [dispatch, user?.email, user?.isGuest]),
   );
 
@@ -95,7 +101,20 @@ export function ProfileScreen() {
           </Pressable>
           <View style={styles.headerCopy}>
             <Text style={styles.name}>{displayName}</Text>
-            <Text style={styles.email}>{displayEmail}</Text>
+            <View style={styles.emailRow}>
+              <Text style={styles.email} numberOfLines={1}>
+                {displayEmail}
+              </Text>
+              {emailVerified ? (
+                <View
+                  style={styles.verifiedBadge}
+                  accessibilityLabel="Email verified"
+                  accessibilityRole="image"
+                >
+                  <AppIcon name="verified" size={16} color="#1877F2" />
+                </View>
+              ) : null}
+            </View>
             {!user?.isGuest && user?.phone ? (
               <Text style={styles.phone}>{user.phone}</Text>
             ) : null}
@@ -131,7 +150,7 @@ export function ProfileScreen() {
         </View>
 
         <View style={styles.menu}>
-          {MENU.map((item) => (
+          {menuItems.map((item) => (
             <Pressable
               key={item.key}
               style={styles.menuRow}
@@ -176,9 +195,7 @@ export function ProfileScreen() {
               <View style={styles.menuIcon}>
                 <AppIcon name={item.icon} size={20} color={colors.text} />
               </View>
-              <Text style={styles.menuLabel}>
-                {item.key === 'verify' && user?.emailVerified ? 'Email verified' : item.label}
-              </Text>
+              <Text style={styles.menuLabel}>{item.label}</Text>
               <Text style={styles.menuChevron}>›</Text>
             </Pressable>
           ))}
@@ -242,8 +259,17 @@ const styles = StyleSheet.create({
   },
   email: {
     color: colors.textMuted,
+    flexShrink: 1,
     fontSize: 13,
+  },
+  emailRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
     marginTop: 2,
+  },
+  verifiedBadge: {
+    marginTop: 1,
   },
   footer: {
     color: colors.textMuted,

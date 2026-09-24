@@ -28,7 +28,7 @@ import { getProductImages } from '../../lib/productMedia';
 import { goBackOrHome } from '../../lib/navigation';
 import { requireLogin } from '../../lib/authGates';
 import { toggleWishlistForUser } from '../../lib/wishlistActions';
-import { productRepository } from '../../services/data/productRepository';
+import { productRepository, productMatchesCatalogId } from '../../services/data/productRepository';
 import { reviewRepository } from '../../services/data/reviewRepository';
 import { appConfig } from '../../config/appConfig';
 import type { ProductReview } from '../../services/data/reviews';
@@ -69,7 +69,9 @@ export function ProductDetailScreen() {
 
   const cartQty =
     useAppSelector((state) => state.cart.items.find((item) => item.product.id === product.id)?.quantity) ?? 0;
-  const wishlisted = useAppSelector((state) => state.wishlist.items.some((item) => item.id === product.id));
+  const wishlisted = useAppSelector((state) =>
+    state.wishlist.items.some((item) => productMatchesCatalogId(item, product.id)),
+  );
   const user = useAppSelector((state) => state.auth.user);
   const recentItems = useAppSelector((state) => state.recent.items);
   const recentlyViewed = useMemo(
