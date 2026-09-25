@@ -1,85 +1,21 @@
+/**
+ * Upsert coupons + store locator pins without wiping the product catalog.
+ * Usage (from repo root):
+ *   npm run seed:ops --workspace apps/api
+ */
 import mongoose from 'mongoose';
-import { demoProducts } from '@nidavellir/shared';
-import type { Product } from '@nidavellir/shared';
 import { loadEnv } from '../config/env.js';
-import { Product as ProductModel } from '../modules/products/product.model.js';
 import { Coupon } from '../modules/coupons/coupon.model.js';
-import { ServiceabilityRule } from '../modules/serviceability/serviceability.model.js';
 import { Store } from '../modules/stores/stores.model.js';
 import { logger } from '../common/logger/logger.js';
 
-function productIdToSlug(id: string): string {
-  return id.startsWith('prod-') ? id.slice(5) : id;
-}
-
-function toSeedDoc(product: Product) {
-  const galleryUrls = product.imageUrls?.length
-    ? product.imageUrls.filter((url) => url !== product.imageUrl)
-    : [];
-
-  return {
-    name: product.name,
-    slug: productIdToSlug(product.id),
-    category: product.category,
-    franchise: product.franchise,
-    description: product.description,
-    price: product.price,
-    compareAtPrice: product.compareAtPrice,
-    currency: product.currency,
-    rating: product.rating,
-    reviewCount: product.reviewCount,
-    stock: product.stock,
-    tags: product.tags,
-    bundleTag: product.bundleTag,
-    isBundleMain: Boolean(product.isBundleMain),
-    imageUrl: product.imageUrl,
-    galleryUrls,
-    isLimitedDrop: product.isLimitedDrop,
-    isFeatured: product.isLimitedDrop || product.rating >= 4.8,
-    sku: product.sku,
-    runeXp: product.runeXp,
-  };
-}
-
-const products = demoProducts.map(toSeedDoc);
-
-async function seed() {
+async function seedOps() {
   const { mongodbUri } = loadEnv();
   await mongoose.connect(mongodbUri);
-  logger.info('Connected to MongoDB for seeding');
-
-  await ProductModel.deleteMany({});
-  const inserted = await ProductModel.insertMany(products);
-  logger.info({ count: inserted.length }, 'Products seeded');
-
-  await ServiceabilityRule.deleteMany({});
-  await ServiceabilityRule.insertMany([
-    {
-      pincodePrefix: '000',
-      codAvailable: true,
-      shippingCharge: 99,
-      freeShippingThreshold: 1499,
-      etaDays: 5,
-      active: true,
-    },
-    {
-      pincodePrefix: '110',
-      codAvailable: true,
-      shippingCharge: 79,
-      freeShippingThreshold: 999,
-      etaDays: 3,
-      active: true,
-    },
-    {
-      pincodePrefix: '500',
-      codAvailable: false,
-      shippingCharge: 129,
-      freeShippingThreshold: 1999,
-      etaDays: 6,
-      active: true,
-    },
-  ]);
-  logger.info('Serviceability rules seeded');
+  logger.info(
+    { mongo: mongodbUri.replace(/\/\/.*@/, '//***@') },
+    'Connected for ops seed (coupons + stores)',
+  );
 
   await Coupon.deleteMany({});
   await Coupon.insertMany([
@@ -142,7 +78,7 @@ async function seed() {
       active: true,
     },
   ]);
-  logger.info('Coupons seeded');
+  logger.info({ count: await Coupon.countDocuments() }, 'Coupons seeded');
 
   await Store.deleteMany({});
   await Store.insertMany([
@@ -191,13 +127,13 @@ async function seed() {
       active: true,
     },
   ]);
-  logger.info('Stores seeded');
+  logger.info({ count: await Store.countDocuments() }, 'Stores seeded');
 
   await mongoose.disconnect();
-  logger.info('Seed complete');
+  logger.info('Ops seed complete');
 }
 
-seed().catch((error) => {
-  logger.error(error, 'Seed failed');
+seedOps().catch((error) => {
+  logger.error(error, 'Ops seed failed');
   process.exit(1);
 });

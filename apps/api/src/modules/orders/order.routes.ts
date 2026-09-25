@@ -12,11 +12,12 @@ export function createOrderRouter(env: Env) {
   const authOptional = optionalAuth(env);
   const requireAuth = createRequireAuth(env);
 
-  router.use(authOptional);
+  // Create may still attach a Bearer when present (logged-in checkout).
+  router.post('/', authOptional, asyncHandler(controller.create));
 
-  router.post('/', asyncHandler(controller.create));
-  router.get('/', asyncHandler(controller.list));
-  router.get('/:id', asyncHandler(controller.getById));
+  // List / detail / cancel / return / exchange always require a real user.
+  router.get('/', requireAuth, asyncHandler(controller.list));
+  router.get('/:id', requireAuth, asyncHandler(controller.getById));
   router.post('/:id/cancel', requireAuth, asyncHandler(controller.cancel));
   router.post('/:id/return', requireAuth, asyncHandler(controller.requestReturn));
   router.post('/:id/exchange', requireAuth, asyncHandler(controller.requestExchange));

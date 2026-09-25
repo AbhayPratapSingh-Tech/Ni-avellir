@@ -17,14 +17,13 @@ export class OrderController {
   };
 
   list = async (request: OrderRequest, response: Response) => {
-    const email = request.query.email as string | undefined;
-    const orders = await this.service.list(request.userId, email);
+    const orders = await this.service.list(request.userId!);
     response.json({ data: { orders } });
   };
 
   getById = async (request: OrderRequest, response: Response) => {
     const id = request.params.id as string;
-    const order = await this.service.getById(id, request.userId);
+    const order = await this.service.getById(id, request.userId!);
     response.json({ data: { order } });
   };
 
