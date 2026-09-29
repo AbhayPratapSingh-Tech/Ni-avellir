@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -41,6 +42,7 @@ import {
 } from '../../lib/addressValidation';
 import { isLoggedInUser, requireLogin } from '../../lib/authGates';
 import { goBackOrHome } from '../../lib/navigation';
+import { formatInr, getProductImages } from '../../lib/productMedia';
 import { useToast } from '../../components/ui/Toast';
 import { authRepository } from '../../services/data/authRepository';
 import type { RootStackParamList } from '../../app/navigation/types';
@@ -447,8 +449,8 @@ export function CheckoutScreen() {
     postalCode: addressErrors.postalCode,
   });
   const stepIndex = STEPS.indexOf(step);
-  // 3-button Android nav is ~48dp; insets.bottom can be 0 with translucent bars.
-  const footerPadBottom = Math.max(insets.bottom, Platform.OS === 'android' ? 56 : 16);
+  // Prefer system inset; small fallback when Android reports 0 (3-button nav).
+  const footerPadBottom = Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 8);
 
   const goNextFromAddress = () => {
     if (showAddressForm && hasSavedAddresses) {
@@ -984,14 +986,35 @@ export function CheckoutScreen() {
           <View>
             <Text style={styles.sectionTitle}>Order review</Text>
             <Text style={styles.reviewTitle}>Items ({cart.itemCount})</Text>
-            {cart.items.map((item) => (
-              <View key={item.product.id} style={styles.reviewLine}>
-                <Text style={styles.reviewName} numberOfLines={1}>
-                  {item.quantity} × {item.product.name}
-                </Text>
-                <Text style={styles.reviewPrice}>₹{item.lineTotal.toLocaleString('en-IN')}</Text>
-              </View>
-            ))}
+            <ScrollView
+              style={styles.reviewItemsList}
+              contentContainerStyle={styles.reviewItemsContent}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={cart.items.length > 2}
+            >
+              {cart.items.map((item) => {
+                const image =
+                  getProductImages(item.product)[0] || item.product.imageUrl;
+                return (
+                  <View key={item.product.id} style={styles.reviewItemCard}>
+                    {image ? (
+                      <Image source={{ uri: image }} style={styles.reviewItemImage} />
+                    ) : (
+                      <View style={[styles.reviewItemImage, styles.reviewItemImageEmpty]} />
+                    )}
+                    <View style={styles.reviewItemInfo}>
+                      <Text style={styles.reviewItemName} numberOfLines={2}>
+                        {item.product.name}
+                      </Text>
+                      <Text style={styles.reviewItemQty}>Qty {item.quantity}</Text>
+                      <Text style={styles.reviewItemPrice}>
+                        {formatInr(item.lineTotal)}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
             <View style={styles.divider} />
             <View style={styles.reviewLine}>
               <Text style={styles.reviewMeta}>Subtotal</Text>
@@ -1024,17 +1047,7 @@ export function CheckoutScreen() {
         ) : null}
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: footerPadBottom + 10 }]}>
-        {step !== 'Address' ? (
-          <Pressable
-            style={[styles.backBtn, submitting && styles.btnDisabled]}
-            disabled={submitting}
-            onPress={() => setStep(STEPS[stepIndex - 1]!)}
-          >
-            <Text style={styles.backBtnText}>Back</Text>
-          </Pressable>
-        ) : null}
-
+      <View style={[styles.footer, { paddingBottom: footerPadBottom }]}>
         {step === 'Review' ? (
           <Pressable
             style={[styles.primaryBtn, (submitting || paying) && styles.btnDisabled]}
@@ -1066,6 +1079,7 @@ export function CheckoutScreen() {
             <Text style={styles.primaryBtnText}>Continue</Text>
           </Pressable>
         )}
+        <Text style={styles.footerNoteTitle}>Secure checkout  ||  Value of your money </Text>
       </View>
     </View>
   );
@@ -1106,21 +1120,6 @@ function Field({
 }
 
 const styles = StyleSheet.create({
-  backBtn: {
-    alignItems: 'center',
-    borderColor: colors.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-    paddingVertical: 14,
-    width: 90,
-  },
-  backBtnText: {
-    color: colors.text,
-    fontSize: typography.body,
-    fontWeight: '700',
-  },
   body: {
     flex: 1,
   },
@@ -1151,9 +1150,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
     borderTopWidth: 1,
-    flexDirection: 'row',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
+  },
+  footerNoteTitle: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: spacing.sm,
+    textAlign: 'center',
   },
   input: {
     backgroundColor: colors.surface,
@@ -1219,10 +1224,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   primaryBtn: {
+    alignItems: 'center',
     backgroundColor: colors.text,
     borderRadius: 12,
-    flex: 1,
+    justifyContent: 'center',
     paddingVertical: 14,
+    width: '100%',
   },
   primaryBtnText: {
     color: colors.onAccent,
@@ -1253,6 +1260,55 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: spacing.sm,
   },
+  reviewItemCard: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: spacing.sm,
+    padding: spacing.sm,
+  },
+  reviewItemImage: {
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    height: 72,
+    marginRight: spacing.sm,
+    width: 72,
+  },
+  reviewItemImageEmpty: {
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+  reviewItemInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  reviewItemName: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  reviewItemPrice: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  reviewItemQty: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  reviewItemsContent: {
+    paddingBottom: 2,
+  },
+  // ~2 cards (72 image + padding + gap) before scroll
+  reviewItemsList: {
+    maxHeight: 188,
+  },
   reviewLine: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1266,16 +1322,6 @@ const styles = StyleSheet.create({
   reviewMetaValue: {
     color: colors.text,
     fontSize: 14,
-  },
-  reviewName: {
-    color: colors.text,
-    flex: 1,
-    fontSize: 14,
-  },
-  reviewPrice: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '700',
   },
   reviewTitle: {
     color: colors.text,

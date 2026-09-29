@@ -14,6 +14,7 @@ import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme/tokens';
+import { BrandMark } from '../../components/ui/BrandMark';
 import { useAppDispatch } from '../../app/store';
 import { enterGuest } from './authSlice';
 import type { AuthStackParamList } from '../../app/navigation/types';
@@ -95,6 +96,9 @@ export function OnboardingScreen() {
             <Image source={{ uri: item.image }} style={styles.photo} resizeMode="cover" />
             <View style={[styles.overlay, { backgroundColor: item.overlay }]} />
             <View style={[styles.copy, { paddingTop: insets.top + 56 }]}>
+              <View style={styles.logoWrap}>
+                <BrandMark height={44} tone="dark" />
+              </View>
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.body}>{item.body}</Text>
             </View>
@@ -135,6 +139,11 @@ const styles = StyleSheet.create({
   },
   copy: {
     paddingHorizontal: 24,
+  },
+  logoWrap: {
+    alignItems: 'center',
+    marginBottom: 8,
+    width: '100%',
   },
   cta: {
     alignItems: 'center',
@@ -207,5 +216,6 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: '800',
     lineHeight: 40,
+    marginTop: 16,
   },
 });

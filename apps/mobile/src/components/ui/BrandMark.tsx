@@ -1,46 +1,29 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../theme/tokens';
+import { Image } from 'react-native';
 
 type Props = {
-  size?: number;
+  /** Image height in dp. Width is derived from the 3:1 stacked wordmark ratio. */
+  height?: number;
+  /**
+   * `light` = wordmark for light UI backgrounds (default).
+   * `dark` = wordmark for dark / photo overlays.
+   */
+  tone?: 'light' | 'dark';
 };
 
-/**
- * Set to `true` after replacing `apps/mobile/assets/brand/logo.png` with the real mark.
- * Until then we show the letter-N fallback (avoids the placeholder square in the header).
- */
-const USE_BRAND_LOGO_PNG = false;
+const WORDMARK_LIGHT = require('../../../assets/brand/wordmark/nidavellir-stacked-transparent-for-light-600w.png');
+const WORDMARK_DARK = require('../../../assets/brand/wordmark/nidavellir-stacked-transparent-for-dark-600w.png');
 
-// Keep require so flipping the flag does not need a new Metro path — file must exist.
-const logoSource = require('../../../assets/brand/logo.png');
+/** Stacked lockup is 1200×400 (3:1). */
+const ASPECT = 3;
 
-export function BrandMark({ size = 36 }: Props) {
-  if (USE_BRAND_LOGO_PNG) {
-    return (
-      <Image
-        source={logoSource}
-        style={{ height: size, width: size, borderRadius: size * 0.22 }}
-        resizeMode="contain"
-        accessibilityLabel="Niðavellir"
-      />
-    );
-  }
-
+export function BrandMark({ height = 40, tone = 'light' }: Props) {
+  const width = height * ASPECT;
   return (
-    <View style={[styles.mark, { height: size, width: size, borderRadius: size * 0.22 }]}>
-      <Text style={[styles.letter, { fontSize: size * 0.52, lineHeight: size * 0.58 }]}>N</Text>
-    </View>
+    <Image
+      source={tone === 'dark' ? WORDMARK_DARK : WORDMARK_LIGHT}
+      style={{ height, width }}
+      resizeMode="contain"
+      accessibilityLabel="Niðavellir"
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  letter: {
-    color: colors.onAccent,
-    fontWeight: '800',
-  },
-  mark: {
-    alignItems: 'center',
-    backgroundColor: colors.text,
-    justifyContent: 'center',
-  },
-});

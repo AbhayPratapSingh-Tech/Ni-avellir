@@ -12,6 +12,10 @@ const REASON_MESSAGE = {
   checkout: 'Login required to checkout',
   wishlist: 'Login required to use wishlist',
   review: 'Login required to write a review',
+  editProfile: 'Login to edit your profile',
+  changePassword: 'Login to change your password',
+  verifyEmail: 'Login to verify email',
+  addresses: 'Login to manage addresses',
 } as const;
 
 /**

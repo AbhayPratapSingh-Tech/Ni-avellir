@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { updateProfile } from '../auth/authSlice';
 import { useToast } from '../../components/ui/Toast';
+import { isLoggedInUser, requireLogin } from '../../lib/authGates';
+import { goBackOrHome } from '../../lib/navigation';
 import { apiClient, getApiErrorMessage } from '../../services/api/apiClient';
 import type { RootStackParamList } from '../../app/navigation/types';
 
@@ -23,6 +25,15 @@ export function VerifyEmailScreen() {
   const [step, setStep] = useState<Step>('send');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isLoggedInUser(user)) {
+        requireLogin({ user, dispatch, toast, reason: 'verifyEmail' });
+        goBackOrHome(navigation);
+      }
+    }, [dispatch, navigation, toast, user]),
+  );
 
   const sendCode = async () => {
     setLoading(true);

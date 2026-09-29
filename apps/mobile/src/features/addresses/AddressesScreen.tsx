@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { appConfig } from '../../config/appConfig';
 import { addressRepository } from '../../services/data/addressRepository';
 import { authRepository } from '../../services/data/authRepository';
@@ -18,6 +19,8 @@ import {
 import { colors, spacing } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
 import { useAppDispatch, useAppSelector } from '../../app/store';
+import { isLoggedInUser, requireLogin } from '../../lib/authGates';
+import { goBackOrHome } from '../../lib/navigation';
 import {
   digitsOnly,
   hasAddressErrors,
@@ -30,6 +33,7 @@ import {
   upsertAddress,
   type SavedAddress,
 } from './addressesSlice';
+import type { RootStackParamList } from '../../app/navigation/types';
 
 type FormState = AddressFields & { id?: string };
 
@@ -95,8 +99,10 @@ const FIELD_META: Array<{
 ];
 
 export function AddressesScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const dispatch = useAppDispatch();
   const toast = useToast();
+  const user = useAppSelector((state) => state.auth.user);
   const addresses = useAppSelector((state) => state.addresses.items);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -105,6 +111,11 @@ export function AddressesScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (!isLoggedInUser(user)) {
+        requireLogin({ user, dispatch, toast, reason: 'addresses' });
+        goBackOrHome(navigation);
+        return;
+      }
       if (appConfig.dataSource === 'api') {
         void addressRepository.syncToStore();
         return;
@@ -112,7 +123,7 @@ export function AddressesScreen() {
       if (addresses.length > 0 && !addresses.some((item) => item.isDefault)) {
         dispatch(setDefaultAddress(addresses[0]!.id));
       }
-    }, [addresses, dispatch]),
+    }, [addresses, dispatch, navigation, toast, user]),
   );
 
   const errors = useMemo(
@@ -133,6 +144,9 @@ export function AddressesScreen() {
     (tried || touched[key]) && errors[key] ? errors[key] : undefined;
 
   const openAdd = () => {
+    if (!requireLogin({ user, dispatch, toast, reason: 'addresses' })) {
+      return;
+    }
     setForm(emptyForm);
     setTried(false);
     setTouched({});
@@ -140,6 +154,9 @@ export function AddressesScreen() {
   };
 
   const openEdit = (address: SavedAddress) => {
+    if (!requireLogin({ user, dispatch, toast, reason: 'addresses' })) {
+      return;
+    }
     setForm({
       id: address.id,
       fullName: address.fullName,

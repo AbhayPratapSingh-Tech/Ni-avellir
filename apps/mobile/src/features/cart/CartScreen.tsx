@@ -142,7 +142,15 @@ export function CartScreen() {
                   {addressLine}
                 </Text>
               </View>
-              <Pressable onPress={() => navigation.navigate('Addresses')} hitSlop={8}>
+              <Pressable
+                onPress={() => {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'addresses' })) {
+                    return;
+                  }
+                  navigation.navigate('Addresses');
+                }}
+                hitSlop={8}
+              >
                 <Text style={styles.change}>{defaultAddress ? 'Change' : 'Add'}</Text>
               </Pressable>
             </View>

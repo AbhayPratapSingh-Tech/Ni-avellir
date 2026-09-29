@@ -4,6 +4,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
+import { BrandMark } from '../../components/ui/BrandMark';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { enterGuest } from './authSlice';
 import { useToast } from '../../components/ui/Toast';
@@ -127,7 +128,7 @@ export function LoginScreen() {
           <Text style={styles.back}>‹ Back</Text>
         </Pressable>
       ) : null}
-      <Text style={styles.kicker}>Niðavellir</Text>
+      <BrandMark height={48} />
       <Text style={styles.title}>Login</Text>
       <Text style={styles.sub}>
         {mode === 'phone'
@@ -255,13 +256,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 14,
   },
-  kicker: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
-  },
   link: {
     color: colors.textMuted,
     fontSize: 14,
@@ -314,6 +308,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: typography.title,
     fontWeight: '800',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
 });
