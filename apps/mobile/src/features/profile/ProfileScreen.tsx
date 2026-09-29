@@ -56,7 +56,12 @@ export function ProfileScreen() {
     runeXp >= 2000 ? 'Master' : runeXp >= 1000 ? 'Journeyman' : runeXp >= 250 ? 'Adept' : 'Apprentice';
   const avatarUri = isDisplayableAvatar(user?.avatarUri) ? user?.avatarUri : undefined;
   const emailVerified = Boolean(!user?.isGuest && user?.emailVerified);
-  const menuItems = MENU.filter((item) => !(item.key === 'verify' && emailVerified));
+  const isGuest = Boolean(user?.isGuest);
+  const menuItems = MENU.filter((item) => {
+    if (item.key === 'verify' && emailVerified) return false;
+    if (isGuest && (item.key === 'password' || item.key === 'sessions')) return false;
+    return true;
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -82,7 +87,7 @@ export function ProfileScreen() {
   );
 
   const openEditProfile = () => {
-    if (!requireLogin({ user, dispatch, toast, reason: 'editProfile' })) {
+    if (!requireLogin({ user, dispatch, toast, reason: 'editProfile', returnTab: 'Account' })) {
       return;
     }
     navigation.navigate('EditProfile');
@@ -175,7 +180,7 @@ export function ProfileScreen() {
                   return;
                 }
                 if (item.key === 'addresses') {
-                  if (!requireLogin({ user, dispatch, toast, reason: 'addresses' })) {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'addresses', returnTab: 'Account' })) {
                     return;
                   }
                   navigation.navigate('Addresses');
@@ -186,21 +191,21 @@ export function ProfileScreen() {
                   return;
                 }
                 if (item.key === 'password') {
-                  if (!requireLogin({ user, dispatch, toast, reason: 'changePassword' })) {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'changePassword', returnTab: 'Account' })) {
                     return;
                   }
                   navigation.navigate('ChangePassword');
                   return;
                 }
                 if (item.key === 'sessions') {
-                  if (!requireLogin({ user, dispatch, toast, reason: 'editProfile' })) {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'editProfile', returnTab: 'Account' })) {
                     return;
                   }
                   navigation.navigate('Sessions');
                   return;
                 }
                 if (item.key === 'verify') {
-                  if (!requireLogin({ user, dispatch, toast, reason: 'verifyEmail' })) {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'verifyEmail', returnTab: 'Account' })) {
                     return;
                   }
                   navigation.navigate('VerifyEmail');
@@ -226,7 +231,9 @@ export function ProfileScreen() {
             user?.isGuest && styles.loginBtn,
             pressed && (user?.isGuest ? styles.loginBtnPressed : styles.logoutPressed),
           ]}
-          onPress={() => dispatch(user?.isGuest ? openLogin() : signOutAndClearSession())}
+          onPress={() =>
+            dispatch(user?.isGuest ? openLogin({ returnTab: 'Account' }) : signOutAndClearSession())
+          }
         >
           <Text style={user?.isGuest ? styles.loginText : styles.logoutText}>
             {user?.isGuest ? 'Login / Signup' : 'Log out'}

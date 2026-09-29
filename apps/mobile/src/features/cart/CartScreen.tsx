@@ -144,7 +144,7 @@ export function CartScreen() {
               </View>
               <Pressable
                 onPress={() => {
-                  if (!requireLogin({ user, dispatch, toast, reason: 'addresses' })) {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'addresses', returnTab: 'Cart' })) {
                     return;
                   }
                   navigation.navigate('Addresses');
@@ -230,6 +230,7 @@ export function CartScreen() {
                   dispatch,
                   toast,
                   reason: 'wishlist',
+                  returnTab: 'Cart',
                 })
               ) {
                 return;
@@ -301,7 +302,7 @@ export function CartScreen() {
         <Pressable
           style={styles.anvilBtn}
           onPress={() => {
-            if (!requireLogin({ user, dispatch, toast, reason: 'checkout' })) {
+            if (!requireLogin({ user, dispatch, toast, reason: 'checkout', returnTab: 'Cart' })) {
               return;
             }
             navigation.navigate('Checkout');

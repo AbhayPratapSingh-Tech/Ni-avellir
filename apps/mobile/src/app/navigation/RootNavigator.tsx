@@ -1,4 +1,5 @@
 import { Text } from 'react-native';
+import { useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
@@ -34,7 +35,8 @@ import { VerifyEmailScreen } from '../../features/profile/VerifyEmailScreen';
 import { NotificationsScreen } from '../../features/profile/NotificationsScreen';
 import { AIAssistantScreen } from '../../features/ai/AIAssistantScreen';
 import { StoreLocatorScreen } from '../../features/stores/StoreLocatorScreen';
-import { useAppSelector } from '../store';
+import { clearReturnTab } from '../../features/auth/authSlice';
+import { useAppDispatch, useAppSelector } from '../store';
 import type { AuthStackParamList, MainTabParamList, RootStackParamList } from './types';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -60,8 +62,19 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
 }
 
 function MainTabs() {
+  const dispatch = useAppDispatch();
+  const returnTab = useAppSelector((state) => state.auth.returnTab);
+  const initialTab = returnTab ?? 'Home';
+
+  useEffect(() => {
+    if (returnTab) {
+      dispatch(clearReturnTab());
+    }
+  }, [dispatch, returnTab]);
+
   return (
     <Tab.Navigator
+      initialRouteName={initialTab}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.text,

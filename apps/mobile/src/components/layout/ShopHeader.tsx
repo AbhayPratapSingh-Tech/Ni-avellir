@@ -32,7 +32,7 @@ export function ShopHeader({ onMenuPress }: Props) {
   const wishBadge = cartBadgeLabel(wishlistCount);
 
   const openWishlist = () => {
-    if (!requireLogin({ user, dispatch, toast, reason: 'wishlist' })) {
+    if (!requireLogin({ user, dispatch, toast, reason: 'wishlist', returnTab: 'Home' })) {
       return;
     }
     navigation.navigate('Wishlist');

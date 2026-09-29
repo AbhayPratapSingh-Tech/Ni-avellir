@@ -13,15 +13,26 @@ const healthClient = axios.create({
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let appStateSub: NativeEventSubscription | null = null;
 let started = false;
+let lastHealthOkAt = 0;
 
 /** Silent GET /health — wakes Render Free cold starts; errors are ignored. */
 export async function pingApiHealth(): Promise<void> {
   if (!isApiMode()) return;
   try {
     await healthClient.get('/health');
+    lastHealthOkAt = Date.now();
   } catch {
     // Offline or still waking — do not surface to UI.
   }
+}
+
+/** Ping only if the last successful health check is older than `maxAgeMs`. */
+export async function pingApiHealthIfStale(maxAgeMs = 60_000): Promise<void> {
+  if (!isApiMode()) return;
+  if (lastHealthOkAt > 0 && Date.now() - lastHealthOkAt < maxAgeMs) {
+    return;
+  }
+  await pingApiHealth();
 }
 
 function clearIntervalOnly() {

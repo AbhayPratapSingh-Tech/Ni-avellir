@@ -1005,12 +1005,12 @@ export function CheckoutScreen() {
                     <View style={styles.reviewItemInfo}>
                       <Text style={styles.reviewItemName} numberOfLines={2}>
                         {item.product.name}
-                      </Text>
+                </Text>
                       <Text style={styles.reviewItemQty}>Qty {item.quantity}</Text>
                       <Text style={styles.reviewItemPrice}>
                         {formatInr(item.lineTotal)}
-                      </Text>
-                    </View>
+                </Text>
+              </View>
                   </View>
                 );
               })}

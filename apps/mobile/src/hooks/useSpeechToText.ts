@@ -1,11 +1,41 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, PermissionsAndroid } from 'react-native';
-import Voice from '@react-native-voice/voice';
+import { NativeModules, Platform, PermissionsAndroid } from 'react-native';
 
 export type SpeechResult = {
   transcript: string;
   durationMs: number;
 };
+
+type VoiceModule = {
+  onSpeechPartialResults: ((event: { value?: string[] }) => void) | null;
+  onSpeechResults: ((event: { value?: string[] }) => void) | null;
+  onSpeechError: ((event: { error?: { message?: string } }) => void) | null;
+  onSpeechEnd: (() => void) | null;
+  start: (locale: string) => Promise<void>;
+  stop: () => Promise<void>;
+  destroy: () => Promise<unknown>;
+  removeAllListeners: () => void;
+};
+
+/**
+ * Only require `@react-native-voice/voice` when the native module exists.
+ * Importing the package while Voice is null constructs NativeEventEmitter(null)
+ * and crashes Heimdall on iOS (missing pod / unlink).
+ */
+function loadVoiceModule(): VoiceModule | null {
+  if (!NativeModules.Voice) {
+    return null;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require('@react-native-voice/voice') as { default?: VoiceModule } & VoiceModule;
+    return (mod.default ?? mod) as VoiceModule;
+  } catch {
+    return null;
+  }
+}
+
+const Voice = loadVoiceModule();
 
 async function ensureMicPermission(): Promise<boolean> {
   if (Platform.OS !== 'android') return true;
@@ -36,6 +66,9 @@ export function useSpeechToText(options?: {
   const locale = options?.locale ?? 'en-IN';
 
   useEffect(() => {
+    if (!Voice) {
+      return;
+    }
     Voice.onSpeechPartialResults = (event) => {
       const value = event.value?.[0];
       if (value) setPartial(value);
@@ -61,11 +94,15 @@ export function useSpeechToText(options?: {
     };
 
     return () => {
-      void Voice.destroy().then(Voice.removeAllListeners);
+      void Voice.destroy().then(Voice.removeAllListeners).catch(() => undefined);
     };
   }, []);
 
   const stop = useCallback(async () => {
+    if (!Voice) {
+      setListening(false);
+      return;
+    }
     try {
       await Voice.stop();
     } catch {
@@ -75,6 +112,12 @@ export function useSpeechToText(options?: {
   }, []);
 
   const start = useCallback(async () => {
+    if (!Voice) {
+      onErrorRef.current?.(
+        'Voice input is unavailable. Rebuild the iOS app after pod install, or type your message.',
+      );
+      return;
+    }
     const ok = await ensureMicPermission();
     if (!ok) {
       onErrorRef.current?.('Microphone permission is required for voice input.');
@@ -87,7 +130,6 @@ export function useSpeechToText(options?: {
       await Voice.start(locale);
     } catch {
       setListening(false);
-      // Fallback locale
       try {
         startedAt.current = Date.now();
         setListening(true);
@@ -104,5 +146,5 @@ export function useSpeechToText(options?: {
     else await start();
   }, [listening, start, stop]);
 
-  return { listening, partial, start, stop, toggle };
+  return { listening, partial, start, stop, toggle, available: Boolean(Voice) };
 }

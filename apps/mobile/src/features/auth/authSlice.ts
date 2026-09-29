@@ -3,6 +3,7 @@ import { appConfig } from '../../config/appConfig';
 import { authRepository } from '../../services/data/authRepository';
 import { clearSessionTokens } from '../../services/api/sessionTokens';
 import { clearAccountScopedStores } from '../../services/session/clearAccountScopedStores';
+import type { MainTabParamList } from '../../app/navigation/types';
 
 export type AuthUser = {
   name: string;
@@ -20,6 +21,11 @@ type AuthState = {
   user: AuthUser | null;
   /** When true, Auth stack opens on Login instead of Onboarding. */
   startOnLogin: boolean;
+  /**
+   * After Login cancel (re-enter guest) or successful auth remounts Shop,
+   * open this main tab instead of defaulting to Home.
+   */
+  returnTab: keyof MainTabParamList | null;
 };
 
 type ProfileUpdate = Omit<Partial<Omit<AuthUser, 'isGuest'>>, 'avatarUri'> & {
@@ -27,9 +33,14 @@ type ProfileUpdate = Omit<Partial<Omit<AuthUser, 'isGuest'>>, 'avatarUri'> & {
   avatarUri?: string | null;
 };
 
+export type OpenLoginPayload = {
+  returnTab?: keyof MainTabParamList;
+};
+
 const initialState: AuthState = {
   user: null,
   startOnLogin: false,
+  returnTab: null,
 };
 
 const authSlice = createSlice({
@@ -37,6 +48,7 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     enterGuest(state) {
+      const keepReturnTab = state.startOnLogin;
       state.user = {
         name: 'Guest',
         email: '',
@@ -44,6 +56,9 @@ const authSlice = createSlice({
         isGuest: true,
       };
       state.startOnLogin = false;
+      if (!keepReturnTab) {
+        state.returnTab = null;
+      }
     },
     signIn(state, action: PayloadAction<Omit<AuthUser, 'isGuest'>>) {
       state.user = { ...action.payload, isGuest: false };
@@ -71,18 +86,24 @@ const authSlice = createSlice({
       }
       state.user = next;
     },
-    openLogin(state) {
+    openLogin(state, action: PayloadAction<OpenLoginPayload | undefined>) {
       state.user = null;
       state.startOnLogin = true;
+      state.returnTab = action.payload?.returnTab ?? null;
+    },
+    clearReturnTab(state) {
+      state.returnTab = null;
     },
     signOut(state) {
       state.user = null;
       state.startOnLogin = false;
+      state.returnTab = null;
     },
   },
 });
 
-export const { enterGuest, signIn, updateProfile, openLogin, signOut } = authSlice.actions;
+export const { enterGuest, signIn, updateProfile, openLogin, clearReturnTab, signOut } =
+  authSlice.actions;
 export const authReducer = authSlice.reducer;
 
 /** Call from UI instead of bare `signOut` so live API tokens clear too.

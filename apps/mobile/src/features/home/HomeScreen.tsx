@@ -32,6 +32,7 @@ import { CachedImage } from '../../components/ui/CachedImage';
 import { appConfig } from '../../config/appConfig';
 import { useDailySale } from '../../lib/saleWindow';
 import { productRepository } from '../../services/data/productRepository';
+import { pingApiHealthIfStale } from '../../services/api/wakeApiServer';
 import type { ShopCategory } from '../../lib/shopCategories';
 import type { RootStackParamList } from '../../app/navigation/types';
 import { trackEvent } from '../../lib/analytics';
@@ -183,21 +184,48 @@ function FlashSaleBar() {
 export function HomeScreen() {
   const navigation = useNavigation<Navigation>();
   const { width } = useWindowDimensions();
-  const [deals, setDeals] = useState<Product[]>([]);
-  const [bestSellers, setBestSellers] = useState<Product[]>([]);
-  const [alsoLike, setAlsoLike] = useState<Product[]>([]);
+  const [deals, setDeals] = useState<Product[]>(() => productRepository.peekDeals() ?? []);
+  const [bestSellers, setBestSellers] = useState<Product[]>(
+    () => productRepository.peekBestSellers() ?? [],
+  );
+  const [alsoLike, setAlsoLike] = useState<Product[]>(() => productRepository.peekAlsoLike(6) ?? []);
   const [bundles, setBundles] = useState<
     Awaited<ReturnType<typeof productRepository.getBundles>>
-  >([]);
+  >(() => productRepository.peekBundles() ?? []);
+  const [shelvesLoading, setShelvesLoading] = useState(
+    () => (productRepository.peekDeals()?.length ?? 0) === 0,
+  );
   const [menuOpen, setMenuOpen] = useState(false);
 
   const loadShelves = useCallback(() => {
+    void pingApiHealthIfStale(60_000);
+
+    const warmDeals = productRepository.peekDeals();
+    const warmBest = productRepository.peekBestSellers();
+    const warmAlso = productRepository.peekAlsoLike(6);
+    const warmBundles = productRepository.peekBundles();
+    if (warmDeals?.length) setDeals(warmDeals);
+    if (warmBest?.length) setBestSellers(warmBest);
+    if (warmAlso?.length) setAlsoLike(warmAlso);
+    if (warmBundles?.length) setBundles(warmBundles);
+
+    const empty =
+      !(warmDeals?.length || warmBest?.length || warmAlso?.length || warmBundles?.length);
+    if (empty) setShelvesLoading(true);
+
     // Priority: deals first; defer lower shelves until interactions settle.
-    void productRepository.getDeals().then(setDeals);
+    void productRepository
+      .getDeals({ refresh: true })
+      .then((items) => {
+        setDeals(items);
+        setShelvesLoading(false);
+      })
+      .catch(() => setShelvesLoading(false));
+
     const task = InteractionManager.runAfterInteractions(() => {
-      void productRepository.getBestSellers().then(setBestSellers);
-      void productRepository.getAlsoLike(6).then(setAlsoLike);
-      void productRepository.getBundles().then(setBundles);
+      void productRepository.getBestSellers({ refresh: true }).then(setBestSellers);
+      void productRepository.getAlsoLike(6, { refresh: true }).then(setAlsoLike);
+      void productRepository.getBundles({ refresh: true }).then(setBundles);
     });
     return () => task.cancel();
   }, []);
@@ -309,11 +337,15 @@ export function HomeScreen() {
               </Pressable>
             </View>
             <View style={styles.grid}>
-              {deals.map((product) => (
-                <View key={product.id} style={styles.gridItem}>
-                  <ProductCard product={product} onPress={openProduct} />
-                </View>
-              ))}
+              {deals.length > 0
+                ? deals.map((product) => (
+                    <View key={product.id} style={styles.gridItem}>
+                      <ProductCard product={product} onPress={openProduct} />
+                    </View>
+                  ))
+                : shelvesLoading
+                  ? [0, 1].map((key) => <View key={`deal-sk-${key}`} style={styles.skeletonCard} />)
+                  : null}
             </View>
           </View>
           <View style={styles.section}>
@@ -328,11 +360,17 @@ export function HomeScreen() {
               </Pressable>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bestTrack}>
-              {bestSellers.map((product) => (
-                <View key={product.id} style={styles.bestCard}>
-                  <SquareProductCard product={product} onPress={openProduct} />
-                </View>
-              ))}
+              {bestSellers.length > 0
+                ? bestSellers.map((product) => (
+                    <View key={product.id} style={styles.bestCard}>
+                      <SquareProductCard product={product} onPress={openProduct} />
+                    </View>
+                  ))
+                : shelvesLoading
+                  ? [0, 1, 2].map((key) => (
+                      <View key={`best-sk-${key}`} style={styles.skeletonSquare} />
+                    ))
+                  : null}
             </ScrollView>
           </View>
           {bundles.length > 0 ? (
@@ -362,11 +400,17 @@ export function HomeScreen() {
               </Pressable>
             </View>
             <View style={styles.grid3}>
-              {alsoLike.map((product) => (
-                <View key={product.id} style={styles.gridItem3}>
-                  <ProductCard product={product} compact onPress={openProduct} />
-                </View>
-              ))}
+              {alsoLike.length > 0
+                ? alsoLike.map((product) => (
+                    <View key={product.id} style={styles.gridItem3}>
+                      <ProductCard product={product} compact onPress={openProduct} />
+                    </View>
+                  ))
+                : shelvesLoading
+                  ? [0, 1, 2].map((key) => (
+                      <View key={`like-sk-${key}`} style={styles.skeletonCompact} />
+                    ))
+                  : null}
             </View>
           </View>
           <Pressable
@@ -511,6 +555,32 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingHorizontal: 3,
     width: '33.333%',
+  },
+  skeletonCard: {
+    backgroundColor: colors.border,
+    borderRadius: 14,
+    height: 220,
+    marginBottom: spacing.sm,
+    marginHorizontal: 4,
+    opacity: 0.55,
+    width: '48%',
+  },
+  skeletonCompact: {
+    backgroundColor: colors.border,
+    borderRadius: 12,
+    height: 140,
+    marginBottom: 8,
+    marginHorizontal: 3,
+    opacity: 0.55,
+    width: '31%',
+  },
+  skeletonSquare: {
+    backgroundColor: colors.border,
+    borderRadius: 14,
+    height: 160,
+    marginRight: spacing.sm,
+    opacity: 0.55,
+    width: 140,
   },
   heroImage: {
     height: 220,

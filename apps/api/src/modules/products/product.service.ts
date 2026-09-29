@@ -25,18 +25,30 @@ export class ProductService {
     const limit = Math.min(Math.max(1, query.limit ?? 20), PAGE_SIZE_MAX);
 
     if (query.collection === 'deals') {
-      const items = await this.getDeals(Math.max(limit, 20));
+      const fetchLimit = Math.min(PAGE_SIZE_MAX, Math.max(limit * page, limit));
+      const items = await this.getDeals(fetchLimit);
       return {
         items: items.slice((page - 1) * limit, page * limit),
-        pagination: { page, limit, total: items.length, pages: Math.ceil(items.length / limit) || 1 },
+        pagination: {
+          page,
+          limit,
+          total: items.length,
+          pages: Math.ceil(items.length / limit) || 1,
+        },
       };
     }
 
     if (query.collection === 'bestsellers') {
-      const items = await this.getBestSellers(Math.max(limit, 20));
+      const fetchLimit = Math.min(PAGE_SIZE_MAX, Math.max(limit * page, limit));
+      const items = await this.getBestSellers(fetchLimit);
       return {
         items: items.slice((page - 1) * limit, page * limit),
-        pagination: { page, limit, total: items.length, pages: Math.ceil(items.length / limit) || 1 },
+        pagination: {
+          page,
+          limit,
+          total: items.length,
+          pages: Math.ceil(items.length / limit) || 1,
+        },
       };
     }
 
@@ -158,16 +170,24 @@ export class ProductService {
   }
 
   async getDeals(limit = 6) {
-    const products = await Product.find({ stock: { $gt: 0 } }).lean();
-    return products
-      .map((product) => {
-        const compareAt = product.compareAtPrice ?? product.price;
-        return { product, savings: compareAt - product.price };
-      })
-      .filter((row) => row.savings > 0)
-      .sort((a, b) => b.savings - a.savings)
-      .slice(0, limit)
-      .map((row) => row.product);
+    const capped = Math.min(Math.max(1, limit), PAGE_SIZE_MAX);
+    return Product.aggregate([
+      {
+        $match: {
+          stock: { $gt: 0 },
+          compareAtPrice: { $exists: true, $ne: null },
+        },
+      },
+      {
+        $addFields: {
+          savings: { $subtract: ['$compareAtPrice', '$price'] },
+        },
+      },
+      { $match: { savings: { $gt: 0 } } },
+      { $sort: { savings: -1 } },
+      { $limit: capped },
+      { $project: { savings: 0 } },
+    ]);
   }
 
   async getBestSellers(limit = 6) {
