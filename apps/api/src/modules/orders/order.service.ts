@@ -117,22 +117,28 @@ export class OrderService {
     return { order, awardedXp };
   }
 
-  async list(userId?: string, email?: string) {
-    const filter: Record<string, unknown> = {
+  async list(userId: string) {
+    if (!userId) {
+      throw new AppError('Authentication required', 401);
+    }
+    return Order.find({
+      userId,
       // Abandoned Razorpay checkouts stay pending_payment — hide from My Orders.
       status: { $nin: ['pending_payment'] },
-    };
-    if (userId) filter.userId = userId;
-    else if (email) filter['customer.email'] = email;
-    return Order.find(filter).sort({ createdAt: -1 }).lean();
+    })
+      .sort({ createdAt: -1 })
+      .lean();
   }
 
-  async getById(id: string, userId?: string) {
+  async getById(id: string, userId: string) {
+    if (!userId) {
+      throw new AppError('Authentication required', 401);
+    }
     const order = await Order.findById(id).lean();
     if (!order) {
       throw new AppError('Order not found', 404);
     }
-    if (userId && order.userId && String(order.userId) !== userId) {
+    if (!order.userId || String(order.userId) !== userId) {
       throw new AppError('Forbidden', 403);
     }
     return order;

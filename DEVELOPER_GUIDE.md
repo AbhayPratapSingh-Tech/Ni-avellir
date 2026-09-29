@@ -129,7 +129,8 @@ npm run dev
 ```
 
 - `dev:api` — Express + Mongo on `http://localhost:4000` (`/api/v1/...`)
-- `seed` — products, coupons (`FORGE10`, `WELCOME100` public; `SUMMER10`, `JUSTFORYOU` assigned to phone `8750996351`), serviceability rules
+- `seed` — products, coupons (`FORGE10`, `WELCOME100` public; `SUMMER10`, `JUSTFORYOU` assigned to phone `8750996351`), serviceability rules, store locator pins (Bengaluru / Mumbai / Jaipur / Delhi)
+- `seed:ops` — coupons + store pins only (does not wipe products): `npm run seed:ops --workspace apps/api`
 - `dev` — Metro for the mobile app
 
 Health check: `curl -s http://localhost:4000/health`
@@ -292,7 +293,7 @@ features: {
 }
 ```
 
-**Store locator:** `ShopHeader` location icon → `StoreLocator` route. Area search uses `GET /api/v1/stores/geocode` with a **free** provider chain (Open-Meteo → Photon → builtin city centroids → Nominatim). The app also geocodes via Open-Meteo on-device if the API fails. Store cards come from `GET /api/v1/stores` (empty until you seed Mongo). Map: `react-native-webview` + Leaflet/OSM tiles (no Google/Mapbox key). Replace `apps/mobile/assets/brand/logo.png` and set `USE_BRAND_LOGO_PNG` in `BrandMark` for a real header mark.
+**Store locator:** `ShopHeader` location icon → `StoreLocator` route. Area search uses `GET /api/v1/stores/geocode` with a **free** provider chain (Open-Meteo → Photon → builtin city centroids → Nominatim). The app also geocodes via Open-Meteo on-device if the API fails. Store cards come from `GET /api/v1/stores` (seeded via `npm run seed --workspace apps/api`). Map: `react-native-webview` + Leaflet/OSM tiles (no Google/Mapbox key). Replace `apps/mobile/assets/brand/logo.png` and set `USE_BRAND_LOGO_PNG` in `BrandMark` for a real header mark.
 
 ---
 

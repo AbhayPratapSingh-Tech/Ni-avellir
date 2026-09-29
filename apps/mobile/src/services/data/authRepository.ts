@@ -19,17 +19,20 @@ export type ApiUser = {
   runeXp?: number;
 };
 
-async function postLoginSync(refreshToken?: string) {
-  const guestId = await getGuestSessionId();
-  await cartRepository.merge(guestId);
+/** Pull addresses / orders / wishlist into Redux after session restore or login. */
+export async function syncLoggedInStores() {
+  if (appConfig.dataSource !== 'api') return;
   await Promise.all([
     addressRepository.syncToStore(),
     orderRepository.syncToStore(),
     wishlistRepository.syncToStore(),
   ]);
-  if (refreshToken) {
-    // merge already uses auth header
-  }
+}
+
+async function postLoginSync() {
+  const guestId = await getGuestSessionId();
+  await cartRepository.merge(guestId);
+  await syncLoggedInStores();
 }
 
 export const authRepository = {
@@ -77,7 +80,7 @@ export const authRepository = {
       accessToken: data.data.accessToken,
       refreshToken: data.data.refreshToken,
     });
-    await postLoginSync(data.data.refreshToken);
+    await postLoginSync();
     return data.data.user;
   },
 
@@ -98,7 +101,7 @@ export const authRepository = {
       accessToken: data.data.accessToken,
       refreshToken: data.data.refreshToken,
     });
-    await postLoginSync(data.data.refreshToken);
+    await postLoginSync();
     return data.data.user;
   },
 

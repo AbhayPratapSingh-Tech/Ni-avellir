@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Image,
@@ -14,7 +14,7 @@ import {
   View,
 } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
@@ -24,6 +24,8 @@ import { updateProfile } from '../auth/authSlice';
 import { appConfig } from '../../config/appConfig';
 import { authRepository } from '../../services/data/authRepository';
 import { digitsOnly } from '../../lib/addressValidation';
+import { isLoggedInUser, requireLogin } from '../../lib/authGates';
+import { goBackOrHome } from '../../lib/navigation';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -118,6 +120,15 @@ export function EditProfileScreen() {
   const dispatch = useAppDispatch();
   const toast = useToast();
   const user = useAppSelector((state) => state.auth.user);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isLoggedInUser(user)) {
+        requireLogin({ user, dispatch, toast, reason: 'editProfile' });
+        goBackOrHome(navigation);
+      }
+    }, [dispatch, navigation, toast, user]),
+  );
 
   const [name, setName] = useState(user?.isGuest ? '' : (user?.name ?? ''));
   const [email, setEmail] = useState(user?.email ?? '');

@@ -9,6 +9,7 @@
     "dev": "tsx watch src/server.ts",
     "lint": "eslint src --ext .ts",
     "seed": "tsx src/scripts/seed.ts",
+    "seed:ops": "tsx src/scripts/seed-ops.ts",
     "seed:sku": "tsx src/scripts/backfill-sku-xp.ts",
     "test:email": "tsx src/scripts/test-email.ts",
     "start": "node dist/server.js",

@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
 import { useToast } from '../../components/ui/Toast';
-import { authRepository } from '../../services/data/authRepository';
+import { useAppDispatch, useAppSelector } from '../../app/store';
+import { isLoggedInUser, requireLogin } from '../../lib/authGates';
+import { goBackOrHome } from '../../lib/navigation';
 import { apiClient, getApiErrorMessage } from '../../services/api/apiClient';
 import type { RootStackParamList } from '../../app/navigation/types';
 
@@ -13,11 +15,22 @@ type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 export function ChangePasswordScreen() {
   const navigation = useNavigation<Navigation>();
+  const dispatch = useAppDispatch();
   const toast = useToast();
+  const user = useAppSelector((state) => state.auth.user);
   const [currentPassword, setCurrent] = useState('');
   const [newPassword, setNew] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isLoggedInUser(user)) {
+        requireLogin({ user, dispatch, toast, reason: 'changePassword' });
+        goBackOrHome(navigation);
+      }
+    }, [dispatch, navigation, toast, user]),
+  );
 
   const submit = async () => {
     if (!currentPassword || newPassword.length < 6) {

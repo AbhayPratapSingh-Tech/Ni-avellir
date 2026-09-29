@@ -28,7 +28,7 @@ import { getProductImages } from '../../lib/productMedia';
 import { goBackOrHome } from '../../lib/navigation';
 import { requireLogin } from '../../lib/authGates';
 import { toggleWishlistForUser } from '../../lib/wishlistActions';
-import { productRepository } from '../../services/data/productRepository';
+import { productRepository, productMatchesCatalogId } from '../../services/data/productRepository';
 import { reviewRepository } from '../../services/data/reviewRepository';
 import { appConfig } from '../../config/appConfig';
 import type { ProductReview } from '../../services/data/reviews';
@@ -39,7 +39,6 @@ import { ImageGalleryModal } from '../../components/commerce/ImageGalleryModal';
 import { ImagePager } from '../../components/commerce/ImagePager';
 import { PriceRow } from '../../components/commerce/PriceRow';
 import { ProductSlider } from '../../components/commerce/ProductSlider';
-import { BrandMark } from '../../components/ui/BrandMark';
 import { AppIcon, type AppIconName } from '../../components/ui/AppIcon';
 import { StarRating } from '../../components/ui/StarRating';
 import { useToast } from '../../components/ui/Toast';
@@ -69,7 +68,9 @@ export function ProductDetailScreen() {
 
   const cartQty =
     useAppSelector((state) => state.cart.items.find((item) => item.product.id === product.id)?.quantity) ?? 0;
-  const wishlisted = useAppSelector((state) => state.wishlist.items.some((item) => item.id === product.id));
+  const wishlisted = useAppSelector((state) =>
+    state.wishlist.items.some((item) => productMatchesCatalogId(item, product.id)),
+  );
   const user = useAppSelector((state) => state.auth.user);
   const recentItems = useAppSelector((state) => state.recent.items);
   const recentlyViewed = useMemo(
@@ -370,7 +371,9 @@ export function ProductDetailScreen() {
                 style={styles.brandChip}
                 onPress={() => navigation.navigate('Products', { franchise: brand, title: brand })}
               >
-                <BrandMark size={28} />
+                <View style={styles.brandAvatar}>
+                  <Text style={styles.brandAvatarText}>{brand.charAt(0).toUpperCase()}</Text>
+                </View>
                 <Text style={styles.brandName}>{brand}</Text>
               </Pressable>
             ))}
@@ -574,6 +577,19 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+  },
+  brandAvatar: {
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 14,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
+  },
+  brandAvatarText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '800',
   },
   brandChips: {
     marginTop: spacing.lg,

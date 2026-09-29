@@ -6,6 +6,7 @@ import { discountPercent, formatInr, getProductImages } from '../../lib/productM
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { addProductToCart } from '../../lib/cartActions';
 import { toggleWishlistForUser } from '../../lib/wishlistActions';
+import { productMatchesCatalogId } from '../../services/data/productRepository';
 import { StarRating } from '../ui/StarRating';
 import { CachedImage } from '../ui/CachedImage';
 import { useToast } from '../ui/Toast';
@@ -30,7 +31,9 @@ export function ProductCard({ product, compact, large, onPress, onAddToCart }: P
   const dispatch = useAppDispatch();
   const toast = useToast();
   const user = useAppSelector((state) => state.auth.user);
-  const wishlisted = useAppSelector((state) => state.wishlist.items.some((item) => item.id === product.id));
+  const wishlisted = useAppSelector((state) =>
+    state.wishlist.items.some((item) => productMatchesCatalogId(item, product.id)),
+  );
   const inStock = product.stock > 0;
   const off = discountPercent(product);
 
@@ -233,7 +236,7 @@ const styles = StyleSheet.create({
     minHeight: 28,
   },
   price: {
-    color: colors.accent,
+    color: colors.text,
     fontSize: 15,
     fontWeight: '800',
   },
@@ -260,7 +263,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   saveChip: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.danger,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 3,

@@ -5,6 +5,7 @@ import { loadEnv } from '../config/env.js';
 import { Product as ProductModel } from '../modules/products/product.model.js';
 import { Coupon } from '../modules/coupons/coupon.model.js';
 import { ServiceabilityRule } from '../modules/serviceability/serviceability.model.js';
+import { Store } from '../modules/stores/stores.model.js';
 import { logger } from '../common/logger/logger.js';
 
 function productIdToSlug(id: string): string {
@@ -142,6 +143,55 @@ async function seed() {
     },
   ]);
   logger.info('Coupons seeded');
+
+  await Store.deleteMany({});
+  await Store.insertMany([
+    {
+      name: 'Niðavellir Flagship — Bengaluru',
+      address: '12 MG Road',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      pincode: '560001',
+      lat: 12.9716,
+      lng: 77.5946,
+      phone: '+91 80 0000 0000',
+      active: true,
+    },
+    {
+      name: 'Niðavellir — Mumbai',
+      address: '45 Linking Road, Bandra',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      pincode: '400050',
+      lat: 19.0596,
+      lng: 72.8295,
+      phone: '+91 22 0000 0000',
+      active: true,
+    },
+    {
+      name: 'Niðavellir — Jaipur',
+      address: 'C-Scheme, MI Road',
+      city: 'Jaipur',
+      state: 'Rajasthan',
+      pincode: '302001',
+      lat: 26.9124,
+      lng: 75.7873,
+      phone: '+91 141 0000 000',
+      active: true,
+    },
+    {
+      name: 'Niðavellir — Delhi',
+      address: 'Connaught Place',
+      city: 'New Delhi',
+      state: 'Delhi',
+      pincode: '110001',
+      lat: 28.6315,
+      lng: 77.2167,
+      phone: '+91 11 0000 0000',
+      active: true,
+    },
+  ]);
+  logger.info('Stores seeded');
 
   await mongoose.disconnect();
   logger.info('Seed complete');

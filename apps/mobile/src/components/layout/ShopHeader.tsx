@@ -38,6 +38,10 @@ export function ShopHeader({ onMenuPress }: Props) {
     navigation.navigate('Wishlist');
   };
 
+  const goHome = () => {
+    navigation.navigate('MainTabs', { screen: 'Home' });
+  };
+
   return (
     <View style={styles.row}>
       <Pressable
@@ -49,9 +53,14 @@ export function ShopHeader({ onMenuPress }: Props) {
       >
         <AppIcon name="menu" size={26} color={colors.text} />
       </Pressable>
-      <View style={styles.logo}>
-        <BrandMark size={40} />
-      </View>
+      <Pressable
+        onPress={goHome}
+        style={styles.logo}
+        accessibilityRole="button"
+        accessibilityLabel="Go to home"
+      >
+        <BrandMark height={60} />
+      </Pressable>
       <View style={styles.rightActions}>
         <Pressable
           onPress={openWishlist}
@@ -118,10 +127,12 @@ const styles = StyleSheet.create({
   logo: {
     alignItems: 'center',
     flex: 1,
+    justifyContent: 'center',
+    paddingVertical: 2,
   },
   menuBtn: {
     alignItems: 'center',
-    height: 44,
+    height: 48,
     justifyContent: 'center',
     width: 44,
   },
@@ -132,13 +143,13 @@ const styles = StyleSheet.create({
   row: {
     alignItems: 'center',
     flexDirection: 'row',
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.sm,
     paddingHorizontal: spacing.xs,
     paddingTop: spacing.sm,
   },
   sideBtn: {
     alignItems: 'center',
-    height: 44,
+    height: 48,
     justifyContent: 'center',
     width: 40,
   },

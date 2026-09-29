@@ -5,6 +5,7 @@ import { getProductImages } from '../../lib/productMedia';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { addProductToCart } from '../../lib/cartActions';
 import { toggleWishlistForUser } from '../../lib/wishlistActions';
+import { productMatchesCatalogId } from '../../services/data/productRepository';
 import { useToast } from '../ui/Toast';
 import { CachedImage } from '../ui/CachedImage';
 import { StarRating } from '../ui/StarRating';
@@ -19,7 +20,9 @@ export function SquareProductCard({ product, onPress }: Props) {
   const dispatch = useAppDispatch();
   const toast = useToast();
   const user = useAppSelector((state) => state.auth.user);
-  const wishlisted = useAppSelector((state) => state.wishlist.items.some((item) => item.id === product.id));
+  const wishlisted = useAppSelector((state) =>
+    state.wishlist.items.some((item) => productMatchesCatalogId(item, product.id)),
+  );
   const image = getProductImages(product)[0];
   const inStock = product.stock > 0;
 

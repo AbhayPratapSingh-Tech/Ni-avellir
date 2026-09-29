@@ -2,6 +2,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { appConfig } from '../../config/appConfig';
 import { authRepository } from '../../services/data/authRepository';
 import { clearSessionTokens } from '../../services/api/sessionTokens';
+import { clearAccountScopedStores } from '../../services/session/clearAccountScopedStores';
 
 export type AuthUser = {
   name: string;
@@ -93,5 +94,6 @@ export function signOutAndClearSession() {
   } else {
     clearSessionTokens();
   }
+  clearAccountScopedStores();
   return enterGuest();
 }

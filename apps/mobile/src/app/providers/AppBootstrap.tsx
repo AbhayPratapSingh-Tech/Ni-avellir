@@ -9,8 +9,9 @@ import {
   startApiKeepAlive,
   stopApiKeepAlive,
 } from '../../services/api/wakeApiServer';
-import { authRepository } from '../../services/data/authRepository';
+import { authRepository, syncLoggedInStores } from '../../services/data/authRepository';
 import { cartRepository } from '../../services/data/cartRepository';
+import { BrandMark } from '../../components/ui/BrandMark';
 import { colors, spacing, typography } from '../../theme/tokens';
 
 /** Never leave the splash hung on cold API / Keychain stalls. */
@@ -58,6 +59,8 @@ export function AppBootstrap({ children }: PropsWithChildren) {
                 emailVerified: user.emailVerified,
               }),
             );
+            // Orders / addresses / wishlist must hydrate with the session (not only on login).
+            await withTimeout(syncLoggedInStores(), 5_000);
           }
         }
         await withTimeout(cartRepository.refresh(), 5_000);
@@ -82,7 +85,7 @@ export function AppBootstrap({ children }: PropsWithChildren) {
   if (!ready) {
     return (
       <View style={styles.splash}>
-        <Text style={styles.brand}>Niðavellir</Text>
+        <BrandMark height={56} />
         <Text style={styles.sub}>Loading your forge…</Text>
         <ActivityIndicator color={colors.text} style={styles.spinner} />
       </View>
@@ -93,12 +96,6 @@ export function AppBootstrap({ children }: PropsWithChildren) {
 }
 
 const styles = StyleSheet.create({
-  brand: {
-    color: colors.text,
-    fontSize: 28,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
   splash: {
     alignItems: 'center',
     backgroundColor: colors.background,

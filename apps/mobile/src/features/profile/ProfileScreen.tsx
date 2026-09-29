@@ -5,10 +5,13 @@ import { useCallback } from 'react';
 import { colors, spacing } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { Screen } from '../../components/ui/Screen';
+import { BrandMark } from '../../components/ui/BrandMark';
 import { openLogin, signOutAndClearSession, updateProfile } from '../auth/authSlice';
 import { appConfig } from '../../config/appConfig';
-import { authRepository } from '../../services/data/authRepository';
+import { authRepository, syncLoggedInStores } from '../../services/data/authRepository';
 import { AppIcon, type AppIconName } from '../../components/ui/AppIcon';
+import { useToast } from '../../components/ui/Toast';
+import { requireLogin } from '../../lib/authGates';
 import type { RootStackParamList } from '../../app/navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -37,6 +40,7 @@ function isDisplayableAvatar(uri?: string) {
 export function ProfileScreen() {
   const navigation = useNavigation<Navigation>();
   const dispatch = useAppDispatch();
+  const toast = useToast();
   const itemCount = useAppSelector((state) => state.cart.itemCount);
   const orderCount = useAppSelector((state) => state.orders.items.length);
   const user = useAppSelector((state) => state.auth.user);
@@ -51,27 +55,36 @@ export function ProfileScreen() {
   const xpTier =
     runeXp >= 2000 ? 'Master' : runeXp >= 1000 ? 'Journeyman' : runeXp >= 250 ? 'Adept' : 'Apprentice';
   const avatarUri = isDisplayableAvatar(user?.avatarUri) ? user?.avatarUri : undefined;
+  const emailVerified = Boolean(!user?.isGuest && user?.emailVerified);
+  const menuItems = MENU.filter((item) => !(item.key === 'verify' && emailVerified));
 
   useFocusEffect(
     useCallback(() => {
       if (appConfig.dataSource !== 'api' || !user || user.isGuest) return;
-      void authRepository.me().then((next) => {
-        if (!next) return;
-        dispatch(
-          updateProfile({
-            name: next.name,
-            email: next.email,
-            phone: next.phone,
-            avatarUri: next.avatarUrl ?? null,
-            runeXp: next.runeXp,
-            emailVerified: next.emailVerified,
-          }),
-        );
-      });
+      void (async () => {
+        const next = await authRepository.me();
+        if (next) {
+          dispatch(
+            updateProfile({
+              name: next.name,
+              email: next.email,
+              phone: next.phone,
+              avatarUri: next.avatarUrl ?? null,
+              runeXp: next.runeXp,
+              emailVerified: next.emailVerified,
+            }),
+          );
+        }
+        // Keep Orders / Addresses / Wishlist stats in sync after relaunch.
+        await syncLoggedInStores();
+      })();
     }, [dispatch, user?.email, user?.isGuest]),
   );
 
   const openEditProfile = () => {
+    if (!requireLogin({ user, dispatch, toast, reason: 'editProfile' })) {
+      return;
+    }
     navigation.navigate('EditProfile');
   };
 
@@ -79,7 +92,7 @@ export function ProfileScreen() {
     <Screen>
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
         <View style={styles.brandBanner}>
-          <Text style={styles.brandMark}>Niðavellir</Text>
+          <BrandMark height={48} />
           <Text style={styles.brandSub}>Forge Account</Text>
         </View>
 
@@ -95,7 +108,20 @@ export function ProfileScreen() {
           </Pressable>
           <View style={styles.headerCopy}>
             <Text style={styles.name}>{displayName}</Text>
-            <Text style={styles.email}>{displayEmail}</Text>
+            <View style={styles.emailRow}>
+              <Text style={styles.email} numberOfLines={1}>
+                {displayEmail}
+              </Text>
+              {emailVerified ? (
+                <View
+                  style={styles.verifiedBadge}
+                  accessibilityLabel="Email verified"
+                  accessibilityRole="image"
+                >
+                  <AppIcon name="verified" size={16} color="#1877F2" />
+                </View>
+              ) : null}
+            </View>
             {!user?.isGuest && user?.phone ? (
               <Text style={styles.phone}>{user.phone}</Text>
             ) : null}
@@ -131,7 +157,7 @@ export function ProfileScreen() {
         </View>
 
         <View style={styles.menu}>
-          {MENU.map((item) => (
+          {menuItems.map((item) => (
             <Pressable
               key={item.key}
               style={styles.menuRow}
@@ -149,6 +175,9 @@ export function ProfileScreen() {
                   return;
                 }
                 if (item.key === 'addresses') {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'addresses' })) {
+                    return;
+                  }
                   navigation.navigate('Addresses');
                   return;
                 }
@@ -157,14 +186,23 @@ export function ProfileScreen() {
                   return;
                 }
                 if (item.key === 'password') {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'changePassword' })) {
+                    return;
+                  }
                   navigation.navigate('ChangePassword');
                   return;
                 }
                 if (item.key === 'sessions') {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'editProfile' })) {
+                    return;
+                  }
                   navigation.navigate('Sessions');
                   return;
                 }
                 if (item.key === 'verify') {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'verifyEmail' })) {
+                    return;
+                  }
                   navigation.navigate('VerifyEmail');
                   return;
                 }
@@ -176,9 +214,7 @@ export function ProfileScreen() {
               <View style={styles.menuIcon}>
                 <AppIcon name={item.icon} size={20} color={colors.text} />
               </View>
-              <Text style={styles.menuLabel}>
-                {item.key === 'verify' && user?.emailVerified ? 'Email verified' : item.label}
-              </Text>
+              <Text style={styles.menuLabel}>{item.label}</Text>
               <Text style={styles.menuChevron}>›</Text>
             </Pressable>
           ))}
@@ -242,8 +278,17 @@ const styles = StyleSheet.create({
   },
   email: {
     color: colors.textMuted,
+    flexShrink: 1,
     fontSize: 13,
+  },
+  emailRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
     marginTop: 2,
+  },
+  verifiedBadge: {
+    marginTop: 1,
   },
   footer: {
     color: colors.textMuted,
@@ -380,12 +425,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
     paddingVertical: spacing.sm,
-  },
-  brandMark: {
-    color: colors.text,
-    fontSize: 26,
-    fontWeight: '900',
-    letterSpacing: 0.6,
   },
   brandSub: {
     color: colors.textMuted,

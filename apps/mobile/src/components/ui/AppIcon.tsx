@@ -18,7 +18,8 @@ export type AppIconName =
   | 'bag'
   | 'heart'
   | 'search'
-  | 'trash';
+  | 'trash'
+  | 'verified';
 
 type Props = {
   name: AppIconName;
@@ -249,6 +250,21 @@ export function AppIcon({ name, size = 20, color = colors.text }: Props) {
           />
           <Path d="M10 11v6" stroke={stroke} strokeWidth={2.2} strokeLinecap="round" />
           <Path d="M14 11v6" stroke={stroke} strokeWidth={2.2} strokeLinecap="round" />
+        </Svg>
+      );
+    case 'verified':
+      // Meta-style verified badge: filled blue circle + white check.
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Circle cx={12} cy={12} r={11} fill={stroke} />
+          <Path
+            d="M7.5 12.2l2.8 2.8 6.2-6.2"
+            stroke="#FFFFFF"
+            strokeWidth={2.4}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
         </Svg>
       );
     default:
