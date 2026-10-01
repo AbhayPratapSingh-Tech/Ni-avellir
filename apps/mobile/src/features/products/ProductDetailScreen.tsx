@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  FlatList,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -40,6 +41,7 @@ import { ImagePager } from '../../components/commerce/ImagePager';
 import { PriceRow } from '../../components/commerce/PriceRow';
 import { ProductSlider } from '../../components/commerce/ProductSlider';
 import { AppIcon, type AppIconName } from '../../components/ui/AppIcon';
+import { CachedImage } from '../../components/ui/CachedImage';
 import { StarRating } from '../../components/ui/StarRating';
 import { useToast } from '../../components/ui/Toast';
 
@@ -47,6 +49,40 @@ type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'ProductDetail'>;
 
 const APP_NAME = 'Niðavellir';
+
+/** PDP promo slider under hero — fill image / productSlug per slide when ready. */
+type PdpPromoBanner = {
+  id: string;
+  image: string;
+  title: string;
+  subtitle: string;
+  /** Catalog slug or id — opens that product's PDP. */
+  productSlug: string;
+};
+
+const PDP_PROMO_BANNERS: PdpPromoBanner[] = [
+  {
+    id: 'promo-1',
+    image: '',
+    title: 'Forge drop',
+    subtitle: 'Banner coming soon',
+    productSlug: '',
+  },
+  {
+    id: 'promo-2',
+    image: '',
+    title: 'Limited run',
+    subtitle: 'Banner coming soon',
+    productSlug: '',
+  },
+  {
+    id: 'promo-3',
+    image: '',
+    title: 'Rune picks',
+    subtitle: 'Banner coming soon',
+    productSlug: '',
+  },
+];
 
 const CONFIDENCE: Array<{ icon: AppIconName; title: string }> = [
   { icon: 'return', title: '7 days free return' },
@@ -88,6 +124,8 @@ export function ProductDetailScreen() {
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [similar, setSimilar] = useState<Product[]>([]);
   const [alsoLike, setAlsoLike] = useState<Product[]>([]);
+  const [promoIndex, setPromoIndex] = useState(0);
+  const promoListRef = useRef<FlatList<PdpPromoBanner>>(null);
 
   useEffect(() => {
     dispatch(viewProduct(product));
@@ -133,6 +171,29 @@ export function ProductDetailScreen() {
 
   const openProduct = (next: Product) => {
     navigation.push('ProductDetail', { product: next });
+  };
+
+  const openPromoBannerProduct = async (banner: PdpPromoBanner) => {
+    const slug = banner.productSlug.trim();
+    if (!slug) {
+      toast.show('Promo product coming soon');
+      return;
+    }
+    const currentSlug = (product as Product & { slug?: string }).slug ?? product.id;
+    if (slug === currentSlug || slug === product.id) {
+      return;
+    }
+    try {
+      const next =
+        (await productRepository.getBySlug(slug)) ?? (await productRepository.getById(slug));
+      if (!next) {
+        toast.show('Promo product unavailable');
+        return;
+      }
+      openProduct(next);
+    } catch {
+      toast.show('Could not open promo');
+    }
   };
 
   const completeBundle = async (members: Product[]) => {
@@ -233,6 +294,52 @@ export function ProductDetailScreen() {
           >
             <Text style={styles.shareText}>↗ Share</Text>
           </Pressable>
+        </View>
+
+        <View style={styles.pdpBannerWrap}>
+          <FlatList
+            ref={promoListRef}
+            data={PDP_PROMO_BANNERS}
+            keyExtractor={(item) => item.id}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
+            onMomentumScrollEnd={(e) => {
+              const next = Math.round(e.nativeEvent.contentOffset.x / width);
+              setPromoIndex(next);
+            }}
+            renderItem={({ item }) => (
+              <Pressable
+                style={[styles.pdpBanner, { width }]}
+                accessibilityRole="button"
+                accessibilityLabel={item.title}
+                onPress={() => {
+                  void openPromoBannerProduct(item);
+                }}
+              >
+                {item.image ? (
+                  <CachedImage uri={item.image} style={styles.pdpBannerImage} priority="normal" />
+                ) : (
+                  <View style={styles.pdpBannerPlaceholder} />
+                )}
+                <View style={styles.pdpBannerCopy}>
+                  <Text style={styles.pdpBannerTitle}>{item.title}</Text>
+                  <Text style={styles.pdpBannerSub}>{item.subtitle}</Text>
+                </View>
+              </Pressable>
+            )}
+          />
+          {PDP_PROMO_BANNERS.length > 1 ? (
+            <View style={styles.pdpBannerDots}>
+              {PDP_PROMO_BANNERS.map((banner, i) => (
+                <View
+                  key={banner.id}
+                  style={[styles.pdpBannerDot, i === promoIndex && styles.pdpBannerDotActive]}
+                />
+              ))}
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.body}>
@@ -751,6 +858,61 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     marginTop: spacing.sm,
+  },
+  pdpBanner: {
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    height: 88,
+    overflow: 'hidden',
+  },
+  pdpBannerCopy: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  pdpBannerDot: {
+    backgroundColor: colors.border,
+    borderRadius: 3,
+    height: 6,
+    marginHorizontal: 3,
+    width: 6,
+  },
+  pdpBannerDotActive: {
+    backgroundColor: colors.accent,
+    width: 14,
+  },
+  pdpBannerDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingBottom: spacing.sm,
+    paddingTop: spacing.xs,
+  },
+  pdpBannerImage: {
+    height: '100%',
+    width: 120,
+  },
+  pdpBannerPlaceholder: {
+    backgroundColor: colors.accentSoft,
+    height: '100%',
+    width: 120,
+  },
+  pdpBannerSub: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  pdpBannerTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  pdpBannerWrap: {
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
   },
   qtyBtn: {
     alignItems: 'center',
