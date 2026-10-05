@@ -116,6 +116,7 @@ Mobile defaults to **`api`** via `apps/mobile/src/config/appConfig.ts` (set `'mo
 3. `apiBaseUrl` → live Render `https://ni-avellir.onrender.com/api/v1` (local laptop API was `http://10.0.2.2:4000/api/v1` on Android / `localhost` on iOS)
 4. Follow the agent checklist in **`AI_AGENT_GUIDE.md`**
 5. Render Free: app fires `GET /api/v1/health` on bootstrap **without blocking** the splash, then pings every 20 minutes while foregrounded (`wakeApiServer.ts`) so cold starts are less likely mid-session — not a paid always-on substitute. Home also re-pings `/health` when focused if the last success is older than ~60s. Empty Home shelves on first open usually mean a cold Render wake — not a missing seed. Product shelves use a short in-memory TTL cache (`productRepository`) so revisit paints instantly while a background refresh runs. Deals API uses a Mongo aggregation (no full-collection scan).
+5b. **Drop Zone:** Home countdown bar opens PLP `collection=drop-zone`. Catalog tag `drop-zone-eligible` marks a fixed eligible pool (seed once). API/mock pick today’s SKUs via Asia/Kolkata date hash (`packages/shared/src/dropZone.ts`) — do **not** re-seed daily. Cart tab omits stack back chevron to avoid unhandled `GO_BACK` after PLP/PDP.
 6. Rune XP is **flat per order** (100 / 500 bundle), not per-SKU sum. Product `sku` / `runeXp` fields remain for display / backfill (`npm run seed:sku --workspace apps/api`).
 
 **Backend path**

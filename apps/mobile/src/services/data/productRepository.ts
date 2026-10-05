@@ -1,5 +1,10 @@
 import { appConfig } from '../../config/appConfig';
-import { ALSO_LIKE_TAG, demoMarketplaceOverview, demoProducts } from '@nidavellir/shared';
+import {
+  ALSO_LIKE_TAG,
+  demoMarketplaceOverview,
+  demoProducts,
+  pickDropZoneProducts,
+} from '@nidavellir/shared';
 import type { Product } from '@nidavellir/shared';
 import { apiClient } from '../api/apiClient';
 import { normalizeProduct } from '../../lib/productMedia';
@@ -34,7 +39,7 @@ export interface ProductListQuery {
   category?: string;
   franchise?: string;
   search?: string;
-  collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking';
+  collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone';
   bundleTag?: string;
   sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
   page?: number;
@@ -162,6 +167,9 @@ function listFromMock(query: ProductListQuery = {}): ProductListResult {
       p.tags.some((tag) => tag.toLowerCase() === ALSO_LIKE_TAG),
     );
     items = tagged.length ? tagged : items.sort((a, b) => b.rating - a.rating);
+  }
+  if (query.collection === 'drop-zone') {
+    items = pickDropZoneProducts(items);
   }
   if (query.collection === 'restocking') {
     items = items.filter((p) => p.stock === 0);

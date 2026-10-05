@@ -42,7 +42,7 @@ export function ProductsScreen() {
   const params = (route.params ?? {}) as {
     category?: string;
     franchise?: string;
-    collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking';
+    collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone';
     title?: string;
     q?: string;
   };

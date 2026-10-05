@@ -73,7 +73,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [x] **AI Merch Assistant** — `POST /api/v1/ai/chat` (tools over live catalog/cart/wishlist/orders + FAQ RAG); mobile hub/chat UI + Search mic (`@react-native-voice/voice`); stub without LLM key, Groq/OpenAI via env.
 
 ### Merchandising & drops
-- [ ] Today’s Niðavellir drop banner.
+- [x] **Drop Zone** — Home countdown bar → PLP `collection=drop-zone`. Eligible pool tagged `drop-zone-eligible` once in seed; daily rotation by Asia/Kolkata date hash (no daily re-seed). Re-seed once after tag change.
 - [ ] Pre-order products.
 - [x] **Bundle products** — driven by live product `bundleTag` / `isBundleMain` + `GET /products/bundles` (not mock membership). PDP “Complete the bundle”; Home banner slider after bestsellers. Re-seed after catalog changes. Banner art hints are placeholders until creatives land.
 - [ ] Mystery boxes.
@@ -99,4 +99,5 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - AI assistant: set `AI_ENABLED` + optional `OPENAI_*` on Render; without a key the API uses stub intents + real commerce tools.
 - Pre-order and mystery boxes need inventory + pricing + cart rules before UI.
 - After bundle seed changes on Render, run seed against Atlas (or redeploy with seed job) so live API gets `bundleTag` products.
+- Drop Zone: do **not** re-seed daily — only re-seed when changing the `drop-zone-eligible` pool. Cart tab has no stack back chevron (avoids unhandled `GO_BACK`).
 - Email template edits: `apps/api/src/integrations/email/email.factory.ts` → push → redeploy Render.

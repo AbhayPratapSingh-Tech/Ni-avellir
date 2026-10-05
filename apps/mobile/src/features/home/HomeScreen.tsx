@@ -152,13 +152,18 @@ function HeroCarousel() {
   );
 }
 
-function FlashSaleBar() {
+function FlashSaleBar({ onPress }: { onPress: () => void }) {
   const { active, countdown } = useDailySale();
 
   return (
-    <View style={styles.flashSale}>
+    <Pressable
+      style={styles.flashSale}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Open Drop Zone"
+    >
       <View>
-        <Text style={styles.flashKicker}>{active ? 'LIVE DROP' : 'DAILY DROP'}</Text>
+        <Text style={styles.flashKicker}>DROP ZONE</Text>
         <Text style={styles.flashTitle}>{active ? 'Ends in' : 'Sale soon'}</Text>
       </View>
       {active ? (
@@ -177,7 +182,7 @@ function FlashSaleBar() {
       ) : (
         <Text style={styles.saleSoonHint}>Opens 9:00 · 7 hrs</Text>
       )}
-    </View>
+    </Pressable>
   );
 }
 
@@ -318,7 +323,11 @@ export function HomeScreen() {
 
         <View style={styles.padded}>
           <View style={styles.section}>
-            <FlashSaleBar />
+            <FlashSaleBar
+              onPress={() =>
+                navigation.navigate('Products', { collection: 'drop-zone', title: 'Drop Zone' })
+              }
+            />
           </View>
           <View style={styles.section}>
             <VideoBanner />

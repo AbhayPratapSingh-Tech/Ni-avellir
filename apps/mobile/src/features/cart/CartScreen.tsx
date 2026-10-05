@@ -83,25 +83,10 @@ export function CartScreen() {
           ? 'coupon discount'
           : undefined;
 
-  const canPop = navigation.canGoBack();
-
-  const goBack = () => {
-    if (canPop) {
-      navigation.goBack();
-      return;
-    }
-    navigation.navigate('MainTabs', { screen: 'Home' });
-  };
-
+  // Cart is a tab root — never use stack goBack (parent canGoBack causes unhandled GO_BACK).
   const header = (
     <View style={styles.topBar}>
-      {canPop ? (
-        <Pressable onPress={goBack} style={styles.topBtn} hitSlop={12}>
-          <Text style={styles.topBtnText}>‹</Text>
-        </Pressable>
-      ) : (
-        <View style={styles.topBtn} />
-      )}
+      <View style={styles.topBtn} />
       <Text style={styles.topTitle}>My Cart</Text>
       <View style={styles.topBtn} />
     </View>
@@ -710,11 +695,6 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     width: 40,
-  },
-  topBtnText: {
-    color: colors.text,
-    fontSize: 32,
-    lineHeight: 34,
   },
   topTitle: {
     color: colors.text,

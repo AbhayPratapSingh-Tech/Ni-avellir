@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -139,6 +138,7 @@ export function EditProfileScreen() {
   const [avatarBase64, setAvatarBase64] = useState<string | undefined>();
   const [avatarMime, setAvatarMime] = useState('image/jpeg');
   const [presetsOpen, setPresetsOpen] = useState(false);
+  const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
   const [tried, setTried] = useState(false);
   const [saving, setSaving] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<keyof ProfileErrors, boolean>>>({});
@@ -193,19 +193,13 @@ export function EditProfileScreen() {
     applyPickedAsset(result.assets?.[0]);
   };
 
-  const openPhotoMenu = () => {
-    Alert.alert('Profile photo', 'Choose how to update your photo', [
-      { text: 'Photo library', onPress: () => void openLibrary() },
-      { text: 'Camera', onPress: () => void openCamera() },
-      { text: 'Choose avatar', onPress: () => setPresetsOpen(true) },
-      ...(avatarUri
-        ? [{ text: 'Remove photo', style: 'destructive' as const, onPress: () => {
-            setAvatarUri(undefined);
-            setAvatarBase64(undefined);
-          } }]
-        : []),
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+  const openPhotoMenu = () => setPhotoMenuOpen(true);
+
+  const closePhotoMenu = () => setPhotoMenuOpen(false);
+
+  const runPhotoAction = (action: () => void) => {
+    closePhotoMenu();
+    action();
   };
 
   const save = async () => {
@@ -350,6 +344,59 @@ export function EditProfileScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      <Modal
+        visible={photoMenuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closePhotoMenu}
+      >
+        <View style={styles.photoMenuOverlay}>
+          <Pressable style={styles.presetBackdrop} onPress={closePhotoMenu} />
+          <View style={styles.photoMenuCard}>
+            <View style={styles.photoMenuHeader}>
+              <View style={styles.photoMenuTitles}>
+                <Text style={styles.photoMenuTitle}>Profile photo</Text>
+                <Text style={styles.photoMenuSub}>Choose how to update your photo</Text>
+              </View>
+              <Pressable onPress={closePhotoMenu} hitSlop={12} accessibilityLabel="Close">
+                <Text style={styles.photoMenuClose}>✕</Text>
+              </Pressable>
+            </View>
+            <Pressable
+              style={styles.photoMenuAction}
+              onPress={() => runPhotoAction(() => setPresetsOpen(true))}
+            >
+              <Text style={styles.photoMenuActionText}>Choose avatar</Text>
+            </Pressable>
+            <Pressable
+              style={styles.photoMenuAction}
+              onPress={() => runPhotoAction(() => void openCamera())}
+            >
+              <Text style={styles.photoMenuActionText}>Camera</Text>
+            </Pressable>
+            <Pressable
+              style={styles.photoMenuAction}
+              onPress={() => runPhotoAction(() => void openLibrary())}
+            >
+              <Text style={styles.photoMenuActionText}>Photo library</Text>
+            </Pressable>
+            {avatarUri ? (
+              <Pressable
+                style={styles.photoMenuAction}
+                onPress={() =>
+                  runPhotoAction(() => {
+                    setAvatarUri(undefined);
+                    setAvatarBase64(undefined);
+                  })
+                }
+              >
+                <Text style={[styles.photoMenuActionText, styles.photoMenuDanger]}>Remove photo</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={presetsOpen} transparent animationType="fade" onRequestClose={() => setPresetsOpen(false)}>
         <View style={styles.presetOverlay}>
           <Pressable style={styles.presetBackdrop} onPress={() => setPresetsOpen(false)} />
@@ -486,6 +533,69 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 6,
+  },
+  photoMenuAction: {
+    paddingVertical: 12,
+  },
+  photoMenuActionText: {
+    color: '#000000',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    textAlign: 'right',
+    textTransform: 'uppercase',
+  },
+  photoMenuCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 4,
+    elevation: 8,
+    marginHorizontal: spacing.xl,
+    maxWidth: 360,
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    width: '100%',
+  },
+  photoMenuClose: {
+    color: colors.textMuted,
+    fontSize: 18,
+    fontWeight: '600',
+    lineHeight: 22,
+    paddingLeft: spacing.md,
+  },
+  photoMenuDanger: {
+    color: colors.danger,
+  },
+  photoMenuHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  photoMenuOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(17, 19, 24, 0.45)',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  photoMenuSub: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  photoMenuTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  photoMenuTitles: {
+    flex: 1,
+    paddingRight: spacing.sm,
   },
   presetBackdrop: {
     ...StyleSheet.absoluteFillObject,

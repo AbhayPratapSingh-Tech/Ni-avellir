@@ -1,4 +1,4 @@
-import { ALSO_LIKE_TAG } from '@nidavellir/shared';
+import { ALSO_LIKE_TAG, DROP_ZONE_TAG, pickDropZoneProducts } from '@nidavellir/shared';
 import { Types } from 'mongoose';
 import { Product } from './product.model.js';
 
@@ -6,7 +6,7 @@ export type ListProductsQuery = {
   category?: string;
   search?: string;
   franchise?: string;
-  collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking';
+  collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone';
   /** Bundle code e.g. DEMON_PR — matches bundleTag or tags. */
   bundleTag?: string;
   minPrice?: number;
@@ -41,6 +41,20 @@ export class ProductService {
     if (query.collection === 'bestsellers') {
       const fetchLimit = Math.min(PAGE_SIZE_MAX, Math.max(limit * page, limit));
       const items = await this.getBestSellers(fetchLimit);
+      return {
+        items: items.slice((page - 1) * limit, page * limit),
+        pagination: {
+          page,
+          limit,
+          total: items.length,
+          pages: Math.ceil(items.length / limit) || 1,
+        },
+      };
+    }
+
+    if (query.collection === 'drop-zone') {
+      const pool = await Product.find({ tags: DROP_ZONE_TAG }).lean();
+      const items = pickDropZoneProducts(pool);
       return {
         items: items.slice((page - 1) * limit, page * limit),
         pagination: {

@@ -39,7 +39,7 @@ export type RootStackParamList = {
     category?: string;
     q?: string;
     franchise?: string;
-    collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking';
+    collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone';
     title?: string;
   } | undefined;
   Search: { q?: string } | undefined;
