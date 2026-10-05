@@ -1,5 +1,10 @@
 import { appConfig } from '../../config/appConfig';
-import { ALSO_LIKE_TAG, demoMarketplaceOverview, demoProducts } from '@nidavellir/shared';
+import {
+  ALSO_LIKE_TAG,
+  demoMarketplaceOverview,
+  demoProducts,
+  pickDropZoneProducts,
+} from '@nidavellir/shared';
 import type { Product } from '@nidavellir/shared';
 import { apiClient } from '../api/apiClient';
 import { normalizeProduct } from '../../lib/productMedia';
@@ -34,11 +39,62 @@ export interface ProductListQuery {
   category?: string;
   franchise?: string;
   search?: string;
-  collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking';
+  collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone';
   bundleTag?: string;
   sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
   page?: number;
   limit?: number;
+}
+
+/** In-memory shelf cache so Home can paint instantly on revisit. */
+const SHELF_TTL_MS = 3 * 60 * 1000;
+
+type ShelfCacheEntry<T> = { value: T; at: number };
+
+const shelfCache = new Map<string, ShelfCacheEntry<unknown>>();
+const shelfInflight = new Map<string, Promise<unknown>>();
+
+function peekShelfCache<T>(key: string): T | undefined {
+  const hit = shelfCache.get(key) as ShelfCacheEntry<T> | undefined;
+  if (!hit) return undefined;
+  if (Date.now() - hit.at > SHELF_TTL_MS) {
+    shelfCache.delete(key);
+    return undefined;
+  }
+  return hit.value;
+}
+
+function writeShelfCache<T>(key: string, value: T) {
+  shelfCache.set(key, { value, at: Date.now() });
+}
+
+async function loadShelfCached<T>(
+  key: string,
+  loader: () => Promise<T>,
+  options?: { refresh?: boolean },
+): Promise<T> {
+  if (!options?.refresh) {
+    const hit = peekShelfCache<T>(key);
+    if (hit !== undefined) {
+      return hit;
+    }
+  }
+  const existing = shelfInflight.get(key) as Promise<T> | undefined;
+  if (existing) {
+    return existing;
+  }
+  const promise = loader()
+    .then((value) => {
+      writeShelfCache(key, value);
+      shelfInflight.delete(key);
+      return value;
+    })
+    .catch((error) => {
+      shelfInflight.delete(key);
+      throw error;
+    });
+  shelfInflight.set(key, promise);
+  return promise;
 }
 
 export interface CartQuote {
@@ -111,6 +167,9 @@ function listFromMock(query: ProductListQuery = {}): ProductListResult {
       p.tags.some((tag) => tag.toLowerCase() === ALSO_LIKE_TAG),
     );
     items = tagged.length ? tagged : items.sort((a, b) => b.rating - a.rating);
+  }
+  if (query.collection === 'drop-zone') {
+    items = pickDropZoneProducts(items);
   }
   if (query.collection === 'restocking') {
     items = items.filter((p) => p.stock === 0);
@@ -276,35 +335,74 @@ export class ProductRepository {
     }, () => mapProducts(demoProducts.filter((p) => p.isLimitedDrop)));
   }
 
-  async getDeals(): Promise<Product[]> {
-    return this.withFallback(async () => {
-      const { data } = await apiClient.get('/products', { params: { collection: 'deals', limit: 6 } });
-      const payload = data.data as { items?: unknown[]; products?: unknown[] };
-      return mapProducts(payload.items ?? payload.products ?? []);
-    }, () =>
-      mapProducts(
-        [...demoProducts]
-          .sort((a, b) => b.compareAtPrice - b.price - (a.compareAtPrice - a.price))
-          .slice(0, 6),
-      ),
+  async getDeals(options?: { refresh?: boolean }): Promise<Product[]> {
+    return loadShelfCached(
+      'deals',
+      () =>
+        this.withFallback(
+          async () => {
+            const { data } = await apiClient.get('/products', {
+              params: { collection: 'deals', limit: 6 },
+            });
+            const payload = data.data as { items?: unknown[]; products?: unknown[] };
+            return mapProducts(payload.items ?? payload.products ?? []);
+          },
+          () =>
+            mapProducts(
+              [...demoProducts]
+                .sort((a, b) => b.compareAtPrice - b.price - (a.compareAtPrice - a.price))
+                .slice(0, 6),
+            ),
+        ),
+      options,
     );
   }
 
-  async getBestSellers(): Promise<Product[]> {
-    return this.withFallback(async () => {
-      const { data } = await apiClient.get('/products', {
-        params: { collection: 'bestsellers', limit: 6 },
-      });
-      const payload = data.data as { items?: unknown[]; products?: unknown[] };
-      return mapProducts(payload.items ?? payload.products ?? []);
-    }, () => mapProducts([...demoProducts].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 6)));
+  peekDeals(): Product[] | undefined {
+    return peekShelfCache<Product[]>('deals');
   }
 
-  async getAlsoLike(limit = 6): Promise<Product[]> {
-    return this.withFallback(async () => {
-      const { data } = await apiClient.get('/products', { params: { collection: 'also-like', limit } });
-      return mapProducts((data.data as ProductListResult).items);
-    }, () => listFromMock({ collection: 'also-like', limit }).items);
+  async getBestSellers(options?: { refresh?: boolean }): Promise<Product[]> {
+    return loadShelfCached(
+      'bestsellers',
+      () =>
+        this.withFallback(
+          async () => {
+            const { data } = await apiClient.get('/products', {
+              params: { collection: 'bestsellers', limit: 6 },
+            });
+            const payload = data.data as { items?: unknown[]; products?: unknown[] };
+            return mapProducts(payload.items ?? payload.products ?? []);
+          },
+          () => mapProducts([...demoProducts].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 6)),
+        ),
+      options,
+    );
+  }
+
+  peekBestSellers(): Product[] | undefined {
+    return peekShelfCache<Product[]>('bestsellers');
+  }
+
+  async getAlsoLike(limit = 6, options?: { refresh?: boolean }): Promise<Product[]> {
+    return loadShelfCached(
+      `also-like:${limit}`,
+      () =>
+        this.withFallback(
+          async () => {
+            const { data } = await apiClient.get('/products', {
+              params: { collection: 'also-like', limit },
+            });
+            return mapProducts((data.data as ProductListResult).items);
+          },
+          () => listFromMock({ collection: 'also-like', limit }).items,
+        ),
+      options,
+    );
+  }
+
+  peekAlsoLike(limit = 6): Product[] | undefined {
+    return peekShelfCache<Product[]>(`also-like:${limit}`);
   }
 
   async getByBundleTag(bundleTag: string): Promise<Product[]> {
@@ -320,52 +418,60 @@ export class ProductRepository {
     );
   }
 
-  async getBundles(): Promise<CatalogBundle[]> {
-    return this.withFallback(
-      async () => {
-        const { data } = await apiClient.get('/products/bundles');
-        const bundles = (data.data?.bundles ?? []) as Array<{
-          tag: string;
-          name: string;
-          subtitle: string;
-          bannerImage: string;
-          mainProductSlug: string;
-          mainProduct: unknown;
-          products: unknown[];
-        }>;
-        return bundles.map((bundle) => ({
-          tag: bundle.tag,
-          name: bundle.name,
-          subtitle: bundle.subtitle,
-          bannerImage: bundle.bannerImage,
-          mainProductSlug: bundle.mainProductSlug,
-          mainProduct: mapApiProduct(bundle.mainProduct as Record<string, unknown>),
-          products: mapProducts(bundle.products ?? []),
-        }));
-      },
-      () => {
-        // College mock only — group demoProducts by bundleTag
-        const byTag = new Map<string, Product[]>();
-        for (const product of demoProducts) {
-          if (!product.bundleTag) continue;
-          const list = byTag.get(product.bundleTag) ?? [];
-          list.push(normalizeProduct(product));
-          byTag.set(product.bundleTag, list);
-        }
-        return [...byTag.entries()].map(([tag, products]) => {
-          const main = products.find((p) => p.isBundleMain) ?? products[0]!;
-          return {
-            tag,
-            name: `${main.franchise} Bundle`,
-            subtitle: `${products.length}-piece set`,
-            bannerImage: main.imageUrl,
-            mainProductSlug: main.id.replace(/^prod-/, ''),
-            mainProduct: main,
-            products,
-          };
-        });
-      },
+  async getBundles(options?: { refresh?: boolean }): Promise<CatalogBundle[]> {
+    return loadShelfCached(
+      'bundles',
+      () =>
+        this.withFallback(
+          async () => {
+            const { data } = await apiClient.get('/products/bundles');
+            const bundles = (data.data?.bundles ?? []) as Array<{
+              tag: string;
+              name: string;
+              subtitle: string;
+              bannerImage: string;
+              mainProductSlug: string;
+              mainProduct: unknown;
+              products: unknown[];
+            }>;
+            return bundles.map((bundle) => ({
+              tag: bundle.tag,
+              name: bundle.name,
+              subtitle: bundle.subtitle,
+              bannerImage: bundle.bannerImage,
+              mainProductSlug: bundle.mainProductSlug,
+              mainProduct: mapApiProduct(bundle.mainProduct as Record<string, unknown>),
+              products: mapProducts(bundle.products ?? []),
+            }));
+          },
+          () => {
+            const byTag = new Map<string, Product[]>();
+            for (const product of demoProducts) {
+              if (!product.bundleTag) continue;
+              const list = byTag.get(product.bundleTag) ?? [];
+              list.push(normalizeProduct(product));
+              byTag.set(product.bundleTag, list);
+            }
+            return [...byTag.entries()].map(([tag, products]) => {
+              const main = products.find((p) => p.isBundleMain) ?? products[0]!;
+              return {
+                tag,
+                name: `${main.franchise} Bundle`,
+                subtitle: `${products.length}-piece set`,
+                bannerImage: main.imageUrl,
+                mainProductSlug: main.id.replace(/^prod-/, ''),
+                mainProduct: main,
+                products,
+              };
+            });
+          },
+        ),
+      options,
     );
+  }
+
+  peekBundles(): CatalogBundle[] | undefined {
+    return peekShelfCache<CatalogBundle[]>('bundles');
   }
 
   async getById(productId: string): Promise<Product | undefined> {

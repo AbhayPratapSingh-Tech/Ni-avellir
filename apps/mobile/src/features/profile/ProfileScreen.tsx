@@ -1,11 +1,12 @@
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { colors, spacing } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { Screen } from '../../components/ui/Screen';
 import { BrandMark } from '../../components/ui/BrandMark';
+import { AvatarLightbox } from '../../components/ui/AvatarLightbox';
 import { openLogin, signOutAndClearSession, updateProfile } from '../auth/authSlice';
 import { appConfig } from '../../config/appConfig';
 import { authRepository, syncLoggedInStores } from '../../services/data/authRepository';
@@ -55,8 +56,14 @@ export function ProfileScreen() {
   const xpTier =
     runeXp >= 2000 ? 'Master' : runeXp >= 1000 ? 'Journeyman' : runeXp >= 250 ? 'Adept' : 'Apprentice';
   const avatarUri = isDisplayableAvatar(user?.avatarUri) ? user?.avatarUri : undefined;
+  const [avatarOpen, setAvatarOpen] = useState(false);
   const emailVerified = Boolean(!user?.isGuest && user?.emailVerified);
-  const menuItems = MENU.filter((item) => !(item.key === 'verify' && emailVerified));
+  const isGuest = Boolean(user?.isGuest);
+  const menuItems = MENU.filter((item) => {
+    if (item.key === 'verify' && emailVerified) return false;
+    if (isGuest && (item.key === 'password' || item.key === 'sessions')) return false;
+    return true;
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -82,7 +89,7 @@ export function ProfileScreen() {
   );
 
   const openEditProfile = () => {
-    if (!requireLogin({ user, dispatch, toast, reason: 'editProfile' })) {
+    if (!requireLogin({ user, dispatch, toast, reason: 'editProfile', returnTab: 'Account' })) {
       return;
     }
     navigation.navigate('EditProfile');
@@ -97,7 +104,12 @@ export function ProfileScreen() {
         </View>
 
         <View style={styles.header}>
-          <Pressable onPress={openEditProfile} style={styles.avatarWrap}>
+          <Pressable
+            onPress={() => setAvatarOpen(true)}
+            style={styles.avatarWrap}
+            accessibilityRole="imagebutton"
+            accessibilityLabel="View profile photo"
+          >
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
             ) : (
@@ -175,7 +187,7 @@ export function ProfileScreen() {
                   return;
                 }
                 if (item.key === 'addresses') {
-                  if (!requireLogin({ user, dispatch, toast, reason: 'addresses' })) {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'addresses', returnTab: 'Account' })) {
                     return;
                   }
                   navigation.navigate('Addresses');
@@ -186,21 +198,21 @@ export function ProfileScreen() {
                   return;
                 }
                 if (item.key === 'password') {
-                  if (!requireLogin({ user, dispatch, toast, reason: 'changePassword' })) {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'changePassword', returnTab: 'Account' })) {
                     return;
                   }
                   navigation.navigate('ChangePassword');
                   return;
                 }
                 if (item.key === 'sessions') {
-                  if (!requireLogin({ user, dispatch, toast, reason: 'editProfile' })) {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'editProfile', returnTab: 'Account' })) {
                     return;
                   }
                   navigation.navigate('Sessions');
                   return;
                 }
                 if (item.key === 'verify') {
-                  if (!requireLogin({ user, dispatch, toast, reason: 'verifyEmail' })) {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'verifyEmail', returnTab: 'Account' })) {
                     return;
                   }
                   navigation.navigate('VerifyEmail');
@@ -226,7 +238,9 @@ export function ProfileScreen() {
             user?.isGuest && styles.loginBtn,
             pressed && (user?.isGuest ? styles.loginBtnPressed : styles.logoutPressed),
           ]}
-          onPress={() => dispatch(user?.isGuest ? openLogin() : signOutAndClearSession())}
+          onPress={() =>
+            dispatch(user?.isGuest ? openLogin({ returnTab: 'Account' }) : signOutAndClearSession())
+          }
         >
           <Text style={user?.isGuest ? styles.loginText : styles.logoutText}>
             {user?.isGuest ? 'Login / Signup' : 'Log out'}
@@ -235,6 +249,13 @@ export function ProfileScreen() {
 
         <Text style={styles.footer}>Niðavellir v0.1.0 · College Final Semester Project</Text>
       </ScrollView>
+
+      <AvatarLightbox
+        visible={avatarOpen}
+        uri={avatarUri}
+        initial={initial}
+        onClose={() => setAvatarOpen(false)}
+      />
     </Screen>
   );
 }

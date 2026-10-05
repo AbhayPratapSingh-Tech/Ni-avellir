@@ -1,6 +1,7 @@
 import type { AuthUser } from '../features/auth/authSlice';
 import { openLogin } from '../features/auth/authSlice';
 import type { AppDispatch } from '../app/store';
+import type { MainTabParamList } from '../app/navigation/types';
 
 export function isLoggedInUser(user: AuthUser | null | undefined): boolean {
   return Boolean(user && !user.isGuest);
@@ -27,11 +28,13 @@ export function requireLogin(options: {
   dispatch: AppDispatch;
   toast: ToastLike;
   reason: keyof typeof REASON_MESSAGE;
+  /** After Login back / success remount, restore this tab (e.g. Cart). */
+  returnTab?: keyof MainTabParamList;
 }): boolean {
   if (isLoggedInUser(options.user)) {
     return true;
   }
   options.toast.show(REASON_MESSAGE[options.reason]);
-  options.dispatch(openLogin());
+  options.dispatch(openLogin({ returnTab: options.returnTab }));
   return false;
 }

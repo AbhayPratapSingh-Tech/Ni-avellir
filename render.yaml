@@ -8,7 +8,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    branch: Nidavellir
+    branch: improve
     rootDir: .
     buildCommand: NPM_CONFIG_PRODUCTION=false npm install && npm run build:api
     startCommand: npm run start:api

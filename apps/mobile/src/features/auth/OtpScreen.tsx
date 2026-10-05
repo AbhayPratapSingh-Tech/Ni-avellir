@@ -203,7 +203,12 @@ export function OtpScreen() {
         <Text style={styles.hint}>Code verifies automatically when all 4 digits are entered.</Text>
       )}
       {appConfig.dataSource === 'api' ? (
-        <Pressable onPress={resend} disabled={resending || loading} style={styles.resendWrap}>
+        <Pressable
+          onPress={resend}
+          disabled={resending || loading}
+          style={styles.resendWrap}
+          android_ripple={{ color: 'transparent' }}
+        >
           <Text style={styles.resend}>
             {resending ? 'Sending…' : "Didn't get the code? Resend"}
           </Text>
@@ -286,6 +291,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   resendWrap: {
+    alignSelf: 'center',
+    backgroundColor: 'transparent',
     marginTop: spacing.lg,
   },
   screen: {

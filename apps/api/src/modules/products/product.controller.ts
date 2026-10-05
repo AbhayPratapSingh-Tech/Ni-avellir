@@ -10,7 +10,7 @@ export class ProductController {
       category?: string;
       search?: string;
       franchise?: string;
-      collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking';
+      collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone';
       bundleTag?: string;
       inStockOnly?: boolean;
       sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
@@ -27,6 +27,7 @@ export class ProductController {
         | 'deals'
         | 'also-like'
         | 'restocking'
+        | 'drop-zone'
         | undefined,
       bundleTag: request.query.bundleTag as string | undefined,
       inStockOnly: request.query.inStockOnly === 'true' ? true : undefined,
