@@ -29,6 +29,7 @@ Discriminated by `type`:
 | `cart` | + `cart` |
 | `wishlist` | + `wishlist` |
 | `order` | + `order` |
+| `navigate` | + `screen: 'CharacterVault'`, optional `characterId`, `message` |
 | `error` | + optional `code` |
 
 Prices, stock, and order status always come from Mongo via existing services — never from the LLM alone.
@@ -41,6 +42,7 @@ Prices, stock, and order status always come from Mongo via existing services —
 - `getWishlist` / `addToWishlist` / `removeFromWishlist` → `WishlistService` (auth)
 - `getOrders` / `getOrderDetails` / `trackOrder` → `OrderService` (auth + ownership)
 - `searchKnowledgeBase` → local markdown under `knowledge/`
+- `openCharacterVault` → returns `navigate` to mobile `CharacterVault` (optional `characterId`: `goku` / `vegeta`)
 
 ## Env
 

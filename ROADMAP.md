@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: College demo implemented (Phases 1–9). Optional testing and store deployment remain. See `PROJECT_PROGRESS.md`.
+Status: College demo implemented (Phases 1–9) + live Render API + Character Vault v1. Optional testing and store deployment remain. See `PROJECT_PROGRESS.md`.
 
 ## Phase 1: Architecture
 
@@ -21,7 +21,8 @@ Status: College demo implemented (Phases 1–9). Optional testing and store depl
 - Digital Gift Card: v2.
 - Digital Game Code: future.
 - Membership/Subscription: future.
-- Bundle Products: future.
+- Bundle Products: shipped (`bundleTag` / Home slider / PDP complete-the-bundle).
+- Character Vault (3D lobby): v1 shipped; licensed idle GLBs / more champions optional.
 
 ## Store And Compliance Readiness
 

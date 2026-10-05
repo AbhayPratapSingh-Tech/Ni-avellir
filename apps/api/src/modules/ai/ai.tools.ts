@@ -25,6 +25,12 @@ export type ToolResult =
   | { kind: 'order'; order: AIOrderPayload; message: string }
   | { kind: 'orders'; orders: AIOrderPayload[]; message: string }
   | { kind: 'knowledge'; snippets: Array<{ source: string; text: string }>; message: string }
+  | {
+      kind: 'navigate';
+      screen: 'CharacterVault';
+      characterId?: string;
+      message: string;
+    }
   | { kind: 'text'; message: string }
   | { kind: 'error'; message: string; code?: string };
 
@@ -247,6 +253,24 @@ export const aiToolDefinitions = [
       },
     },
   },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'openCharacterVault',
+      description:
+        'Open the in-app Character Vault (3D lobby for Goku, Vegeta, and future champions). Use when the user asks for Character Vault, 3D characters, forge champions, or to meet Goku/Vegeta.',
+      parameters: {
+        type: 'object',
+        properties: {
+          characterId: {
+            type: 'string',
+            enum: ['goku', 'vegeta'],
+            description: 'Optional champion to focus when the vault opens.',
+          },
+        },
+      },
+    },
+  },
 ];
 
 export class AiTools {
@@ -433,6 +457,23 @@ export class AiTools {
             kind: 'knowledge',
             snippets,
             message: snippets.map((s) => s.text).join('\n\n'),
+          };
+        }
+        case 'openCharacterVault': {
+          const rawId = args.characterId ? String(args.characterId).toLowerCase() : undefined;
+          const characterId =
+            rawId === 'goku' || rawId === 'vegeta' ? rawId : undefined;
+          const who =
+            characterId === 'goku'
+              ? 'Goku'
+              : characterId === 'vegeta'
+                ? 'Vegeta'
+                : 'the champions';
+          return {
+            kind: 'navigate',
+            screen: 'CharacterVault',
+            characterId,
+            message: `Opening Character Vault — meet ${who}. Orbit in 3D, then visit their vault.`,
           };
         }
         default:

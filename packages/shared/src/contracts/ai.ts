@@ -101,10 +101,18 @@ export type AIErrorResponse = AIResponseBase & {
   code?: string;
 };
 
+/** Client should open an in-app screen (e.g. Character Vault). */
+export type AINavigateResponse = AIResponseBase & {
+  type: 'navigate';
+  screen: 'CharacterVault';
+  characterId?: string;
+};
+
 export type AIResponse =
   | AITextResponse
   | AIProductResultsResponse
   | AICartResponse
   | AIWishlistResponse
   | AIOrderResponse
-  | AIErrorResponse;
+  | AIErrorResponse
+  | AINavigateResponse;

@@ -35,6 +35,7 @@ import { VerifyEmailScreen } from '../../features/profile/VerifyEmailScreen';
 import { NotificationsScreen } from '../../features/profile/NotificationsScreen';
 import { AIAssistantScreen } from '../../features/ai/AIAssistantScreen';
 import { StoreLocatorScreen } from '../../features/stores/StoreLocatorScreen';
+import { CharacterVaultScreen } from '../../features/characters/CharacterVaultScreen';
 import { clearReturnTab } from '../../features/auth/authSlice';
 import { useAppDispatch, useAppSelector } from '../store';
 import type { AuthStackParamList, MainTabParamList, RootStackParamList } from './types';
@@ -195,6 +196,11 @@ function ShopNavigator() {
         name="AIAssistant"
         component={AIAssistantScreen}
         options={{ headerShown: false }}
+      />
+      <RootStack.Screen
+        name="CharacterVault"
+        component={CharacterVaultScreen}
+        options={{ headerShown: false, title: 'Character Vault' }}
       />
       <RootStack.Screen
         name="ProductDetail"

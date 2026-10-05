@@ -103,7 +103,7 @@ Nidavellir is intended to become a real premium gaming merchandise marketplace, 
 
 ## Current Status
 
-Phases 1–9 are complete for the college demo. **Live default:** mobile `dataSource: 'api'` → Render Free + Atlas. Resend verify email is live on Render (`EMAIL_DEMO_MODE=false`). Store locator: header pin → OSM WebView map + `GET /stores` (seed later). Optional next: custom email domain, FCM, automated tests, store builds. Tracking: `PROJECT_PROGRESS.md` and `TODO.md`.
+Phases 1–9 are complete for the college demo. **Live default:** mobile `dataSource: 'api'` → Render Free + Atlas. Resend verify email is live on Render (`EMAIL_DEMO_MODE=false`). Store locator: header pin → OSM WebView map + `GET /stores`. **Character Vault v1** shipped (Filament lobby, Home teaser, Heimdall navigate). Optional next: custom email domain, FCM, automated tests, store builds, licensed vault GLBs. Tracking: `PROJECT_PROGRESS.md` and `TODO.md`.
 
 ## Live Database + API (how to go beyond mock)
 
@@ -117,6 +117,7 @@ Mobile defaults to **`api`** via `apps/mobile/src/config/appConfig.ts` (set `'mo
 4. Follow the agent checklist in **`AI_AGENT_GUIDE.md`**
 5. Render Free: app fires `GET /api/v1/health` on bootstrap **without blocking** the splash, then pings every 20 minutes while foregrounded (`wakeApiServer.ts`) so cold starts are less likely mid-session — not a paid always-on substitute. Home also re-pings `/health` when focused if the last success is older than ~60s. Empty Home shelves on first open usually mean a cold Render wake — not a missing seed. Product shelves use a short in-memory TTL cache (`productRepository`) so revisit paints instantly while a background refresh runs. Deals API uses a Mongo aggregation (no full-collection scan).
 5b. **Drop Zone:** Home countdown bar opens PLP `collection=drop-zone`. Catalog tag `drop-zone-eligible` marks a fixed eligible pool (seed once). API/mock pick today’s SKUs via Asia/Kolkata date hash (`packages/shared/src/dropZone.ts`) — do **not** re-seed daily. Cart tab omits stack back chevron to avoid unhandled `GO_BACK` after PLP/PDP.
+5c. **Character Vault v1 (done)** (`char_valut` branch): Home teaser under Drop Zone → `CharacterVault` (react-native-filament orbit, unit-cube + `displayScale` ~1.12, taller flex stage). Roster: Goku/Vegeta local `assets/characters/*.glb` → PLP `{name}'s Vault` (`franchise: 'Dragon Ball'`). Animator only if `enableIdleAnimation` (0-clip GLBs crash Filament). Loader stays ~1.2s after `useModel` loaded so IBL/first draw catch up; CTA outline with press/hover fill; `preloadVaultModels` from Home teaser. Heimdall tool `openCharacterVault` → AI `navigate` → mobile opens vault. Flag `appConfig.features.characterVault`. Native rebuild after Filament; New Arch stays off.
 6. Rune XP is **flat per order** (100 / 500 bundle), not per-SKU sum. Product `sku` / `runeXp` fields remain for display / backfill (`npm run seed:sku --workspace apps/api`).
 
 **Backend path**

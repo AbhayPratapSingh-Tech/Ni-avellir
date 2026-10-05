@@ -44,6 +44,8 @@ export type RootStackParamList = {
   } | undefined;
   Search: { q?: string } | undefined;
   AIAssistant: { mode?: 'talk' | 'chat' } | undefined;
+  /** Game-lobby 3D character showcase → franchise PLP. */
+  CharacterVault: { characterId?: string } | undefined;
   ProductDetail: { product: Product };
   Checkout: undefined;
   OrderConfirmation: { orderId: string; awardedXp?: number };

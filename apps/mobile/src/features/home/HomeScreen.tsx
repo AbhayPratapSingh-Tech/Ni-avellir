@@ -23,13 +23,14 @@ import { colors, spacing } from '../../theme/tokens';
 import { ProductCard } from '../../components/commerce/ProductCard';
 import { SquareProductCard } from '../../components/commerce/SquareProductCard';
 import { CategoryCircleSlider } from '../../components/commerce/CategoryCircleSlider';
+import { CharacterVaultTeaser } from '../characters/CharacterVaultTeaser';
+import { appConfig } from '../../config/appConfig';
 import { VideoBanner } from '../../components/commerce/VideoBanner';
 import { BundleBannerSlider } from '../../components/commerce/BundleBannerSlider';
 import { ShopHeader } from '../../components/layout/ShopHeader';
 import { ShopDrawer } from '../../components/layout/ShopDrawer';
 import { Screen } from '../../components/ui/Screen';
 import { CachedImage } from '../../components/ui/CachedImage';
-import { appConfig } from '../../config/appConfig';
 import { useDailySale } from '../../lib/saleWindow';
 import { productRepository } from '../../services/data/productRepository';
 import { pingApiHealthIfStale } from '../../services/api/wakeApiServer';
@@ -329,6 +330,11 @@ export function HomeScreen() {
               }
             />
           </View>
+          {appConfig.features.characterVault ? (
+            <View style={styles.section}>
+              <CharacterVaultTeaser />
+            </View>
+          ) : null}
           <View style={styles.section}>
             <VideoBanner />
           </View>

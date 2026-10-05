@@ -3,6 +3,7 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '../..');
+const defaultConfig = getDefaultConfig(projectRoot);
 
 /**
  * Watch only the hoisted dependencies and the shared package.
@@ -27,7 +28,9 @@ const config = {
       react: path.resolve(workspaceRoot, 'node_modules/react'),
       'react-native': path.resolve(projectRoot, 'node_modules/react-native'),
     },
+    // Character Vault (react-native-filament) GLB models.
+    assetExts: [...(defaultConfig.resolver?.assetExts || []), 'glb'],
   },
 };
 
-module.exports = mergeConfig(getDefaultConfig(projectRoot), config);
+module.exports = mergeConfig(defaultConfig, config);
