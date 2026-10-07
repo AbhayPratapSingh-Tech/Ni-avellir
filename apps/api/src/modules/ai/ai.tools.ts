@@ -258,13 +258,13 @@ export const aiToolDefinitions = [
     function: {
       name: 'openCharacterVault',
       description:
-        'Open the in-app Character Vault (3D lobby for Goku, Vegeta, and future champions). Use when the user asks for Character Vault, 3D characters, forge champions, or to meet Goku/Vegeta.',
+        'Open the in-app Character Vault (3D lobby for Goku, Vegeta, Kid Levi, and future champions). Use when the user asks for Character Vault, 3D characters, forge champions, or to meet Goku/Vegeta/Levi.',
       parameters: {
         type: 'object',
         properties: {
           characterId: {
             type: 'string',
-            enum: ['goku', 'vegeta'],
+            enum: ['goku', 'vegeta', 'kid-levi'],
             description: 'Optional champion to focus when the vault opens.',
           },
         },
@@ -460,15 +460,26 @@ export class AiTools {
           };
         }
         case 'openCharacterVault': {
-          const rawId = args.characterId ? String(args.characterId).toLowerCase() : undefined;
+          const rawId = args.characterId
+            ? String(args.characterId).toLowerCase().replace(/_/g, '-')
+            : undefined;
           const characterId =
-            rawId === 'goku' || rawId === 'vegeta' ? rawId : undefined;
+            rawId === 'goku' ||
+            rawId === 'vegeta' ||
+            rawId === 'kid-levi' ||
+            rawId === 'levi'
+              ? rawId === 'levi'
+                ? 'kid-levi'
+                : rawId
+              : undefined;
           const who =
             characterId === 'goku'
               ? 'Goku'
               : characterId === 'vegeta'
                 ? 'Vegeta'
-                : 'the champions';
+                : characterId === 'kid-levi'
+                  ? 'Kid Levi'
+                  : 'the champions';
           return {
             kind: 'navigate',
             screen: 'CharacterVault',

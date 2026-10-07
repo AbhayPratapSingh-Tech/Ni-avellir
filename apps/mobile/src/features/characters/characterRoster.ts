@@ -49,6 +49,19 @@ export const CHARACTER_VAULT_ROSTER: VaultCharacter[] = [
     enableIdleAnimation: false,
     displayScale: [1.12, 1.12, 1.12],
   },
+  {
+    id: 'kid-levi',
+    displayName: 'Kid Levi',
+    brandLabel: 'Attack on Titan',
+    franchise: 'Attack on Titan',
+    modelSource: require('../../../assets/characters/kid_levi_ackerman.glb'),
+    posterUri:
+      'https://images.unsplash.com/photo-1613376023733-0f963823bc78?auto=format&fit=crop&w=900&q=80',
+    // GLB clip 8 = lwer_anim_idle (clip 0 is a skill, not idle).
+    idleAnimationIndex: 8,
+    enableIdleAnimation: true,
+    displayScale: [1.12, 1.12, 1.12],
+  },
 ];
 
 export function getVaultCharacter(id?: string): VaultCharacter {

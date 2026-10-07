@@ -42,7 +42,7 @@ Prices, stock, and order status always come from Mongo via existing services —
 - `getWishlist` / `addToWishlist` / `removeFromWishlist` → `WishlistService` (auth)
 - `getOrders` / `getOrderDetails` / `trackOrder` → `OrderService` (auth + ownership)
 - `searchKnowledgeBase` → local markdown under `knowledge/`
-- `openCharacterVault` → returns `navigate` to mobile `CharacterVault` (optional `characterId`: `goku` / `vegeta`)
+- `openCharacterVault` → returns `navigate` to mobile `CharacterVault` (optional `characterId`: `goku` / `vegeta` / `kid-levi`)
 
 ## Env
 

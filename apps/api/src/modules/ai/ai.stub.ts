@@ -106,16 +106,18 @@ export async function runStubOrchestrator(params: {
 
   // Prefer Character Vault for lobby/3D intent — do not steal catalog searches like "goku hoodie".
   if (
-    /character vault|3d character|forge champion|open (the )?vault|dragon ball.?vault|meet (goku|vegeta)|show (me )?(goku|vegeta)(\s|$)|take me to (goku|vegeta)/i.test(
+    /character vault|3d character|forge champion|open (the )?vault|dragon ball.?vault|attack on titan.?vault|meet (goku|vegeta|levi)|show (me )?(goku|vegeta|kid levi|levi)(\s|$)|take me to (goku|vegeta|levi)/i.test(
       lower,
     ) &&
     !/\b(hoodie|tee|shirt|merch|product|under|₹|rs)\b/i.test(lower)
   ) {
-    const characterId = /\bvegeta\b/i.test(lower)
-      ? 'vegeta'
-      : /\bgoku\b/i.test(lower)
-        ? 'goku'
-        : undefined;
+    const characterId = /\b(kid[- ]?levi|levi)\b/i.test(lower)
+      ? 'kid-levi'
+      : /\bvegeta\b/i.test(lower)
+        ? 'vegeta'
+        : /\bgoku\b/i.test(lower)
+          ? 'goku'
+          : undefined;
     const result = await tools.run('openCharacterVault', { characterId }, ctx);
     return toolResultToResponse(conversation.id, result);
   }

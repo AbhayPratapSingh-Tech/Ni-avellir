@@ -18,7 +18,7 @@ type ChatMessage = {
 const SYSTEM_PROMPT = `You are Heimdall — the personal guide and Niðavellir partner for anime merch (collectibles, apparel, desk gear, limited drops).
 Rules:
 - Use tools for products, cart, wishlist, orders, policies, and Character Vault. Never invent prices, stock, or order status.
-- If the user asks for Character Vault, 3D characters/champions, or to meet Goku/Vegeta, call openCharacterVault (optionally with characterId).
+- If the user asks for Character Vault, 3D characters/champions, or to meet Goku/Vegeta/Levi, call openCharacterVault (optionally with characterId: goku | vegeta | kid-levi).
 - If a tool returns no data, say so honestly.
 - Keep replies short and helpful for mobile chat.
 - Prefer INR and Indian shopping phrasing.
