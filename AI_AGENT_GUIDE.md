@@ -12,7 +12,7 @@ Related: `PROJECT_INSIGHTS.md`, `ARCHITECTURE.md`, `apps/mobile/src/config/appCo
 2. **No secrets in git** — no real JWT, Razorpay live keys, Mongo URIs, or Keychain dumps.
 3. **Money paths are critical** — orders + payments must not silently invent “paid” results when `dataSource === 'api'`.
 4. **Branch on `intent.demoMode`** for Razorpay UI (demo sheet vs `react-native-razorpay` + `/confirm`).
-5. **New Architecture stays off** until libs are stable (see Podfile / `gradle.properties`).
+5. **New Architecture stays off** until libs are stable (see Podfile / `gradle.properties`). Character Vault uses `react-native-filament` on the old arch first; do not flip New Arch solely for Filament.
 6. **Prefer repository + Redux patterns already in the app** — do not invent parallel data layers.
 7. **Never create a git commit unless the user explicitly asks** in that message. Draft commit message lines / `git status` summaries are fine; do **not** run `git commit` (or `git push`) on your own. If unclear, ask first. Same rule applies after “give me commit lines” — lines only, no commit.
 
@@ -79,6 +79,7 @@ Checklist when flipping live:
 8. AI assistant (optional): `AI_ENABLED` + `OPENAI_*` on API; mobile Home **AI** / Account **Ask Niðavellir**; voice needs mic permission + native rebuild.
 9. Store locator: `features.storeLocator` in `appConfig`; header pin → `StoreLocator`; API `GET /api/v1/stores` + `GET /api/v1/stores/geocode` (free chain: Open-Meteo → Photon → builtin cities → Nominatim). Mobile falls back to Open-Meteo/builtin if API geocode fails. Logo at `apps/mobile/assets/brand/logo.png` (BrandMark letter-N until `USE_BRAND_LOGO_PNG`). WebView + Leaflet/OSM — no paid map key / no native rebuild for map. Seed pins via `npm run seed` or ops-only `npm run seed:ops --workspace apps/api`.
 10. **Orders list/detail require JWT** — `GET /api/v1/orders` and `GET /api/v1/orders/:id` never return data without `userId` (no anonymous full-catalog dump).
+11. **Character Vault** (v1 done): `features.characterVault` → Home teaser under Drop Zone → `CharacterVault`. Roster in `features/characters/characterRoster.ts`; local GLBs need `metro.config.js` `assetExts: glb`. Never mount Filament `<Animator>` unless `enableIdleAnimation` (0-clip = fatal). Visit CTA → Products PLP `{name}'s Vault`. Heimdall: `openCharacterVault` + AI `navigate` screen `CharacterVault`. Keep New Arch off.
 
 ---
 
@@ -125,6 +126,7 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 - [ ] Symlink in `scripts/ensure-mobile-node-modules.js` if autolinking needs the mobile `node_modules` path.
 - [ ] `pod install` (UTF-8 locale) + Android rebuild.
 - [ ] Document rebuild requirement in `PROJECT_INSIGHTS.md` or this file.
+- [ ] Character Vault / Filament: keep New Arch off; add `glb` to Metro `assetExts`; never mount Animator on 0-clip models.
 
 ### F. Docs agents must keep current
 
@@ -162,6 +164,11 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 | Store locator screen | `features/stores/StoreLocatorScreen.tsx` |
 | Stores API | `apps/api/src/modules/stores/*` (`GET /stores`, `GET /stores/geocode`) |
 | Store repository | `services/data/storeRepository.ts` |
+| Character Vault screen | `features/characters/CharacterVaultScreen.tsx` |
+| Character orbit (Filament) | `features/characters/CharacterOrbitViewer.tsx` |
+| Vault roster + GLB requires | `features/characters/characterRoster.ts` + `assets/characters/` |
+| Vault Home teaser / preload | `CharacterVaultTeaser.tsx` / `preloadVaultModels.ts` |
+| Heimdall open vault tool | `apps/api/src/modules/ai/ai.tools.ts` (`openCharacterVault`) |
 | Header brand logo | `assets/brand/logo.png` + `components/ui/BrandMark.tsx` |
 | Payments API | `apps/api/src/modules/payments/*` |
 
@@ -196,3 +203,4 @@ Most auth/cart/orders live paths are implemented. Still deferred (see `TODO.md`)
 - Store builds (Play / TestFlight); paid always-on host if Free cold starts hurt demos.
 - Razorpay webhooks + Render Free API + Resend verify email are already shipped (`render.yaml`, `EMAIL_DEMO_MODE=false`).
 - Strict `allowMockFallback: false` on staging/prod store builds.
+- Character Vault: licensed idle-loop GLBs / more champions / CDN (v1 Filament lobby already shipped).

@@ -72,6 +72,14 @@ function toolResultToResponse(conversationId: string, result: ToolResult): AIRes
       return { type: 'text', conversationId, message: result.message };
     case 'knowledge':
       return { type: 'text', conversationId, message: result.message };
+    case 'navigate':
+      return {
+        type: 'navigate',
+        conversationId,
+        message: result.message,
+        screen: result.screen,
+        characterId: result.characterId,
+      };
     case 'error':
       return {
         type: 'error',
@@ -95,6 +103,24 @@ export async function runStubOrchestrator(params: {
   const { message, conversation, ctx, tools } = params;
   const text = message.trim();
   const lower = text.toLowerCase();
+
+  // Prefer Character Vault for lobby/3D intent — do not steal catalog searches like "goku hoodie".
+  if (
+    /character vault|3d character|forge champion|open (the )?vault|dragon ball.?vault|attack on titan.?vault|meet (goku|vegeta|levi)|show (me )?(goku|vegeta|kid levi|levi)(\s|$)|take me to (goku|vegeta|levi)/i.test(
+      lower,
+    ) &&
+    !/\b(hoodie|tee|shirt|merch|product|under|₹|rs)\b/i.test(lower)
+  ) {
+    const characterId = /\b(kid[- ]?levi|levi)\b/i.test(lower)
+      ? 'kid-levi'
+      : /\bvegeta\b/i.test(lower)
+        ? 'vegeta'
+        : /\bgoku\b/i.test(lower)
+          ? 'goku'
+          : undefined;
+    const result = await tools.run('openCharacterVault', { characterId }, ctx);
+    return toolResultToResponse(conversation.id, result);
+  }
 
   if (/return policy|exchange|refund|shipping|delivery|cod|payment|faq|warranty|how long/i.test(lower)) {
     const result = await tools.run('searchKnowledgeBase', { query: text }, ctx);
@@ -219,7 +245,7 @@ export async function runStubOrchestrator(params: {
     type: 'text',
     conversationId: conversation.id,
     message:
-      "I'm Heimdall — your personal guide and Niðavellir partner. I can help with merch search, cart, wishlist, orders, and policies. Try “Show me desk gear under 3000” or “Show my cart”.",
+      "I'm Heimdall — your personal guide and Niðavellir partner. I can help with merch search, cart, wishlist, orders, policies, and Character Vault. Try “Open Character Vault”, “Meet Kid Levi”, or “Show me desk gear under 3000”.",
   };
 }
 

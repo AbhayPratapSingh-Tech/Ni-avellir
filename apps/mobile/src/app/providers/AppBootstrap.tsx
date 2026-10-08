@@ -12,7 +12,7 @@ import {
 import { authRepository, syncLoggedInStores } from '../../services/data/authRepository';
 import { cartRepository } from '../../services/data/cartRepository';
 import { BrandMark } from '../../components/ui/BrandMark';
-import { colors, spacing, typography } from '../../theme/tokens';
+import { colors, spacing } from '../../theme/tokens';
 
 /** Never leave the splash hung on cold API / Keychain stalls. */
 const BOOTSTRAP_BUDGET_MS = 8_000;
@@ -85,7 +85,7 @@ export function AppBootstrap({ children }: PropsWithChildren) {
   if (!ready) {
     return (
       <View style={styles.splash}>
-        <BrandMark height={56} />
+        <BrandMark height={108} />
         <Text style={styles.sub}>Loading your forge…</Text>
         <ActivityIndicator color={colors.text} style={styles.spinner} />
       </View>
@@ -108,7 +108,9 @@ const styles = StyleSheet.create({
   },
   sub: {
     color: colors.textMuted,
-    fontSize: typography.body,
-    marginTop: spacing.sm,
+    fontSize: 20,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    marginTop: spacing.md,
   },
 });

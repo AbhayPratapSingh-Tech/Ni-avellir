@@ -194,6 +194,15 @@ export function AIAssistantPanel({
               : undefined,
         };
         setMessages((prev) => [...prev, assistantMsg]);
+
+        if (response.type === 'navigate' && response.screen === 'CharacterVault') {
+          // Let the reply paint, then open the vault lobby.
+          setTimeout(() => {
+            navigation.navigate('CharacterVault', {
+              characterId: response.characterId,
+            });
+          }, 350);
+        }
       } catch (error) {
         setMessages((prev) => [
           ...prev,
@@ -209,7 +218,7 @@ export function AIAssistantPanel({
         setSending(false);
       }
     },
-    [conversationId, persistConversation, refreshCommerce, sending, toast],
+    [conversationId, navigation, persistConversation, refreshCommerce, sending, toast],
   );
 
   const speech = useSpeechToText({

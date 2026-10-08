@@ -2,7 +2,7 @@
 
 Premium gaming merchandise marketplace — a full-stack mobile commerce app.
 
-**Status: Live API on Render + mobile wired.** Default `dataSource: 'api'` → `https://ni-avellir.onrender.com/api/v1`. Resend verify email live (`EMAIL_DEMO_MODE=false`). Local API via `npm run dev:api`. Mock via `appConfig.dataSource: 'mock'`.
+**Status: Live API on Render + mobile wired.** Default `dataSource: 'api'` → `https://ni-avellir.onrender.com/api/v1`. Resend verify email live (`EMAIL_DEMO_MODE=false`). Character Vault v1 (Filament lobby) shipped. Local API via `npm run dev:api`. Mock via `appConfig.dataSource: 'mock'`.
 
 ## What's Included
 

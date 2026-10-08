@@ -26,8 +26,10 @@ export function ProductCard({ product, compact, large, onPress, onAddToCart }: P
   const images = getProductImages(product);
   // Portrait media for 2-col retail; slightly shorter for Home 3-col compact.
   const aspect = compact ? 1.05 : large ? 1.25 : 1.2;
+  const imageAspectRatio = 1 / aspect;
   const fallback = compact ? 96 : large ? 190 : 160;
   const imageHeight = width > 0 ? Math.round(width * aspect) : fallback;
+  const usePager = !compact && images.length > 1;
   const dispatch = useAppDispatch();
   const toast = useToast();
   const user = useAppSelector((state) => state.auth.user);
@@ -67,21 +69,23 @@ export function ProductCard({ product, compact, large, onPress, onAddToCart }: P
         style={[styles.imageWrap, !compact && styles.imageWrapRetail]}
         onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       >
-        {width > 0 ? (
-          compact ? (
-            <Pressable onPress={() => onPress?.(product)}>
-              <CachedImage uri={images[0]} style={{ height: imageHeight, width }} />
-            </Pressable>
-          ) : (
-            <ImagePager
-              images={images}
-              height={imageHeight}
-              width={width}
-              showCount={false}
-              onPressImage={() => onPress?.(product)}
+        {usePager && width > 0 ? (
+          <ImagePager
+            images={images}
+            height={imageHeight}
+            width={width}
+            showCount={false}
+            onPressImage={() => onPress?.(product)}
+          />
+        ) : (
+          <Pressable onPress={() => onPress?.(product)}>
+            <CachedImage
+              uri={images[0]}
+              style={{ width: '100%', aspectRatio: imageAspectRatio }}
+              priority={large ? 'high' : 'normal'}
             />
-          )
-        ) : null}
+          </Pressable>
+        )}
         <Pressable style={styles.wishChip} onPress={handleWish} hitSlop={8}>
           <Text style={[styles.wishGlyph, wishlisted && styles.heartOn]}>{wishlisted ? '♥' : '♡'}</Text>
         </Pressable>

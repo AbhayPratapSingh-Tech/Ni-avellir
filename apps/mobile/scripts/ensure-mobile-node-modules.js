@@ -20,6 +20,8 @@ const links = [
   ['react-native-webview', 'react-native-webview'],
   ['@react-native-voice/voice', '@react-native-voice/voice'],
   ['react-native-tts', 'react-native-tts'],
+  ['react-native-filament', 'react-native-filament'],
+  ['react-native-worklets-core', 'react-native-worklets-core'],
 ];
 
 function ensureDir(dir) {

@@ -212,6 +212,11 @@ Nidavellir/
 | **AI Merch Assistant** | `features/ai/AIAssistantScreen.tsx` |
 | **AI API client** | `services/ai/aiApi.ts` |
 | **Voice STT hook** | `hooks/useSpeechToText.ts` |
+| **Character Vault screen** | `features/characters/CharacterVaultScreen.tsx` |
+| **Character orbit viewer (Filament)** | `features/characters/CharacterOrbitViewer.tsx` |
+| **Vault roster + local GLBs** | `features/characters/characterRoster.ts` + `assets/characters/` |
+| **Vault Home teaser** | `features/characters/CharacterVaultTeaser.tsx` |
+| **Vault GLB preload** | `features/characters/preloadVaultModels.ts` |
 | **Edit profile + avatar** | `features/profile/EditProfileScreen.tsx` |
 | **Devices & sessions** | `features/profile/SessionsScreen.tsx` |
 | **Verify email** | `features/profile/VerifyEmailScreen.tsx` |
@@ -290,10 +295,13 @@ features: {
   aiAssistant: true,   // Heimdall chat
   voiceInput: true,    // mic on Search / Heimdall
   storeLocator: true,  // header pin → StoreLocator (OSM WebView map)
+  characterVault: true, // Home teaser → CharacterVault (Filament; native rebuild)
 }
 ```
 
 **Store locator:** `ShopHeader` location icon → `StoreLocator` route. Area search uses `GET /api/v1/stores/geocode` with a **free** provider chain (Open-Meteo → Photon → builtin city centroids → Nominatim). The app also geocodes via Open-Meteo on-device if the API fails. Store cards come from `GET /api/v1/stores` (seeded via `npm run seed --workspace apps/api`). Map: `react-native-webview` + Leaflet/OSM tiles (no Google/Mapbox key). Replace `apps/mobile/assets/brand/logo.png` and set `USE_BRAND_LOGO_PNG` in `BrandMark` for a real header mark.
+
+**Character Vault:** Home banner under Drop Zone → `CharacterVault`. Local GLBs in `assets/characters/` (Metro `assetExts` must include `glb`). Set `enableIdleAnimation: true` only when the GLB has clips. Visit CTA opens Products with `franchise` + title `{name}'s Vault`. Heimdall tool `openCharacterVault` returns `navigate` → mobile opens the screen. New Architecture stays off.
 
 ---
 

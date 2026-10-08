@@ -54,6 +54,8 @@ export const appConfig = {
     aiAssistant: true,
     voiceInput: true,
     storeLocator: true,
+    /** Game-lobby 3D Character Vault (requires native rebuild after Filament install). */
+    characterVault: true,
   },
 
   /**

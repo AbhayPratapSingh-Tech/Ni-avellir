@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Character Vault (v1)
+
+- Mobile: Home teaser under Drop Zone → `CharacterVault` (react-native-filament orbit lobby). Roster: Goku/Vegeta (`Dragon Ball`, no clips) + Kid Levi (`Attack on Titan`, idle clip **8**). Visit CTA → Products PLP `{name}'s Vault`.
+- Animator gated by `enableIdleAnimation` (0-clip GLBs must not mount Animator). Loader held ~1.2s after decode for IBL/first draw; CTA outline with press/hover fill; GLB warm via `preloadVaultModels`.
+- Heimdall: `openCharacterVault` (`goku` / `vegeta` / `kid-levi`) + AI `navigate` → opens vault. Flag `appConfig.features.characterVault`. Metro `assetExts: glb`. New Arch stays off.
+- Docs: `TODO`, `PROJECT_PROGRESS`, `PROJECT_INSIGHTS`, `AI_AGENT_GUIDE`, `DEVELOPER_GUIDE`, `assets/characters/README.md`.
+
 ### AI Merch Assistant
 
 - API: `POST /api/v1/ai/chat` with tool runners over products/cart/wishlist/orders + FAQ/returns/shipping knowledge; Groq/OpenAI via `OPENAI_*` env, stub without key.
