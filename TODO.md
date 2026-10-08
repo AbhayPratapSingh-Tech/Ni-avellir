@@ -69,7 +69,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] Smart push notifications (interest / cart / drop aware) — needs FCM first.
 - [ ] Frictionless visual search.
 - [ ] Personalized home feed.
-- [x] **Character Vault (v1) — done** — Filament lobby (`CharacterVault`), Home teaser under Drop Zone, Goku/Vegeta local GLBs → PLP `{name}'s Vault` (`franchise: 'Dragon Ball'`). Orbit + unit-cube/`displayScale`, Animator only when `enableIdleAnimation`, loader held ~1.2s after decode so mesh is visible, CTA outline + press/hover fill, GLB warm from Home teaser, Heimdall `openCharacterVault` → navigate. Flag `features.characterVault`. Branch: `char_valut`. Next (optional): licensed idle-loop models / more champions / CDN assets.
+- [x] **Character Vault (v1) — done** — Filament lobby (`CharacterVault`), Home teaser under Drop Zone. Roster: Goku/Vegeta (`Dragon Ball`, no clips) + Kid Levi (`Attack on Titan`, idle clip **8**, `enableIdleAnimation: true`) → PLP `{name}'s Vault`. Orbit + unit-cube/`displayScale`, Animator only when `enableIdleAnimation`, loader held ~1.2s after decode, CTA outline + press/hover fill, GLB warm from Home teaser, Heimdall `openCharacterVault` (`goku` / `vegeta` / `kid-levi`). Flag `features.characterVault`. Branch: `char_valut`. Next (optional): licensed idle-loop models / more champions / CDN assets.
 - [x] **AI Merch Assistant** — `POST /api/v1/ai/chat` (tools over live catalog/cart/wishlist/orders + FAQ RAG); mobile hub/chat UI + Search mic (`@react-native-voice/voice`); stub without LLM key, Groq/OpenAI via env.
 
 ### Merchandising & drops
@@ -100,5 +100,5 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - Pre-order and mystery boxes need inventory + pricing + cart rules before UI.
 - After bundle seed changes on Render, run seed against Atlas (or redeploy with seed job) so live API gets `bundleTag` products.
 - Drop Zone: do **not** re-seed daily — only re-seed when changing the `drop-zone-eligible` pool. Cart tab has no stack back chevron (avoids unhandled `GO_BACK`).
-- Character Vault (v1 shipped): dedicated stack screen (not mid-Home Filament); one `FilamentScene`, `addToScene` per character; loader clears ~1.2s after decode (IBL/draw lag); CTA press + hover fill; warm GLBs from Home teaser (`preloadVaultModels`); metro `assetExts: glb`; CDN/licensed GLBs before store ship; don’t flip New Arch until Voice/Razorpay/Reanimated pass on spike.
+- Character Vault (v1 shipped): dedicated stack screen (not mid-Home Filament); one `FilamentScene`, `addToScene` per character; Kid Levi idle is clip **8** (not 0); Goku/Vegeta stay `enableIdleAnimation: false`; loader clears ~1.2s after decode; CTA press + hover fill; warm GLBs from Home teaser (`preloadVaultModels`); metro `assetExts: glb`; CDN/licensed GLBs before store ship; don’t flip New Arch until Voice/Razorpay/Reanimated pass on spike.
 - Email template edits: `apps/api/src/integrations/email/email.factory.ts` → push → redeploy Render.

@@ -21,6 +21,12 @@ export type VaultCharacter = {
   enableIdleAnimation: boolean;
   /** Applied after transformToUnitCube so oversized game meshes fit the vault. */
   displayScale: [number, number, number];
+  /**
+   * Optional extra offset after unit-cube + scale.
+   * Use when an idle pose’s visual mass is not at the GLB origin
+   * (`transformToUnitCube` only centers the rest-pose AABB).
+   */
+  translate?: [number, number, number];
 };
 
 export const CHARACTER_VAULT_ROSTER: VaultCharacter[] = [
@@ -61,6 +67,11 @@ export const CHARACTER_VAULT_ROSTER: VaultCharacter[] = [
     idleAnimationIndex: 8,
     enableIdleAnimation: true,
     displayScale: [1.12, 1.12, 1.12],
+    // Kid Levi only: idle pose is asymmetric (swords / cape / stance), so after
+    // transformToUnitCube the visual center sits slightly to the viewer’s right.
+    // Nudge X negative to optically center him. Prefer fixing the GLB origin in
+    // Blender if this mesh is re-exported; do not copy this offset to other champs.
+    translate: [-0.12, 0, 0],
   },
 ];
 

@@ -23,7 +23,7 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 - **Sessions** — `deviceLabel` / `os` / `ip` on refresh tokens; Devices & sessions UI.
 - **Rune XP** — flat **100**/order, **500** for bundle orders (2+ same `bundleTag`); confirmation shows award.
 - **UI polish** — SVG `AppIcon`, `CachedImage` error placeholder, Home YouTube `VideoBanner` autoplay retries, PDP confidence 2×2 + specs/reviews above carousels.
-- **Character Vault v1** — Home teaser under Drop Zone → `CharacterVault` (react-native-filament orbit). Goku/Vegeta local GLBs → PLP `{name}'s Vault`. Animator gated by `enableIdleAnimation`; Heimdall `openCharacterVault` navigate; flag `features.characterVault`.
+- **Character Vault v1** — Home teaser under Drop Zone → `CharacterVault` (react-native-filament orbit). Roster: Goku/Vegeta + Kid Levi (idle clip 8). Visit CTA → PLP `{name}'s Vault`. Animator gated by `enableIdleAnimation`; Heimdall `openCharacterVault` (`goku` / `vegeta` / `kid-levi`); flag `features.characterVault`.
 
 ### Phase 1: Architecture
 - Full architecture plan (monorepo, bare React Native CLI, backend, shared contracts).

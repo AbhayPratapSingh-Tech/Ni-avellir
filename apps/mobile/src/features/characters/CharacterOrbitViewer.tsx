@@ -60,6 +60,7 @@ function RosterModel({
       model={model}
       transformToUnitCube
       scale={item.displayScale}
+      translate={item.translate}
     >
       {item.enableIdleAnimation && active ? (
         <Animator

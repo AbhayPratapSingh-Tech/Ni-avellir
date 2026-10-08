@@ -245,7 +245,7 @@ export async function runStubOrchestrator(params: {
     type: 'text',
     conversationId: conversation.id,
     message:
-      "I'm Heimdall — your personal guide and Niðavellir partner. I can help with merch search, cart, wishlist, orders, policies, and Character Vault. Try “Open Character Vault”, “Meet Goku”, or “Show me desk gear under 3000”.",
+      "I'm Heimdall — your personal guide and Niðavellir partner. I can help with merch search, cart, wishlist, orders, policies, and Character Vault. Try “Open Character Vault”, “Meet Kid Levi”, or “Show me desk gear under 3000”.",
   };
 }
 
