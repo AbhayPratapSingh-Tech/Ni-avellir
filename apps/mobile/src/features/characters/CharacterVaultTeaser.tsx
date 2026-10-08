@@ -16,9 +16,10 @@ export function CharacterVaultTeaser() {
   const goku = CHARACTER_VAULT_ROSTER.find((c) => c.id === 'goku') ?? CHARACTER_VAULT_ROSTER[0]!;
   const vegeta = CHARACTER_VAULT_ROSTER.find((c) => c.id === 'vegeta');
 
-  // Start warming as soon as Home shows the teaser (Goku first).
+  // Defer GLB warm so Home banners / PLP thumbs get the network first (~6.7MB otherwise).
   useEffect(() => {
-    preloadVaultModels(goku.id);
+    const timer = setTimeout(() => preloadVaultModels(goku.id), 4000);
+    return () => clearTimeout(timer);
   }, [goku.id]);
 
   const openVault = () => {

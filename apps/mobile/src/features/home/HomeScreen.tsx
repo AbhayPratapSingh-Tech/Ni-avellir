@@ -30,7 +30,7 @@ import { BundleBannerSlider } from '../../components/commerce/BundleBannerSlider
 import { ShopHeader } from '../../components/layout/ShopHeader';
 import { ShopDrawer } from '../../components/layout/ShopDrawer';
 import { Screen } from '../../components/ui/Screen';
-import { CachedImage } from '../../components/ui/CachedImage';
+import { CachedImage, prefetchImages } from '../../components/ui/CachedImage';
 import { useDailySale } from '../../lib/saleWindow';
 import { productRepository } from '../../services/data/productRepository';
 import { pingApiHealthIfStale } from '../../services/api/wakeApiServer';
@@ -202,6 +202,17 @@ export function HomeScreen() {
     () => (productRepository.peekDeals()?.length ?? 0) === 0,
   );
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    prefetchImages(
+      [
+        ...heroSlides.map((slide) => slide.image),
+        HERO_BANNER.image,
+        CLOSING_BANNER.image,
+      ],
+      'high',
+    );
+  }, []);
 
   const loadShelves = useCallback(() => {
     void pingApiHealthIfStale(60_000);

@@ -50,7 +50,7 @@ type Route = RouteProp<RootStackParamList, 'ProductDetail'>;
 
 const APP_NAME = 'Niðavellir';
 
-/** PDP promo slider under hero — fill image / productSlug per slide when ready. */
+/** PDP promo slider before similar brands — fill image / productSlug per slide when ready. */
 type PdpPromoBanner = {
   id: string;
   image: string;
@@ -296,52 +296,6 @@ export function ProductDetailScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.pdpBannerWrap}>
-          <FlatList
-            ref={promoListRef}
-            data={PDP_PROMO_BANNERS}
-            keyExtractor={(item) => item.id}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            decelerationRate="fast"
-            onMomentumScrollEnd={(e) => {
-              const next = Math.round(e.nativeEvent.contentOffset.x / width);
-              setPromoIndex(next);
-            }}
-            renderItem={({ item }) => (
-              <Pressable
-                style={[styles.pdpBanner, { width }]}
-                accessibilityRole="button"
-                accessibilityLabel={item.title}
-                onPress={() => {
-                  void openPromoBannerProduct(item);
-                }}
-              >
-                {item.image ? (
-                  <CachedImage uri={item.image} style={styles.pdpBannerImage} priority="normal" />
-                ) : (
-                  <View style={styles.pdpBannerPlaceholder} />
-                )}
-                <View style={styles.pdpBannerCopy}>
-                  <Text style={styles.pdpBannerTitle}>{item.title}</Text>
-                  <Text style={styles.pdpBannerSub}>{item.subtitle}</Text>
-                </View>
-              </Pressable>
-            )}
-          />
-          {PDP_PROMO_BANNERS.length > 1 ? (
-            <View style={styles.pdpBannerDots}>
-              {PDP_PROMO_BANNERS.map((banner, i) => (
-                <View
-                  key={banner.id}
-                  style={[styles.pdpBannerDot, i === promoIndex && styles.pdpBannerDotActive]}
-                />
-              ))}
-            </View>
-          ) : null}
-        </View>
-
         <View style={styles.body}>
           <Text style={styles.brand}>{product.brand}</Text>
           <Text style={styles.franchise}>{product.franchise}</Text>
@@ -464,6 +418,52 @@ export function ProductDetailScreen() {
         <ProductSlider title="Similar items" products={similar} onPress={openProduct} />
         <ProductSlider title="You might also like" products={alsoLike} onPress={openProduct} />
         <ProductSlider title="Recently viewed" products={recentlyViewed} onPress={openProduct} />
+
+        <View style={styles.pdpBannerWrap}>
+          <FlatList
+            ref={promoListRef}
+            data={PDP_PROMO_BANNERS}
+            keyExtractor={(item) => item.id}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
+            onMomentumScrollEnd={(e) => {
+              const next = Math.round(e.nativeEvent.contentOffset.x / width);
+              setPromoIndex(next);
+            }}
+            renderItem={({ item }) => (
+              <Pressable
+                style={[styles.pdpBanner, { width }]}
+                accessibilityRole="button"
+                accessibilityLabel={item.title}
+                onPress={() => {
+                  void openPromoBannerProduct(item);
+                }}
+              >
+                {item.image ? (
+                  <CachedImage uri={item.image} style={styles.pdpBannerImage} priority="normal" />
+                ) : (
+                  <View style={styles.pdpBannerPlaceholder} />
+                )}
+                <View style={styles.pdpBannerCopy}>
+                  <Text style={styles.pdpBannerTitle}>{item.title}</Text>
+                  <Text style={styles.pdpBannerSub}>{item.subtitle}</Text>
+                </View>
+              </Pressable>
+            )}
+          />
+          {PDP_PROMO_BANNERS.length > 1 ? (
+            <View style={styles.pdpBannerDots}>
+              {PDP_PROMO_BANNERS.map((banner, i) => (
+                <View
+                  key={banner.id}
+                  style={[styles.pdpBannerDot, i === promoIndex && styles.pdpBannerDotActive]}
+                />
+              ))}
+            </View>
+          ) : null}
+        </View>
 
         <View style={[styles.body, styles.brands]}>
           <Text style={styles.brandsTitle}>Similar brands on {APP_NAME}</Text>
@@ -913,6 +913,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderTopColor: colors.border,
     borderTopWidth: 1,
+    marginTop: spacing.lg,
   },
   qtyBtn: {
     alignItems: 'center',
