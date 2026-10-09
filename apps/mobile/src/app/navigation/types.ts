@@ -27,6 +27,7 @@ export type AuthStackParamList = {
     name: string;
     email: string;
     phone: string;
+    userId?: string;
     avatarUri?: string;
     runeXp?: number;
     emailVerified?: boolean;
@@ -47,6 +48,7 @@ export type RootStackParamList = {
   /** Game-lobby 3D character showcase → franchise PLP. */
   CharacterVault: { characterId?: string } | undefined;
   ProductDetail: { product: Product };
+  ProductReviews: { product: Product };
   Checkout: undefined;
   OrderConfirmation: { orderId: string; awardedXp?: number };
   Orders: undefined;

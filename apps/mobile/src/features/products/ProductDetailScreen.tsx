@@ -1,17 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   FlatList,
   Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   Pressable,
   ScrollView,
   Share,
   StyleSheet,
   Text,
-  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -30,13 +25,18 @@ import { goBackOrHome } from '../../lib/navigation';
 import { requireLogin } from '../../lib/authGates';
 import { toggleWishlistForUser } from '../../lib/wishlistActions';
 import { productRepository, productMatchesCatalogId } from '../../services/data/productRepository';
-import { reviewRepository } from '../../services/data/reviewRepository';
-import { appConfig } from '../../config/appConfig';
-import type { ProductReview } from '../../services/data/reviews';
 import { getApiErrorMessage } from '../../services/api/apiClient';
+import {
+  isOwnReview,
+  reviewRepository,
+  withViewerAvatar,
+} from '../../services/data/reviewRepository';
+import type { ProductReview } from '../../services/data/reviews';
 import { BundleCompleteSection } from '../../components/commerce/BundleCompleteSection';
 import { Accordion } from '../../components/commerce/Accordion';
 import { ImageGalleryModal } from '../../components/commerce/ImageGalleryModal';
+import { ReviewListItem } from '../../components/commerce/ReviewListItem';
+import { WriteReviewModal } from '../../components/commerce/WriteReviewModal';
 import { ImagePager } from '../../components/commerce/ImagePager';
 import { PriceRow } from '../../components/commerce/PriceRow';
 import { ProductSlider } from '../../components/commerce/ProductSlider';
@@ -117,10 +117,6 @@ export function ProductDetailScreen() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [bundleBusy, setBundleBusy] = useState(false);
-  const [reviewName, setReviewName] = useState('');
-  const [reviewBody, setReviewBody] = useState('');
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewBusy, setReviewBusy] = useState(false);
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [similar, setSimilar] = useState<Product[]>([]);
   const [alsoLike, setAlsoLike] = useState<Product[]>([]);
@@ -214,36 +210,16 @@ export function ProductDetailScreen() {
 
   const bundleTag = resolveProductBundleTag(product);
   const bundleHint = getBundleDisplayHint(bundleTag);
+  const visibleReviews = withViewerAvatar(reviews, user);
+  const previewReviews = visibleReviews.slice(0, 2);
 
-  const submitReview = async () => {
-    if (!reviewName.trim() || !reviewBody.trim()) {
-      Alert.alert('Add a name and review');
-      return;
-    }
-    if (
-      appConfig.dataSource === 'api' &&
-      !requireLogin({ user, dispatch, toast, reason: 'review' })
-    ) {
-      return;
-    }
-    setReviewBusy(true);
+  const removeReview = async (item: ProductReview) => {
     try {
-      const created = await reviewRepository.create({
-        productId: product.id,
-        name: reviewName.trim(),
-        rating: reviewRating,
-        body: reviewBody.trim(),
-      });
-      setReviews((current) => [created, ...current.filter((item) => item.id !== created.id)]);
-      setReviewName('');
-      setReviewBody('');
-      setReviewRating(5);
-      setReviewOpen(false);
-      toast.show('Review submitted');
+      await reviewRepository.remove(item.id);
+      setReviews((current) => current.filter((row) => row.id !== item.id));
+      toast.show('Review removed');
     } catch (error) {
       toast.show(getApiErrorMessage(error));
-    } finally {
-      setReviewBusy(false);
     }
   };
 
@@ -385,34 +361,39 @@ export function ProductDetailScreen() {
         <View style={styles.body}>
           <View style={styles.reviewHeader}>
             <Text style={styles.sectionTitle}>Reviews</Text>
-            <Pressable onPress={() => setReviewOpen(true)}>
-              <Text style={styles.writeLink}>Write a review</Text>
-            </Pressable>
-          </View>
-          {reviews.map((review) => (
-            <View key={review.id} style={styles.reviewCard}>
-              <Image source={{ uri: review.avatarUrl }} style={styles.avatar} />
-              <View style={styles.reviewBody}>
-                <View style={styles.reviewTop}>
-                  <Text style={styles.reviewName}>{review.name}</Text>
-                  <Text style={styles.verified}>{review.verified ? 'Verified' : 'Not verified'}</Text>
-                </View>
-                <StarRating rating={review.rating} size={12} />
-                <Text style={styles.reviewText}>{review.body}</Text>
+            <View style={styles.reviewActions}>
+              <Pressable onPress={() => setReviewOpen(true)} hitSlop={8}>
+                <Text style={styles.writeLink}>Write a review</Text>
+              </Pressable>
+              {reviews.length > 0 ? (
                 <Pressable
-                  onPress={() =>
-                    setReviews((current) =>
-                      current.map((item) =>
-                        item.id === review.id ? { ...item, helpful: item.helpful + 1 } : item,
-                      ),
-                    )
-                  }
+                  onPress={() => navigation.navigate('ProductReviews', { product })}
+                  hitSlop={8}
                 >
-                  <Text style={styles.helpful}>Helpful ({review.helpful})</Text>
+                  <Text style={styles.viewAllLink}>View all</Text>
                 </Pressable>
-              </View>
+              ) : null}
             </View>
-          ))}
+          </View>
+          {previewReviews.length ? (
+            previewReviews.map((review) => (
+              <ReviewListItem
+                key={review.id}
+                review={review}
+                canRemove={isOwnReview(review, user)}
+                onRemove={(item) => void removeReview(item)}
+                onHelpful={(item) =>
+                  setReviews((current) =>
+                    current.map((row) =>
+                      row.id === item.id ? { ...row, helpful: row.helpful + 1 } : row,
+                    ),
+                  )
+                }
+              />
+            ))
+          ) : (
+            <Text style={styles.noReviews}>No reviews yet. Write the first one.</Text>
+          )}
         </View>
 
         <ProductSlider title="Similar items" products={similar} onPress={openProduct} />
@@ -553,54 +534,14 @@ export function ProductDetailScreen() {
 
       <ImageGalleryModal visible={galleryOpen} images={images} onClose={() => setGalleryOpen(false)} />
 
-      <Modal
+      <WriteReviewModal
         visible={reviewOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setReviewOpen(false)}
-      >
-        <View style={styles.reviewOverlay}>
-          <Pressable style={styles.reviewBackdrop} onPress={() => setReviewOpen(false)} />
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.reviewSheetWrap}
-          >
-            <View style={[styles.reviewSheet, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-              <View style={styles.reviewHandle} />
-              <View style={styles.reviewSheetHeader}>
-                <Text style={styles.reviewSheetTitle}>Write a review</Text>
-                <Pressable onPress={() => setReviewOpen(false)} hitSlop={12}>
-                  <Text style={styles.reviewClose}>Close</Text>
-                </Pressable>
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Your name"
-                placeholderTextColor={colors.textMuted}
-                value={reviewName}
-                onChangeText={setReviewName}
-              />
-              <View style={styles.reviewStars}>
-                <StarRating rating={reviewRating} size={28} onChange={setReviewRating} />
-              </View>
-              <TextInput
-                style={[styles.input, styles.inputArea]}
-                placeholder="How was the gear?"
-                placeholderTextColor={colors.textMuted}
-                value={reviewBody}
-                onChangeText={setReviewBody}
-                multiline
-              />
-              <Pressable style={styles.submitReviewBtn} onPress={() => void submitReview()} disabled={reviewBusy}>
-                <Text style={styles.addBtnText}>{reviewBusy ? 'Submitting…' : 'Submit review'}</Text>
-              </Pressable>
-              <Pressable onPress={() => setReviewOpen(false)} hitSlop={8}>
-                <Text style={styles.cancel}>Cancel</Text>
-              </Pressable>
-            </View>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
+        productId={product.id}
+        onClose={() => setReviewOpen(false)}
+        onCreated={(created) => {
+          setReviews((current) => [created, ...current.filter((item) => item.id !== created.id)]);
+        }}
+      />
     </View>
   );
 }
@@ -610,24 +551,22 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   addBtn: {
-    backgroundColor: colors.accent,
+    backgroundColor: 'transparent',
+    borderColor: colors.text,
     borderRadius: 12,
+    borderWidth: 1.5,
     flex: 1,
     paddingVertical: 14,
   },
   addBtnDisabled: {
     backgroundColor: colors.border,
+    borderColor: colors.border,
   },
   addBtnText: {
-    color: colors.onAccent,
+    color: colors.text,
     fontSize: 15,
     fontWeight: '800',
     textAlign: 'center',
-  },
-  avatar: {
-    borderRadius: 20,
-    height: 40,
-    width: 40,
   },
   bankCard: {
     backgroundColor: colors.surface,
@@ -730,13 +669,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
   },
-  cancel: {
-    color: colors.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
   confidence: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -789,12 +721,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
-  helpful: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 6,
-  },
   iconBtn: {
     alignItems: 'center',
     backgroundColor: colors.surface,
@@ -814,19 +740,6 @@ const styles = StyleSheet.create({
   },
   iconRow: {
     flexDirection: 'row',
-  },
-  input: {
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 10,
-    borderWidth: 1,
-    color: colors.text,
-    marginBottom: spacing.md,
-    padding: spacing.md,
-  },
-  inputArea: {
-    minHeight: 110,
-    textAlignVertical: 'top',
   },
   name: {
     color: colors.text,
@@ -955,81 +868,21 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginTop: 6,
   },
-  reviewBody: {
-    flex: 1,
-    marginLeft: spacing.sm,
-  },
-  reviewCard: {
-    flexDirection: 'row',
+  noReviews: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
     marginTop: spacing.md,
   },
-  reviewBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  reviewClose: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  reviewHandle: {
-    alignSelf: 'center',
-    backgroundColor: colors.border,
-    borderRadius: 2,
-    height: 4,
-    marginBottom: spacing.md,
-    width: 40,
+  reviewActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginTop: spacing.lg,
   },
   reviewHeader: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  reviewName: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  reviewOverlay: {
-    backgroundColor: 'rgba(17, 19, 24, 0.45)',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  reviewSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-  },
-  reviewSheetHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  reviewSheetTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  reviewSheetWrap: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  reviewStars: {
-    marginBottom: spacing.md,
-  },
-  reviewText: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 6,
-  },
-  reviewTop: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
   },
   screen: {
     backgroundColor: colors.background,
@@ -1063,13 +916,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: spacing.sm,
   },
-  submitReviewBtn: {
-    alignItems: 'center',
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    justifyContent: 'center',
-    paddingVertical: 14,
-  },
   stickyBar: {
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
@@ -1097,10 +943,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
-  verified: {
-    color: colors.textMuted,
-    fontSize: 11,
+  viewAllLink: {
+    color: colors.text,
+    fontSize: 13,
     fontWeight: '700',
+    marginLeft: spacing.md,
   },
   wishActive: {
     color: colors.danger,
@@ -1170,6 +1017,5 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 13,
     fontWeight: '700',
-    marginTop: spacing.lg,
   },
 });

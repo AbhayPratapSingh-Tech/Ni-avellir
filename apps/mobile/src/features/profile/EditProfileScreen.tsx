@@ -17,6 +17,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
+import { CenteredModalClose, CenteredModalShell } from '../../components/ui/CenteredModalClose';
 import { useToast } from '../../components/ui/Toast';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { updateProfile } from '../auth/authSlice';
@@ -350,17 +351,16 @@ export function EditProfileScreen() {
         animationType="fade"
         onRequestClose={closePhotoMenu}
       >
-        <View style={styles.photoMenuOverlay}>
+        <View style={styles.photoMenuOverlay} pointerEvents="box-none">
           <Pressable style={styles.presetBackdrop} onPress={closePhotoMenu} />
-          <View style={styles.photoMenuCard}>
+          <CenteredModalShell>
+            <CenteredModalClose onPress={closePhotoMenu} />
+            <View style={styles.photoMenuCard}>
             <View style={styles.photoMenuHeader}>
               <View style={styles.photoMenuTitles}>
                 <Text style={styles.photoMenuTitle}>Profile photo</Text>
                 <Text style={styles.photoMenuSub}>Choose how to update your photo</Text>
               </View>
-              <Pressable onPress={closePhotoMenu} hitSlop={12} accessibilityLabel="Close">
-                <Text style={styles.photoMenuClose}>✕</Text>
-              </Pressable>
             </View>
             <Pressable
               style={styles.photoMenuAction}
@@ -393,7 +393,8 @@ export function EditProfileScreen() {
                 <Text style={[styles.photoMenuActionText, styles.photoMenuDanger]}>Remove photo</Text>
               </Pressable>
             ) : null}
-          </View>
+            </View>
+          </CenteredModalShell>
         </View>
       </Modal>
 
@@ -560,20 +561,10 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     width: '100%',
   },
-  photoMenuClose: {
-    color: colors.textMuted,
-    fontSize: 18,
-    fontWeight: '600',
-    lineHeight: 22,
-    paddingLeft: spacing.md,
-  },
   photoMenuDanger: {
     color: colors.danger,
   },
   photoMenuHeader: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     marginBottom: spacing.md,
   },
   photoMenuOverlay: {
@@ -581,6 +572,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(17, 19, 24, 0.45)',
     flex: 1,
     justifyContent: 'center',
+    overflow: 'visible',
   },
   photoMenuSub: {
     color: colors.textMuted,

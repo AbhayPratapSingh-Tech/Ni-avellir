@@ -13,6 +13,7 @@ export function createReviewRouter(env?: Env) {
   router.get('/', asyncHandler(controller.list));
   if (requireAuth) {
     router.post('/', requireAuth, asyncHandler(controller.create));
+    router.delete('/:id', requireAuth, asyncHandler(controller.remove));
   }
 
   return router;

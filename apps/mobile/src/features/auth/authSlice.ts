@@ -6,6 +6,8 @@ import { clearAccountScopedStores } from '../../services/session/clearAccountSco
 import type { MainTabParamList } from '../../app/navigation/types';
 
 export type AuthUser = {
+  /** API user id — used to own reviews / account actions. */
+  id?: string;
   name: string;
   email: string;
   phone: string;

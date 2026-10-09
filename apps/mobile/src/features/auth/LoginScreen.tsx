@@ -98,6 +98,7 @@ export function LoginScreen() {
       try {
         const user = await authRepository.login(email.trim(), password);
         navigation.navigate('AuthSuccess', {
+          userId: user.id,
           name: user.name,
           email: user.email,
           phone: user.phone,
