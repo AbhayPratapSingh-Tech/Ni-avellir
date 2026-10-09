@@ -19,7 +19,7 @@ export class ReviewController {
   };
 
   remove = async (request: AuthenticatedRequest, response: Response) => {
-    await this.service.remove(request.userId!, request.params.id);
+    await this.service.remove(request.userId!, request.params.id as string);
     response.json({ data: { ok: true } });
   };
 }
