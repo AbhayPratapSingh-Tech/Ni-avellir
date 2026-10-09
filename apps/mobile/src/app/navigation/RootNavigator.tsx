@@ -9,6 +9,7 @@ import { CategoriesScreen } from '../../features/categories/CategoriesScreen';
 import { ProductsScreen } from '../../features/products/ProductsScreen';
 import { SearchScreen } from '../../features/search/SearchScreen';
 import { ProductDetailScreen } from '../../features/products/ProductDetailScreen';
+import { ProductReviewsScreen } from '../../features/products/ProductReviewsScreen';
 import { CartScreen } from '../../features/cart/CartScreen';
 import { ProfileScreen } from '../../features/profile/ProfileScreen';
 import { CheckoutScreen } from '../../features/checkout/CheckoutScreen';
@@ -206,6 +207,11 @@ function ShopNavigator() {
         name="ProductDetail"
         component={ProductDetailScreen}
         options={{ headerShown: false }}
+      />
+      <RootStack.Screen
+        name="ProductReviews"
+        component={ProductReviewsScreen}
+        options={{ headerShown: false, title: 'All Reviews' }}
       />
       <RootStack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
       <RootStack.Screen

@@ -51,6 +51,7 @@ export function AppBootstrap({ children }: PropsWithChildren) {
           if (user && mounted) {
             dispatch(
               signIn({
+                id: user.id,
                 name: user.name,
                 email: user.email,
                 phone: user.phone,

@@ -91,6 +91,7 @@ export function OtpScreen() {
         }
         const user = await authRepository.verifyEmailAndLogin(email.trim(), code, password);
         navigation.replace('AuthSuccess', {
+          userId: user.id,
           name: user.name,
           email: user.email,
           phone: user.phone,
@@ -109,6 +110,7 @@ export function OtpScreen() {
           email,
         });
         navigation.replace('AuthSuccess', {
+          userId: user.id,
           name: user.name,
           email: user.email,
           phone: user.phone,

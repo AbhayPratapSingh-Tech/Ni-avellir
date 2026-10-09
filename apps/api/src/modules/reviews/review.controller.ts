@@ -17,6 +17,11 @@ export class ReviewController {
     const review = await this.service.create(request.userId!, request.body);
     response.status(201).json({ data: { review } });
   };
+
+  remove = async (request: AuthenticatedRequest, response: Response) => {
+    await this.service.remove(request.userId!, request.params.id);
+    response.json({ data: { ok: true } });
+  };
 }
 
 export function createReviewRouterHandlers(env: Env) {

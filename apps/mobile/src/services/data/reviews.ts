@@ -1,13 +1,26 @@
 export type ProductReview = {
   id: string;
   productId: string;
+  userId?: string;
   name: string;
   avatarUrl: string;
   rating: number;
   verified: boolean;
+  title: string;
   body: string;
   helpful: number;
+  imageUrl?: string;
 };
+
+export function reviewDisplayTitle(review: { title?: string; body: string }): string {
+  const titled = review.title?.trim();
+  if (titled) return titled;
+  const body = review.body.trim();
+  const first = body.split(/[.!?]/)[0]?.trim() ?? '';
+  if (!first) return 'Review';
+  if (first.length <= 40) return first;
+  return `${first.slice(0, 40).trim()}…`;
+}
 
 export const demoReviews: ProductReview[] = [
   {
@@ -17,6 +30,7 @@ export const demoReviews: ProductReview[] = [
     avatarUrl: 'https://i.pravatar.cc/80?img=12',
     rating: 5,
     verified: true,
+    title: 'Sharp paint work',
     body: 'Paint work is sharp and the numbered card feels legit. Looks serious on a clean desk.',
     helpful: 24,
   },
@@ -27,6 +41,7 @@ export const demoReviews: ProductReview[] = [
     avatarUrl: 'https://i.pravatar.cc/80?img=32',
     rating: 4,
     verified: true,
+    title: 'Heavy fleece fit',
     body: 'Heavy fleece, embroidery sits flat. Size up if you want the LAN-weekend drape.',
     helpful: 11,
   },
@@ -37,6 +52,7 @@ export const demoReviews: ProductReview[] = [
     avatarUrl: 'https://i.pravatar.cc/80?img=15',
     rating: 5,
     verified: false,
+    title: 'Tight stitching',
     body: 'Stitching is tight and the edge light is low enough that it does not wash the monitor.',
     helpful: 8,
   },
@@ -47,6 +63,7 @@ export const demoReviews: ProductReview[] = [
     avatarUrl: 'https://i.pravatar.cc/80?img=47',
     rating: 5,
     verified: true,
+    title: 'Match-day fit',
     body: 'Match-day fit. Sublimation did not crack after a wash.',
     helpful: 19,
   },
@@ -57,6 +74,7 @@ export const demoReviews: ProductReview[] = [
     avatarUrl: 'https://i.pravatar.cc/80?img=8',
     rating: 4,
     verified: false,
+    title: 'Short run quality',
     body: 'Short run quality is there. Wish there was a size chart on the card.',
     helpful: 3,
   },
@@ -67,6 +85,7 @@ export const demoReviews: ProductReview[] = [
     avatarUrl: 'https://i.pravatar.cc/80?img=25',
     rating: 5,
     verified: true,
+    title: 'Consistent stopping power',
     body: 'Stopping power is consistent. No edge peel after two weeks of grind.',
     helpful: 16,
   },
@@ -77,6 +96,7 @@ export const demoReviews: ProductReview[] = [
     avatarUrl: 'https://i.pravatar.cc/80?img=5',
     rating: 4,
     verified: true,
+    title: 'Smooth zip',
     body: 'Zip is smooth and the reflective mark pops under booth lights.',
     helpful: 7,
   },
@@ -87,6 +107,7 @@ export const demoReviews: ProductReview[] = [
     avatarUrl: 'https://i.pravatar.cc/80?img=44',
     rating: 5,
     verified: true,
+    title: 'Perfect desk match',
     body: 'Mat and rest match perfectly. Bundle sleeve feels like a real drop.',
     helpful: 12,
   },
@@ -97,6 +118,7 @@ export const demoReviews: ProductReview[] = [
     avatarUrl: 'https://i.pravatar.cc/80?img=18',
     rating: 5,
     verified: false,
+    title: 'No screen glare',
     body: 'No screen glare. Clamp held on a thin bezel without marks.',
     helpful: 9,
   },
@@ -107,6 +129,7 @@ export const demoReviews: ProductReview[] = [
     avatarUrl: 'https://i.pravatar.cc/80?img=36',
     rating: 5,
     verified: true,
+    title: 'Pins are sharp',
     body: 'Pins are sharp. Sold out fast — glad I grabbed a set.',
     helpful: 21,
   },

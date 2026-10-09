@@ -59,7 +59,7 @@ function PulseRing({ delayMs, size }: { delayMs: number; size: number }) {
 export function AuthSuccessScreen() {
   const route = useRoute<Route>();
   const dispatch = useAppDispatch();
-  const { name, email, phone, avatarUri, runeXp, emailVerified } = route.params;
+  const { name, email, phone, userId, avatarUri, runeXp, emailVerified } = route.params;
 
   const checkScale = useSharedValue(0);
   const checkOpacity = useSharedValue(0);
@@ -77,10 +77,10 @@ export function AuthSuccessScreen() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      dispatch(signIn({ name, email, phone, avatarUri, runeXp, emailVerified }));
+      dispatch(signIn({ id: userId, name, email, phone, avatarUri, runeXp, emailVerified }));
     }, 2600);
     return () => clearTimeout(timer);
-  }, [avatarUri, dispatch, email, emailVerified, name, phone, runeXp]);
+  }, [avatarUri, dispatch, email, emailVerified, name, phone, runeXp, userId]);
 
   useFocusEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
