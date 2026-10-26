@@ -1,7 +1,5 @@
 import type { Request, Response } from 'express';
 import type { AuthenticatedRequest } from '../../common/middleware/require-auth.js';
-import { createRequireAuth } from '../../common/middleware/require-auth.js';
-import type { Env } from '../../config/env.js';
 import { ReviewService } from './review.service.js';
 
 export class ReviewController {
@@ -22,10 +20,4 @@ export class ReviewController {
     await this.service.remove(request.userId!, request.params.id as string);
     response.json({ data: { ok: true } });
   };
-}
-
-export function createReviewRouterHandlers(env: Env) {
-  const requireAuth = createRequireAuth(env);
-  const controller = new ReviewController(new ReviewService());
-  return { controller, requireAuth };
 }

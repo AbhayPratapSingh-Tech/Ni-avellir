@@ -35,6 +35,9 @@ export function ReviewListItem({ review, canRemove, onHelpful, onRemove }: Props
           {reviewDisplayTitle(review)}
         </Text>
         <Text style={styles.text}>{review.body}</Text>
+        {review.imageUrl ? (
+          <Image source={{ uri: review.imageUrl }} style={styles.photo} />
+        ) : null}
         <View style={styles.meta}>
           <Text style={styles.metaText}>
             {review.name}
@@ -84,6 +87,12 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: 12,
     fontWeight: '700',
+  },
+  photo: {
+    borderRadius: 8,
+    height: 96,
+    marginTop: 8,
+    width: 144,
   },
   meta: {
     alignItems: 'center',

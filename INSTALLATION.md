@@ -6,24 +6,25 @@ Status: **Ready.** This guide walks you through getting the Niðavellir app runn
 
 ```bash
 # 1. Install prerequisites once (see below if you don't have them)
-brew install node pnpm
+brew install node
 # (macOS only) Xcode + Command Line Tools from the App Store / xcode-select
 
 # 2. Clone the repo
 git clone <your-repo-url> Nidavellir
 cd Nidavellir
 
-# 3. Install JS dependencies
-pnpm install
+# 3. Install JS dependencies (npm workspaces)
+npm install
+npm run setup
 
 # 4. (iOS only) Install native pods
 cd apps/mobile/ios && pod install && cd ../../../
 
 # 5. Run the app — pick one:
-pnpm --filter mobile start     # start Metro (keep this terminal open)
-pnpm --filter mobile ios       # launch on iOS simulator
+npm run dev        # start Metro (keep this terminal open)
+npm run ios        # launch on iOS simulator
 # OR
-pnpm --filter mobile android   # launch on Android emulator/device
+npm run android    # launch on Android emulator/device
 ```
 
 > **Demo tip:** Before running, set `dataSource: 'mock'` in `apps/mobile/src/config/appConfig.ts` so the app works fully offline with no server or database needed.
@@ -32,18 +33,11 @@ pnpm --filter mobile android   # launch on Android emulator/device
 
 ## Step 1: Install Prerequisites (macOS)
 
-### Node.js 22 LTS
+### Node.js 20+
 
 ```bash
-brew install node@22
-node -v   # should print v22.x.x
-```
-
-### pnpm 9
-
-```bash
-npm install -g pnpm@9
-pnpm -v   # should print 9.x.x
+brew install node
+node -v   # should print v20.x or newer (repo `engines`: >=20.20.2)
 ```
 
 ### Xcode (required for iOS)
@@ -99,10 +93,11 @@ cd Nidavellir
 ## Step 3: Install Dependencies
 
 ```bash
-pnpm install
+npm install
+npm run setup
 ```
 
-This installs the mobile app, the API, and the shared `@nidavellir/shared` package.
+This installs the mobile app, the API, and the shared `@nidavellir/shared` package (npm workspaces).
 
 **For iOS only** — install CocoaPods (once) and native pods:
 
@@ -124,7 +119,7 @@ Open `apps/mobile/src/config/appConfig.ts` and set:
 ```ts
 export const appConfig = {
   dataSource: 'mock',   // 'mock' = offline demo (recommended for showing)
-  apiBaseUrl: 'http://localhost:4000/api/v1',
+  // Live default in the repo is 'api' → Render. Use 'mock' for a no-server demo.
   ...
 };
 ```
@@ -141,13 +136,13 @@ export const appConfig = {
 Terminal 1 — start Metro:
 
 ```bash
-pnpm --filter mobile start
+npm run dev
 ```
 
 Terminal 2 — launch the app:
 
 ```bash
-pnpm --filter mobile ios
+npm run ios
 ```
 
 The app opens in the iOS Simulator.
@@ -157,14 +152,12 @@ The app opens in the iOS Simulator.
 Terminal 1 — start Metro:
 
 ```bash
-pnpm --filter mobile start
+npm run dev
 ```
 
 Terminal 2 — launch the app:
 
 ```bash
-pnpm --filter mobile android
-# or from repo root:
 npm run android
 ```
 
@@ -243,10 +236,10 @@ Requires **Docker** (or a local MongoDB).
 docker run -d --name nidavellir-mongo -p 27017:27017 mongo:7
 
 # Start the API
-pnpm --filter api dev
+npm run dev:api
 
 # Seed demo data (first time only)
-pnpm --filter api seed
+npm run seed --workspace apps/api
 ```
 
 The API runs at `http://localhost:4000`.
@@ -258,8 +251,8 @@ The API runs at `http://localhost:4000`.
 Bare React Native Community CLI (no Expo). Minimum targets:
 
 - **OS:** Android 10 (API 29), iOS 16.0
-- **Node.js:** 22 LTS
-- **pnpm:** 9.x
+- **Node.js:** 20.20+ (Render uses 20.20.2)
+- **Package manager:** npm workspaces (not pnpm)
 - **CocoaPods:** >= 1.16
 - **JDK:** 17
 - **Android SDK Platform / Build-Tools:** 35 / 35.0.0

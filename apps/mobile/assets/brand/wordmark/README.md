@@ -9,6 +9,4 @@ In-app brand lockup (icon + NIDAVELLIR + tagline). Aspect **3:1**.
 | `nidavellir-stacked-dark-bg-*.png` | Solid navy background lockup (marketing / splash variants) |
 | `*.svg` | Master vectors for re-export |
 
-Runtime uses the 600w PNGs via `components/ui/BrandMark.tsx`.
-
-A full export pack may also live at `apps/nidavellir-stacked-logo/` as an offline reference.
+Runtime uses the 600w PNGs via `components/ui/BrandMark.tsx`. SVG masters for re-export live in this folder.

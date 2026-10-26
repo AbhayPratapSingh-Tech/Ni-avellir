@@ -59,6 +59,8 @@ export class ReviewService {
     if (!product) throw new AppError('Product not found', 404);
     const author = await User.findById(userId).lean();
     const title = typeof input.title === 'string' ? input.title.trim().slice(0, 70) : '';
+    const body = typeof input.body === 'string' ? input.body.trim().slice(0, 1500) : '';
+    if (!body) throw new AppError('Review text is required', 400);
     const imageUrl =
       typeof input.imageUrl === 'string' && /^https?:\/\//i.test(input.imageUrl.trim())
         ? input.imageUrl.trim()
@@ -73,7 +75,7 @@ export class ReviewService {
       productId: input.productId,
       name: input.name || author?.name || 'Shopper',
       rating: input.rating,
-      body: input.body,
+      body,
       ...(title ? { title } : {}),
       ...(avatarUrl ? { avatarUrl } : {}),
       ...(imageUrl ? { imageUrl } : {}),

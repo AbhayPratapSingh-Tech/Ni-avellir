@@ -279,7 +279,8 @@ curl -sS -m 90 -X POST "$BASE/addresses" -H "Authorization: Bearer $ACCESS" -H '
   -d '{{"fullName":"Curl Demo","phone":"9876543210","line1":"12 Forge Lane","city":"Delhi","state":"DL","postalCode":"110001","isDefault":true}}'
 curl -sS -m 90 "$BASE/reviews?productId=$PRODUCT_ID"
 curl -sS -m 90 -X POST "$BASE/reviews" -H "Authorization: Bearer $ACCESS" -H 'Content-Type: application/json' \\
-  -d "{{\\"productId\\":\\"$PRODUCT_ID\\",\\"name\\":\\"Curl Demo\\",\\"rating\\":5,\\"body\\":\\"Solid piece.\\"}}"
+  -d "{{\\"productId\\":\\"$PRODUCT_ID\\",\\"name\\":\\"Curl Demo\\",\\"rating\\":5,\\"title\\":\\"Solid piece\\",\\"body\\":\\"Solid piece.\\"}}"
+# Author-only: curl -sS -m 90 -X DELETE "$BASE/reviews/$REVIEW_ID" -H "Authorization: Bearer $ACCESS"
 curl -sS -m 90 "$BASE/notifications" -H "Authorization: Bearer $ACCESS"
 curl -sS -m 90 -X POST "$BASE/notifications/read-all" -H "Authorization: Bearer $ACCESS"
 ```

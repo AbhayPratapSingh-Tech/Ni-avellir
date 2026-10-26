@@ -133,7 +133,9 @@ export function WriteReviewModal({ visible, productId, onClose, onCreated }: Pro
         avatarUrl: isDisplayAvatarUrl(avatarUrl) ? avatarUrl : undefined,
         imageUrl: remoteImage,
       });
-      onCreated(created);
+      onCreated(
+        !created.imageUrl && imageUri ? { ...created, imageUrl: imageUri } : created,
+      );
       onClose();
       toast.show('Review submitted');
     } catch (error) {
@@ -209,6 +211,9 @@ export function WriteReviewModal({ visible, productId, onClose, onCreated }: Pro
                 showSoftInputOnFocus
                 textAlignVertical="top"
               />
+              <Text style={styles.charCount}>
+                {body.length}/{BODY_MAX}
+              </Text>
               <Text style={styles.imageLabel}>Image</Text>
               <Pressable style={styles.imageBox} onPress={() => void pickImage()} accessibilityLabel="Add image">
                 {imageUri ? (
@@ -245,6 +250,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+  },
+  charCount: {
+    color: colors.textMuted,
+    fontSize: 11,
+    marginBottom: spacing.md,
+    marginTop: -spacing.sm,
+    textAlign: 'right',
   },
   heading: {
     color: colors.text,
