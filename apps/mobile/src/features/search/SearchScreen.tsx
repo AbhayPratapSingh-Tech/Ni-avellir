@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Product } from '@nidavellir/shared';
 import { colors, spacing, typography } from '../../theme/tokens';
@@ -9,12 +9,15 @@ import { CatalogEmptyState } from '../../components/commerce/CatalogEmptyState';
 import { FloatingCartButton } from '../../components/commerce/FloatingCartButton';
 import { Screen } from '../../components/ui/Screen';
 import { MicButton } from '../../components/ui/MicButton';
+import { CameraSearchButton } from '../../components/ui/CameraSearchButton';
 import { productRepository, type SearchSuggestions } from '../../services/data/productRepository';
 import { useAppDispatch } from '../../app/store';
 import { addProductToCart } from '../../lib/cartActions';
 import { useToast } from '../../components/ui/Toast';
 import { goBackOrHome } from '../../lib/navigation';
 import { useSpeechToText } from '../../hooks/useSpeechToText';
+import { pickVisualSearchImage } from '../../lib/visualSearchPick';
+import { getApiErrorMessage } from '../../services/api/apiClient';
 import { appConfig } from '../../config/appConfig';
 import type { RootStackParamList } from '../../app/navigation/types';
 
@@ -23,11 +26,13 @@ type Navigation = NativeStackNavigationProp<RootStackParamList>;
 export function SearchScreen() {
   const navigation = useNavigation<Navigation>();
   const route = useRoute();
-  const params = (route.params ?? {}) as { q?: string };
+  const params = (route.params ?? {}) as { q?: string; openVisualSearch?: boolean };
   const dispatch = useAppDispatch();
   const toast = useToast();
   const [query, setQuery] = useState(params.q ?? '');
   const [products, setProducts] = useState<Product[]>([]);
+  const [visualBusy, setVisualBusy] = useState(false);
+  const visualKickoffDone = useRef(false);
   const [suggestions, setSuggestions] = useState<SearchSuggestions>({
     queries: [],
     categories: [],
@@ -59,6 +64,50 @@ export function SearchScreen() {
     }
   }, [speech.listening, speech.partial]);
 
+  const runVisualSearch = useCallback(async () => {
+    if (!appConfig.features.visualSearch) return;
+    if (appConfig.dataSource !== 'api') {
+      toast.show('Visual search needs the live API');
+      return;
+    }
+    const picked = await pickVisualSearchImage();
+    if (picked.error) {
+      toast.show(picked.error);
+      return;
+    }
+    if (!picked.uri) return;
+    setVisualBusy(true);
+    try {
+      const result = await productRepository.visualSearch(picked.uri);
+      if (result.reason === 'vision_unavailable') {
+        toast.show('Visual search is unavailable right now');
+        return;
+      }
+      if (result.query) {
+        setQuery(result.query);
+      }
+      setProducts(result.products);
+      if (!result.products.length) {
+        toast.show(result.query ? 'No matches for that photo' : 'No matches found');
+      }
+    } catch (error) {
+      toast.show(getApiErrorMessage(error));
+    } finally {
+      setVisualBusy(false);
+    }
+  }, [toast]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!params.openVisualSearch || visualKickoffDone.current) {
+        return;
+      }
+      visualKickoffDone.current = true;
+      void runVisualSearch();
+      navigation.setParams({ openVisualSearch: undefined });
+    }, [navigation, params.openVisualSearch, runVisualSearch]),
+  );
+
   const handleAdd = useCallback(
     (product: Product) => {
       void addProductToCart({ product, dispatch, toast }).then((ok) => {
@@ -68,7 +117,7 @@ export function SearchScreen() {
     [dispatch, toast],
   );
 
-  const emptyQuery = !query.trim();
+  const emptyQuery = !query.trim() && products.length === 0;
   const allOutOfStock = products.length > 0 && products.every((item) => item.stock === 0);
 
   return (
@@ -88,6 +137,15 @@ export function SearchScreen() {
           autoFocus
           returnKeyType="search"
         />
+        {appConfig.features.visualSearch ? (
+          <CameraSearchButton
+            busy={visualBusy}
+            onPress={() => {
+              void runVisualSearch();
+            }}
+            size={40}
+          />
+        ) : null}
         {appConfig.features.voiceInput ? (
           <MicButton
             listening={speech.listening}

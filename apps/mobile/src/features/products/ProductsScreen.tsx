@@ -17,7 +17,7 @@ import { CatalogEmptyState } from '../../components/commerce/CatalogEmptyState';
 import { FloatingCartButton } from '../../components/commerce/FloatingCartButton';
 import { Screen } from '../../components/ui/Screen';
 import { productRepository } from '../../services/data/productRepository';
-import { useAppDispatch } from '../../app/store';
+import { useAppDispatch, useAppSelector } from '../../app/store';
 import { addProductToCart } from '../../lib/cartActions';
 import { useToast } from '../../components/ui/Toast';
 import type { RootStackParamList } from '../../app/navigation/types';
@@ -42,12 +42,14 @@ export function ProductsScreen() {
   const params = (route.params ?? {}) as {
     category?: string;
     franchise?: string;
-    collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone';
+    collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone' | 'for-you';
     title?: string;
     q?: string;
   };
   const dispatch = useAppDispatch();
   const toast = useToast();
+  const recentItems = useAppSelector((state) => state.recent.items);
+  const wishlistItems = useAppSelector((state) => state.wishlist.items);
   const [products, setProducts] = useState<Product[]>([]);
   const [sort, setSort] = useState<SortValue>('newest');
   const [sortOpen, setSortOpen] = useState(false);
@@ -90,38 +92,62 @@ export function ProductsScreen() {
       }
 
       try {
-        const query = {
-          sort,
-          category,
-          franchise,
-          search,
-          collection,
-          page: pageToLoad,
-          limit: PAGE_SIZE,
-        };
-        const result = await productRepository.list(query);
-        console.log('[PLP] products page', {
-          page: result.page,
-          pages: result.pages,
-          total: result.total,
-          itemCount: result.items.length,
-        });
+        if (collection === 'for-you') {
+          const recentIds = recentItems.map((item) => item.id).slice(0, 12);
+          const signalProducts = [...recentItems, ...wishlistItems].filter(
+            (item, index, all) => all.findIndex((row) => row.id === item.id) === index,
+          );
+          const items = await productRepository.getForYou({
+            recentIds,
+            signalProducts,
+            limit: PAGE_SIZE,
+            refresh: replace,
+          });
+          console.log('[PLP] products page', {
+            page: 1,
+            pages: 1,
+            total: items.length,
+            itemCount: items.length,
+            collection: 'for-you',
+          });
+          setPage(1);
+          setPages(1);
+          setTotal(items.length);
+          setProducts(items);
+        } else {
+          const query = {
+            sort,
+            category,
+            franchise,
+            search,
+            collection,
+            page: pageToLoad,
+            limit: PAGE_SIZE,
+          };
+          const result = await productRepository.list(query);
+          console.log('[PLP] products page', {
+            page: result.page,
+            pages: result.pages,
+            total: result.total,
+            itemCount: result.items.length,
+          });
 
-        setPage(result.page);
-        setPages(result.pages);
-        setTotal(result.total);
-        setProducts((prev) => {
-          if (replace) return result.items;
-          const seen = new Set(prev.map((p) => p.id));
-          return [...prev, ...result.items.filter((p) => !seen.has(p.id))];
-        });
+          setPage(result.page);
+          setPages(result.pages);
+          setTotal(result.total);
+          setProducts((prev) => {
+            if (replace) return result.items;
+            const seen = new Set(prev.map((p) => p.id));
+            return [...prev, ...result.items.filter((p) => !seen.has(p.id))];
+          });
+        }
       } finally {
         setInitialLoading(false);
         setLoadingMore(false);
         loadingMoreRef.current = false;
       }
     },
-    [sort, category, franchise, search, collection],
+    [sort, category, franchise, search, collection, recentItems, wishlistItems],
   );
 
   useEffect(() => {

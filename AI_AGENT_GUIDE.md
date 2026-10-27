@@ -80,7 +80,9 @@ Checklist when flipping live:
 9. Store locator: `features.storeLocator` in `appConfig`; header pin → `StoreLocator`; API `GET /api/v1/stores` + `GET /api/v1/stores/geocode` (free chain: Open-Meteo → Photon → builtin cities → Nominatim). Mobile falls back to Open-Meteo/builtin if API geocode fails. Logo at `apps/mobile/assets/brand/logo.png` (BrandMark letter-N until `USE_BRAND_LOGO_PNG`). WebView + Leaflet/OSM — no paid map key / no native rebuild for map. Seed pins via `npm run seed` or ops-only `npm run seed:ops --workspace apps/api`.
 10. **Orders list/detail require JWT** — `GET /api/v1/orders` and `GET /api/v1/orders/:id` never return data without `userId` (no anonymous full-catalog dump).
 11. **Character Vault** (v1 done): `features.characterVault` → Home teaser under Drop Zone → `CharacterVault`. Roster in `features/characters/characterRoster.ts`; local GLBs need `metro.config.js` `assetExts: glb`. Never mount Filament `<Animator>` unless `enableIdleAnimation` (0-clip = fatal). Visit CTA → Products PLP `{name}'s Vault`. Heimdall: `openCharacterVault` + AI `navigate` screen `CharacterVault`. Keep New Arch off.
-12. **All Reviews:** PDP teaser (2 rows) + **View all** (hidden when empty) → `ProductReviews`. Write review is a centered modal (`WriteReviewModal`), not a bottom sheet. Create uploads a local profile photo so other users can see avatars. Authors `DELETE /reviews/:id`. Render blueprint `branch` in `render.yaml` must be the branch you actually merge (`reviews` today — not stale `improve`).
+12. **All Reviews:** PDP teaser (2 rows) + **View all** (hidden when empty) → `ProductReviews`. Write review is a centered modal (`WriteReviewModal`), not a bottom sheet. Create uploads a local profile photo so other users can see avatars. Authors `DELETE /reviews/:id`. Render dashboard branch is the deploy source of truth (often `Nidavellir` or a temp branch like `todo`); keep `render.yaml` `branch` aligned when you settle.
+13. **Visual search (v1):** `features.visualSearch` → Search/Home camera → `POST /api/v1/products/visual-search` (multipart `image`, not persisted). Vision uses `OPENAI_*` (+ optional `OPENAI_VISION_MODEL`). No key → empty + `vision_unavailable` (never invent SKUs). Native rebuild after Info.plist camera/library copy changes.
+14. **For you Home rail (v1):** `features.personalizedHome` → `GET /api/v1/products/for-you?recentIds=` (optional JWT + wishlist/orders). Guests/no signals → bestsellers. Does not replace Deals/Bestsellers/Also like.
 
 ---
 
@@ -168,7 +170,10 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 | All Reviews screen | `features/products/ProductReviewsScreen.tsx` |
 | Write-review modal | `components/commerce/WriteReviewModal.tsx` |
 | Reviews API | `apps/api/src/modules/reviews/*` |
-| Render blueprint branch | `render.yaml` (`branch: reviews`) |
+| Visual search API | `POST /products/visual-search` (`products/visual-search.ts`) |
+| For you API | `GET /products/for-you` |
+| Camera search control | `components/ui/CameraSearchButton.tsx` + `lib/visualSearchPick.ts` |
+| Render blueprint branch | `render.yaml` (match dashboard deploy branch) |
 | Character Vault screen | `features/characters/CharacterVaultScreen.tsx` |
 | Character orbit (Filament) | `features/characters/CharacterOrbitViewer.tsx` |
 | Vault roster + GLB requires | `features/characters/characterRoster.ts` + `assets/characters/` |

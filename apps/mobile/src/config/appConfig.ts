@@ -56,6 +56,10 @@ export const appConfig = {
     storeLocator: true,
     /** Game-lobby 3D Character Vault (requires native rebuild after Filament install). */
     characterVault: true,
+    /** Camera/gallery → vision LLM → catalog search (needs live API + OPENAI_*). */
+    visualSearch: true,
+    /** Home For you rail from recent views + wishlist + orders. */
+    personalizedHome: true,
   },
 
   /**

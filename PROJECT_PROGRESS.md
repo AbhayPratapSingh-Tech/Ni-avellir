@@ -25,6 +25,7 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 - **UI polish** — SVG `AppIcon`, `CachedImage` error placeholder, Home YouTube `VideoBanner` autoplay retries, PDP confidence 2×2 + specs/reviews above carousels.
 - **Character Vault v1** — Home teaser under Drop Zone → `CharacterVault` (react-native-filament orbit). Roster: Goku/Vegeta + Kid Levi (idle clip 8). Visit CTA → PLP `{name}'s Vault`. Animator gated by `enableIdleAnimation`; Heimdall `openCharacterVault` (`goku` / `vegeta` / `kid-levi`); flag `features.characterVault`. On `reviews` (originally `char_valut`).
 - **All Reviews** — `ProductReviews` screen, review title + hosted avatar, `DELETE /reviews/:id` for the author, Render `tsc` param cast.
+- **Visual search + For you** — `POST /products/visual-search` (vision → catalog), Home For you rail via `GET /products/for-you`; flags `visualSearch` / `personalizedHome`.
 
 ### Phase 1: Architecture
 - Full architecture plan (monorepo, bare React Native CLI, backend, shared contracts).

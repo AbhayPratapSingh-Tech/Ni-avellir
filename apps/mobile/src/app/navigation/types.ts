@@ -40,10 +40,10 @@ export type RootStackParamList = {
     category?: string;
     q?: string;
     franchise?: string;
-    collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone';
+    collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone' | 'for-you';
     title?: string;
   } | undefined;
-  Search: { q?: string } | undefined;
+  Search: { q?: string; openVisualSearch?: boolean } | undefined;
   AIAssistant: { mode?: 'talk' | 'chat' } | undefined;
   /** Game-lobby 3D character showcase → franchise PLP. */
   CharacterVault: { characterId?: string } | undefined;

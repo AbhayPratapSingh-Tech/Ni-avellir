@@ -1,6 +1,10 @@
 import { ALSO_LIKE_TAG, DROP_ZONE_TAG, pickDropZoneProducts } from '@nidavellir/shared';
 import { Types } from 'mongoose';
+import { Order } from '../orders/order.model.js';
+import { Wishlist } from '../wishlist/wishlist.model.js';
 import { Product } from './product.model.js';
+import type { Env } from '../../config/env.js';
+import { extractVisualSearchHints } from './visual-search.js';
 
 export type ListProductsQuery = {
   category?: string;
@@ -16,6 +20,10 @@ export type ListProductsQuery = {
   page?: number;
   limit?: number;
 };
+
+function isMongoObjectId(value: string) {
+  return Types.ObjectId.isValid(value) && String(new Types.ObjectId(value)) === value;
+}
 
 const PAGE_SIZE_MAX = 50;
 
@@ -232,6 +240,140 @@ export class ProductService {
       franchises,
       brands: franchises,
     };
+  }
+
+  /**
+   * Vision photo → catalog list. Never invents SKUs; empty products when vision unavailable.
+   */
+  async visualSearch(
+    env: Env,
+    imageBuffer: Buffer,
+    mimeType: string,
+  ): Promise<{
+    query: string;
+    franchise?: string;
+    category?: string;
+    products: Awaited<ReturnType<ProductService['getBestSellers']>>;
+    reason?: 'vision_unavailable';
+  }> {
+    const hints = await extractVisualSearchHints(env, imageBuffer, mimeType);
+    if (!hints) {
+      return { query: '', products: [], reason: 'vision_unavailable' };
+    }
+    const listed = await this.list({
+      search: hints.search,
+      franchise: hints.franchise,
+      category: hints.category,
+      inStockOnly: true,
+      limit: 20,
+      page: 1,
+      sort: 'newest',
+    });
+    return {
+      query: hints.search,
+      franchise: hints.franchise,
+      category: hints.category,
+      products: listed.items,
+    };
+  }
+
+  /**
+   * Personalized shelf from recent views + wishlist + recent orders.
+   * Guests / no signals → bestsellers. Catalog read only (not a money path).
+   */
+  async getForYou(input: {
+    userId?: string;
+    recentIds?: string[];
+    limit?: number;
+  }) {
+    const limit = Math.min(Math.max(1, input.limit ?? 12), PAGE_SIZE_MAX);
+    const recentIds = (input.recentIds ?? []).map(String).filter(Boolean).slice(0, 12);
+
+    const signalIds = new Set<string>(recentIds);
+    if (input.userId) {
+      const [wishlist, orders] = await Promise.all([
+        Wishlist.findOne({ userId: input.userId }).lean(),
+        Order.find({
+          userId: input.userId,
+          status: { $nin: ['pending_payment'] },
+        })
+          .sort({ createdAt: -1 })
+          .limit(8)
+          .lean(),
+      ]);
+      for (const id of wishlist?.productIds ?? []) {
+        signalIds.add(String(id));
+      }
+      for (const order of orders) {
+        for (const item of order.items ?? []) {
+          if (item.productId) signalIds.add(String(item.productId));
+        }
+      }
+    }
+
+    if (!signalIds.size) {
+      return this.getBestSellers(limit);
+    }
+
+    const idList = [...signalIds];
+    const objectIds = idList.filter(isMongoObjectId);
+    const slugs = idList
+      .filter((id) => !isMongoObjectId(id))
+      .map((id) => (id.startsWith('prod-') ? id.slice(5) : id));
+    const seedFilter =
+      objectIds.length && slugs.length
+        ? { $or: [{ _id: { $in: objectIds } }, { slug: { $in: slugs } }] }
+        : objectIds.length
+          ? { _id: { $in: objectIds } }
+          : { slug: { $in: slugs } };
+    const seeds = await Product.find(seedFilter).lean();
+
+    const franchises = new Set(seeds.map((p) => p.franchise).filter(Boolean));
+    const categories = new Set(seeds.map((p) => p.category).filter(Boolean));
+    const tags = new Set(seeds.flatMap((p) => p.tags ?? []).filter(Boolean));
+    const seedIdSet = new Set(seeds.map((p) => String(p._id)));
+
+    if (!franchises.size && !categories.size && !tags.size) {
+      return this.getBestSellers(limit);
+    }
+
+    const candidates = await Product.find({ stock: { $gt: 0 } })
+      .sort({ reviewCount: -1, rating: -1 })
+      .limit(120)
+      .lean();
+
+    const scored = candidates
+      .map((product) => {
+        let score = 0;
+        if (franchises.has(product.franchise)) score += 8;
+        if (categories.has(product.category)) score += 4;
+        for (const tag of product.tags ?? []) {
+          if (tags.has(tag)) {
+            score += 2;
+            break;
+          }
+        }
+        if (seedIdSet.has(String(product._id))) score -= 20;
+        return { product, score };
+      })
+      .filter((row) => row.score > 0)
+      .sort((a, b) => b.score - a.score || b.product.reviewCount - a.product.reviewCount);
+
+    const picked = scored.map((row) => row.product);
+    if (picked.length >= limit) {
+      return picked.slice(0, limit);
+    }
+
+    const pad = await this.getBestSellers(limit);
+    const seen = new Set(picked.map((p) => String(p._id)));
+    for (const product of pad) {
+      const id = String(product._id);
+      if (seen.has(id)) continue;
+      picked.push(product);
+      seen.add(id);
+      if (picked.length >= limit) break;
+    }
+    return picked.slice(0, limit);
   }
 
   async getRelated(slug: string, limit = 8) {

@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Visual search + For you
+
+- `POST /api/v1/products/visual-search` — multipart image (memory only, rate-limited) → vision LLM keywords → `ProductService.list`. Empty / `vision_unavailable` when AI key missing. Optional `OPENAI_VISION_MODEL`.
+- Mobile Search + Home camera control (`features.visualSearch`); gallery/camera → FormData; mock mode toasts that live API is required.
+- `GET /api/v1/products/for-you?recentIds=` (optional JWT) ranks from recent views + wishlist + orders; pads with bestsellers.
+- Home **For you** rail + View all PLP (`features.personalizedHome`). Existing Home shelves unchanged.
+
 ### PDP All Reviews
 
 - All Reviews screen (`ProductReviews`) from PDP **View all**; write-review is a centered modal (title, body, stars, optional image) not a bottom sheet.

@@ -39,11 +39,64 @@ export interface ProductListQuery {
   category?: string;
   franchise?: string;
   search?: string;
-  collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone';
+  collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone' | 'for-you';
   bundleTag?: string;
   sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
   page?: number;
   limit?: number;
+}
+
+export type VisualSearchResult = {
+  query: string;
+  franchise?: string;
+  category?: string;
+  products: Product[];
+  reason?: 'vision_unavailable';
+};
+
+/** Rank demo/catalog products from recent + wishlist signals (mock / offline For you). */
+export function rankForYouFromSignals(
+  catalog: Product[],
+  signalProducts: Product[],
+  limit = 12,
+): Product[] {
+  const inStock = catalog.filter((p) => p.stock > 0);
+  if (!signalProducts.length) {
+    return [...inStock].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, limit);
+  }
+  const franchises = new Set(signalProducts.map((p) => p.franchise).filter(Boolean));
+  const categories = new Set(signalProducts.map((p) => p.category).filter(Boolean));
+  const tags = new Set(signalProducts.flatMap((p) => p.tags ?? []).filter(Boolean));
+  const seedIds = new Set(signalProducts.map((p) => p.id));
+
+  const scored = inStock
+    .map((product) => {
+      let score = 0;
+      if (franchises.has(product.franchise)) score += 8;
+      if (categories.has(product.category)) score += 4;
+      for (const tag of product.tags ?? []) {
+        if (tags.has(tag)) {
+          score += 2;
+          break;
+        }
+      }
+      if (seedIds.has(product.id)) score -= 20;
+      return { product, score };
+    })
+    .filter((row) => row.score > 0)
+    .sort((a, b) => b.score - a.score || b.product.reviewCount - a.product.reviewCount)
+    .map((row) => row.product);
+
+  if (scored.length >= limit) return scored.slice(0, limit);
+  const pad = [...inStock].sort((a, b) => b.reviewCount - a.reviewCount);
+  const seen = new Set(scored.map((p) => p.id));
+  for (const product of pad) {
+    if (seen.has(product.id)) continue;
+    scored.push(product);
+    seen.add(product.id);
+    if (scored.length >= limit) break;
+  }
+  return scored.slice(0, limit);
 }
 
 /** In-memory shelf cache so Home can paint instantly on revisit. */
@@ -403,6 +456,86 @@ export class ProductRepository {
 
   peekAlsoLike(limit = 6): Product[] | undefined {
     return peekShelfCache<Product[]>(`also-like:${limit}`);
+  }
+
+  async getForYou(options?: {
+    recentIds?: string[];
+    signalProducts?: Product[];
+    limit?: number;
+    refresh?: boolean;
+  }): Promise<Product[]> {
+    const limit = options?.limit ?? 12;
+    const recentIds = (options?.recentIds ?? []).filter(Boolean).slice(0, 12);
+    const cacheKey = `for-you:${recentIds.join(',')}:${limit}`;
+    return loadShelfCached(
+      cacheKey,
+      () =>
+        this.withFallback(
+          async () => {
+            const { data } = await apiClient.get('/products/for-you', {
+              params: {
+                recentIds: recentIds.join(','),
+                limit,
+              },
+            });
+            return mapProducts((data.data?.products ?? []) as unknown[]);
+          },
+          () =>
+            rankForYouFromSignals(
+              demoProducts.map(normalizeProduct),
+              options?.signalProducts ?? [],
+              limit,
+            ),
+        ),
+      { refresh: options?.refresh },
+    );
+  }
+
+  peekForYou(recentIds: string[] = [], limit = 12): Product[] | undefined {
+    const key = `for-you:${recentIds.filter(Boolean).slice(0, 12).join(',')}:${limit}`;
+    return peekShelfCache<Product[]>(key);
+  }
+
+  /**
+   * Photo → catalog search. Requires live API + vision key on the server.
+   * Mock mode should not call this (UI shows a toast instead).
+   */
+  async visualSearch(imageUri: string): Promise<VisualSearchResult> {
+    if (!this.useApi) {
+      return { query: '', products: [], reason: 'vision_unavailable' };
+    }
+    const form = new FormData();
+    const name = imageUri.split('/').pop() || 'search.jpg';
+    const lower = name.toLowerCase();
+    const type = lower.endsWith('.png')
+      ? 'image/png'
+      : lower.endsWith('.webp')
+        ? 'image/webp'
+        : 'image/jpeg';
+    form.append('image', {
+      uri: imageUri,
+      name,
+      type,
+    } as unknown as Blob);
+
+    const { data } = await apiClient.post('/products/visual-search', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60_000,
+    });
+    const payload = data.data as {
+      query?: string;
+      franchise?: string;
+      category?: string;
+      products?: unknown[];
+      reason?: 'vision_unavailable';
+    };
+    return {
+      query: String(payload.query ?? ''),
+      franchise: payload.franchise,
+      category: payload.category,
+      products: mapProducts(payload.products ?? []),
+      reason: payload.reason,
+    };
   }
 
   async getByBundleTag(bundleTag: string): Promise<Product[]> {

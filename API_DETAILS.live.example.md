@@ -68,6 +68,11 @@ curl -sS -m 60 "$BASE/products/limited-drops"
 curl -sS -m 60 "$BASE/products/categories"
 curl -sS -m 60 "$BASE/products/franchises"
 curl -sS -m 60 "$BASE/products/suggestions?q=hoodie"
+curl -sS -m 60 "$BASE/products/for-you?recentIds=$PRODUCT_ID&limit=8"
+# Optional Bearer improves For you via wishlist + recent orders:
+# curl -sS -m 60 "$BASE/products/for-you?recentIds=$PRODUCT_ID" -H "Authorization: Bearer $ACCESS"
+# Visual search (multipart; needs vision-capable OPENAI_* on Render):
+# curl -sS -m 90 -X POST "$BASE/products/visual-search" -F "image=@./sample.jpg"
 curl -sS -m 60 "$BASE/products/deathnote-tee"
 curl -sS -m 60 "$BASE/products/deathnote-tee/related"
 curl -sS -m 60 "$BASE/serviceability?pincode=110001"
