@@ -42,7 +42,6 @@ Mock-only (no Mongo/Render): set `appConfig.dataSource` to `'mock'`, then `npm r
 ```bash
 npm install
 npm run setup
-# or: pnpm install && npm run setup
 ```
 
 `npm install` builds `@nidavellir/shared`. `npm run setup` copies `apps/api/.env.development` from the example (if missing) and restores mobile RN symlinks.
@@ -68,12 +67,10 @@ Then run with two terminals from the **repo root**:
 ```bash
 # Terminal 1 — Metro
 npm run --workspace apps/mobile start
-# or: pnpm --filter mobile start
 
 # Terminal 2 — iOS Simulator
 npm run ios
 # or: npm run --workspace apps/mobile ios
-# or: pnpm --filter mobile ios
 ```
 
 ### 3. Run the mobile app (Android / general)
@@ -88,14 +85,13 @@ Start Metro:
 ```bash
 npm run dev
 # or: npm run start --workspace apps/mobile
-# or: pnpm --filter mobile start
 ```
 
 Then run on a device/emulator:
 
 ```bash
-pnpm --filter mobile android   # Android
-pnpm --filter mobile ios       # iOS (after pod install above)
+npm run android   # Android
+npm run ios       # iOS (after pod install above)
 ```
 
 ### Build Android release APK
@@ -182,6 +178,8 @@ Nidavellir/
 | **API client** | `services/api/apiClient.ts` |
 | **Data source abstraction (mock/API)** | `services/data/productRepository.ts` |
 | **Demo reviews** | `services/data/reviews.ts` |
+| **All Reviews screen** | `features/products/ProductReviewsScreen.tsx` |
+| **Write-review modal** | `components/commerce/WriteReviewModal.tsx` |
 | **Onboarding (3 full-screen slides)** | `features/auth/OnboardingScreen.tsx` |
 | **Login** | `features/auth/LoginScreen.tsx` |
 | **Sign up** | `features/auth/SignupScreen.tsx` |
@@ -197,7 +195,7 @@ Nidavellir/
 | **Product card** | `components/commerce/ProductCard.tsx` |
 | **Square / slider / price / gallery pieces** | `components/commerce/` |
 | **Product list (PLP)** | `features/products/ProductsScreen.tsx` |
-| **Product detail (PDP) + review modal** | `features/products/ProductDetailScreen.tsx` |
+| **Product detail (PDP) + review teaser** | `features/products/ProductDetailScreen.tsx` |
 | **Cart (address card, stock chips, Hit the Anvil)** | `features/cart/CartScreen.tsx` |
 | **Coupon offers modal (empty Apply)** | `features/cart/CouponOffersModal.tsx` — `GET /coupons` filtered by public or `userIds` (Mongo id / phone) |
 | **Cart state (Redux slice)** | `features/cart/cartSlice.ts` |

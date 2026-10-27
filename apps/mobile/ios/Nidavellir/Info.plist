@@ -39,9 +39,9 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
 	<key>NSCameraUsageDescription</key>
-	<string>Niðavellir needs camera access to update your profile photo.</string>
+	<string>Niðavellir needs camera access for profile photos and visual product search.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Niðavellir needs photo library access to update your profile photo.</string>
+	<string>Niðavellir needs photo library access for profile photos and visual product search.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Niðavellir needs photo library access to save your profile photo.</string>
 	<key>UILaunchStoryboardName</key>

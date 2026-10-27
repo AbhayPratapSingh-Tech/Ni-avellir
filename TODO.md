@@ -52,7 +52,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 
 > Putting API + Mongo + app on real servers (Railway / Render / AWS + Play Store / TestFlight), with real env secrets — **not your laptop.**
 
-- [x] **API on Render Free** — `https://ni-avellir.onrender.com` (`render.yaml`, `npm run build:api` / `start:api`, Atlas Mongo, Razorpay Test keys, **Resend verify email live**). Mobile `apiBaseUrl` + `/health` keep-alive (`wakeApiServer.ts`).
+- [x] **API on Render Free** — `https://ni-avellir.onrender.com` (`render.yaml` deploys branch **`reviews`**, `npm run build:api` / `start:api`, Atlas Mongo, Razorpay Test keys, **Resend verify email live**). Mobile `apiBaseUrl` + `/health` keep-alive (`wakeApiServer.ts`). Sync the Render dashboard branch to `reviews` or blueprint auto-sync will keep building `improve`.
 - [ ] **HTTPS / store deploy (remaining)**
   - Paid always-on host if cold starts are unacceptable for store users.
   - Point production builds at HTTPS API; `dataSource: 'api'`, `allowMockFallback: false`.
@@ -67,9 +67,9 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 
 ### Discovery & personalization
 - [ ] Smart push notifications (interest / cart / drop aware) — needs FCM first.
-- [ ] Frictionless visual search.
-- [ ] Personalized home feed.
-- [x] **Character Vault (v1) — done** — Filament lobby (`CharacterVault`), Home teaser under Drop Zone. Roster: Goku/Vegeta (`Dragon Ball`, no clips) + Kid Levi (`Attack on Titan`, idle clip **8**, `enableIdleAnimation: true`) → PLP `{name}'s Vault`. Orbit + unit-cube/`displayScale`, Animator only when `enableIdleAnimation`, loader held ~1.2s after decode, CTA outline + press/hover fill, GLB warm from Home teaser, Heimdall `openCharacterVault` (`goku` / `vegeta` / `kid-levi`). Flag `features.characterVault`. Branch: `char_valut`. Next (optional): licensed idle-loop models / more champions / CDN assets.
+- [x] **Frictionless visual search (v1)** — Search/Home camera → `POST /products/visual-search` (vision LLM → catalog `search`). Needs live API + `OPENAI_*` / vision-capable model. Photos not persisted. Flag `features.visualSearch`.
+- [x] **Personalized home feed (v1)** — Home **For you** rail + PLP from `GET /products/for-you` (recent + wishlist + orders). Guests/no signals → bestsellers. Flag `features.personalizedHome`.
+- [x] **Character Vault (v1) — done** — Filament lobby (`CharacterVault`), Home teaser under Drop Zone. Roster: Goku/Vegeta (`Dragon Ball`, no clips) + Kid Levi (`Attack on Titan`, idle clip **8**, `enableIdleAnimation: true`) → PLP `{name}'s Vault`. Orbit + unit-cube/`displayScale`, Animator only when `enableIdleAnimation`, loader held ~1.2s after decode, CTA outline + press/hover fill, GLB warm from Home teaser, Heimdall `openCharacterVault` (`goku` / `vegeta` / `kid-levi`). Flag `features.characterVault`. Shipped on `reviews` (vault work originally landed on `char_valut`). Next (optional): licensed idle-loop models / more champions / CDN assets.
 - [x] **AI Merch Assistant** — `POST /api/v1/ai/chat` (tools over live catalog/cart/wishlist/orders + FAQ RAG); mobile hub/chat UI + Search mic (`@react-native-voice/voice`); stub without LLM key, Groq/OpenAI via env.
 
 ### Merchandising & drops
@@ -88,6 +88,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [x] `CachedImage` placeholder + `onError` fallback.
 - [x] Home `VideoBanner` muted autoplay retries (load / focus / AppState).
 - [x] PDP specs/reviews above recommendation carousels; confidence **2×2** grid.
+- [x] **All Reviews** — PDP teaser (2 rows) + **View all** → `ProductReviews`; write-review modal (title / experience / stars); author **Remove**; hosted profile photo on create. Outline **Add to cart** on PDP.
 
 ### PDP & community
 - [ ] “How they get along” / customer images.
@@ -95,7 +96,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] Community blog.
 
 ### Notes for implementers
-- Visual search and smart pushes need backend + privacy / moderation plans.
+- Visual search v1: photos stay in memory on the API; set a vision-capable `OPENAI_VISION_MODEL` if `OPENAI_MODEL` is text-only (e.g. some Groq chat models). Smart pushes still need FCM.
 - AI assistant: set `AI_ENABLED` + optional `OPENAI_*` on Render; without a key the API uses stub intents + real commerce tools.
 - Pre-order and mystery boxes need inventory + pricing + cart rules before UI.
 - After bundle seed changes on Render, run seed against Atlas (or redeploy with seed job) so live API gets `bundleTag` products.

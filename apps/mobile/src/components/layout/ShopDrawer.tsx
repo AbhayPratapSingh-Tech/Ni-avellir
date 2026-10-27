@@ -27,6 +27,7 @@ type ProductLink = {
   label: string;
   title: string;
   q?: string;
+  tag?: string;
   franchise?: string;
   category?: 'collectibles' | 'apparel' | 'desk-gear' | 'limited-drops';
 };
@@ -65,7 +66,7 @@ const MENU_SECTIONS: MenuSection[] = [
     id: 'anime',
     label: 'Anime',
     children: [
-      { id: 'anime-all', label: 'All anime', q: 'anime', title: 'Anime' },
+      { id: 'anime-all', label: 'All anime', tag: 'anime', title: 'Anime' },
       { id: 'solo-leveling', label: 'Solo Leveling', franchise: 'Solo Leveling', title: 'Solo Leveling' },
       { id: 'aot', label: 'Attack on Titan', franchise: 'Attack on Titan', title: 'Attack on Titan' },
       { id: 'demon-slayer', label: 'Demon Slayer', franchise: 'Demon Slayer', title: 'Demon Slayer' },
@@ -110,6 +111,7 @@ export function ShopDrawer({ visible, onClose }: Props) {
   const goProducts = (params: {
     title: string;
     q?: string;
+    tag?: string;
     franchise?: string;
     category?: 'collectibles' | 'apparel' | 'desk-gear' | 'limited-drops';
   }) => {
@@ -162,6 +164,7 @@ export function ShopDrawer({ visible, onClose }: Props) {
                               goProducts({
                                 title: item.title,
                                 ...(item.q ? { q: item.q } : {}),
+                                ...(item.tag ? { tag: item.tag } : {}),
                                 ...(item.franchise ? { franchise: item.franchise } : {}),
                                 ...(item.category ? { category: item.category } : {}),
                               })

@@ -54,7 +54,7 @@ export function createApp(env: Env) {
   app.use('/health', healthRouter);
   app.use('/api/v1/health', healthRouter);
   app.use('/api/v1/auth', createAuthRouter(env));
-  app.use('/api/v1/products', createProductRouter());
+  app.use('/api/v1/products', createProductRouter(env));
   app.use('/api/v1/cart', createCartRouter(env));
   app.use('/api/v1/orders', createOrderRouter(env));
   app.use('/api/v1/payments', createPaymentRouter(env));

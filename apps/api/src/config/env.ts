@@ -45,6 +45,8 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_BASE_URL: z.string().optional().default('https://api.openai.com/v1'),
   OPENAI_MODEL: z.string().optional().default('gpt-4o-mini'),
+  /** Optional vision model for POST /products/visual-search (defaults to OPENAI_MODEL). */
+  OPENAI_VISION_MODEL: z.string().optional(),
 });
 
 export type Env = ReturnType<typeof loadEnv>;
@@ -93,5 +95,6 @@ export function loadEnv() {
       : parsed.OPENAI_API_KEY,
     openaiBaseUrl: parsed.OPENAI_BASE_URL,
     openaiModel: parsed.OPENAI_MODEL,
+    openaiVisionModel: parsed.OPENAI_VISION_MODEL || undefined,
   };
 }

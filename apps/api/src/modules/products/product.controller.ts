@@ -1,15 +1,21 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../../common/errors/app-error.js';
+import type { Env } from '../../config/env.js';
+import type { AuthenticatedRequest } from '../../common/middleware/require-auth.js';
 import { ProductService } from './product.service.js';
 
 export class ProductController {
-  constructor(private readonly service: ProductService) {}
+  constructor(
+    private readonly service: ProductService,
+    private readonly env?: Env,
+  ) {}
 
   list = async (request: Request, response: Response) => {
     const query: {
       category?: string;
       search?: string;
       franchise?: string;
+      tag?: string;
       collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone';
       bundleTag?: string;
       inStockOnly?: boolean;
@@ -22,6 +28,7 @@ export class ProductController {
       category: request.query.category as string | undefined,
       search: request.query.search as string | undefined,
       franchise: request.query.franchise as string | undefined,
+      tag: request.query.tag as string | undefined,
       collection: request.query.collection as
         | 'bestsellers'
         | 'deals'
@@ -103,5 +110,34 @@ export class ProductController {
     const slug = request.params.slug as string;
     const related = await this.service.getRelated(slug);
     response.json({ data: related });
+  };
+
+  visualSearch = async (request: Request, response: Response) => {
+    if (!this.env) {
+      throw new AppError('Visual search is not configured', 500);
+    }
+    const file = request.file;
+    if (!file?.buffer?.length) {
+      throw new AppError('Image is required', 400);
+    }
+    const mimeType = file.mimetype?.startsWith('image/') ? file.mimetype : 'image/jpeg';
+    const result = await this.service.visualSearch(this.env, file.buffer, mimeType);
+    response.json({ data: result });
+  };
+
+  getForYou = async (request: AuthenticatedRequest, response: Response) => {
+    const recentRaw = String(request.query.recentIds ?? '');
+    const recentIds = recentRaw
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean)
+      .slice(0, 12);
+    const limit = request.query.limit ? Number(request.query.limit) : 12;
+    const products = await this.service.getForYou({
+      userId: request.userId,
+      recentIds,
+      limit,
+    });
+    response.json({ data: { products } });
   };
 }

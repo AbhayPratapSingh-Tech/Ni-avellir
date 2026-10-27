@@ -242,6 +242,8 @@ curl -sS -m 90 "$BASE/products/limited-drops"
 curl -sS -m 90 "$BASE/products/categories"
 curl -sS -m 90 "$BASE/products/franchises"
 curl -sS -m 90 "$BASE/products/suggestions?q=hoodie"
+curl -sS -m 90 "$BASE/products/for-you?recentIds=$PRODUCT_ID&limit=8"
+# Visual search: curl -sS -m 90 -X POST "$BASE/products/visual-search" -F "image=@./sample.jpg"
 curl -sS -m 90 "$BASE/products/{product_slug}"
 curl -sS -m 90 "$BASE/products/{product_slug}/related"
 curl -sS -m 90 "$BASE/serviceability?pincode=110001"
@@ -279,7 +281,8 @@ curl -sS -m 90 -X POST "$BASE/addresses" -H "Authorization: Bearer $ACCESS" -H '
   -d '{{"fullName":"Curl Demo","phone":"9876543210","line1":"12 Forge Lane","city":"Delhi","state":"DL","postalCode":"110001","isDefault":true}}'
 curl -sS -m 90 "$BASE/reviews?productId=$PRODUCT_ID"
 curl -sS -m 90 -X POST "$BASE/reviews" -H "Authorization: Bearer $ACCESS" -H 'Content-Type: application/json' \\
-  -d "{{\\"productId\\":\\"$PRODUCT_ID\\",\\"name\\":\\"Curl Demo\\",\\"rating\\":5,\\"body\\":\\"Solid piece.\\"}}"
+  -d "{{\\"productId\\":\\"$PRODUCT_ID\\",\\"name\\":\\"Curl Demo\\",\\"rating\\":5,\\"title\\":\\"Solid piece\\",\\"body\\":\\"Solid piece.\\"}}"
+# Author-only: curl -sS -m 90 -X DELETE "$BASE/reviews/$REVIEW_ID" -H "Authorization: Bearer $ACCESS"
 curl -sS -m 90 "$BASE/notifications" -H "Authorization: Bearer $ACCESS"
 curl -sS -m 90 -X POST "$BASE/notifications/read-all" -H "Authorization: Bearer $ACCESS"
 ```

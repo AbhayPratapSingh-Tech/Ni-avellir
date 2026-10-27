@@ -4,6 +4,22 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Visual search + For you
+
+- `POST /api/v1/products/visual-search` — multipart image (memory only, rate-limited) → vision LLM keywords → `ProductService.list`. Empty / `vision_unavailable` when AI key missing. Optional `OPENAI_VISION_MODEL`.
+- Mobile Search + Home camera control (`features.visualSearch`); gallery/camera → FormData; mock mode toasts that live API is required.
+- `GET /api/v1/products/for-you?recentIds=` (optional JWT) ranks from recent views + wishlist + orders; pads with bestsellers.
+- Home **For you** rail + View all PLP (`features.personalizedHome`). Existing Home shelves unchanged.
+
+### PDP All Reviews
+
+- All Reviews screen (`ProductReviews`) from PDP **View all**; write-review is a centered modal (title, body, stars, optional image) not a bottom sheet.
+- Review `title` / `avatarUrl` on API; authors can delete their own reviews (`DELETE /reviews/:id`). Submit uploads a local profile photo so other users can see it.
+- PDP **Add to cart** is an outline button; **Buy now** stays solid.
+- Render `tsc`: cast `request.params.id` on review delete.
+- Review photo shows on the list row; gallery picks stay on-device unless the URL is already `http(s)`.
+- Repo hygiene: npm (not pnpm) install docs, one Prettier + ESLint 8 config, Render blueprint `branch: reviews`.
+
 ### Character Vault (v1)
 
 - Mobile: Home teaser under Drop Zone → `CharacterVault` (react-native-filament orbit lobby). Roster: Goku/Vegeta (`Dragon Ball`, no clips) + Kid Levi (`Attack on Titan`, idle clip **8**). Visit CTA → Products PLP `{name}'s Vault`.
@@ -37,7 +53,7 @@ All notable changes to this project will be documented here.
 
 - Expanded shared mock catalog (~28 products, 6 franchises, `you-may-also-like` tag, richer specs).
 - Added Home **You may also like** 3×2 grid and `collection: 'also-like'` PLP.
-- Converted PDP write-review to a bottom-sheet modal; fixed submit button stretch; more space before brand chips.
+- PDP write-review started as a bottom-sheet (superseded by the centered All Reviews modal above).
 - Added Edit profile (name / email / phone) and editable avatar (`react-native-image-picker` + presets).
 - Orders list backed by Redux `ordersSlice` for the session.
 - Removed duplicate screen titles when the stack header already shows the name.

@@ -63,11 +63,17 @@ curl -sS -m 90 "$BASE/health"
 
 ```bash
 curl -sS -m 60 "$BASE/products?limit=10"
+curl -sS -m 60 "$BASE/products?tag=anime&limit=10"
 curl -sS -m 60 "$BASE/products/featured"
 curl -sS -m 60 "$BASE/products/limited-drops"
 curl -sS -m 60 "$BASE/products/categories"
 curl -sS -m 60 "$BASE/products/franchises"
 curl -sS -m 60 "$BASE/products/suggestions?q=hoodie"
+curl -sS -m 60 "$BASE/products/for-you?recentIds=$PRODUCT_ID&limit=8"
+# Optional Bearer improves For you via wishlist + recent orders:
+# curl -sS -m 60 "$BASE/products/for-you?recentIds=$PRODUCT_ID" -H "Authorization: Bearer $ACCESS"
+# Visual search (multipart; needs vision-capable OPENAI_* on Render):
+# curl -sS -m 90 -X POST "$BASE/products/visual-search" -F "image=@./sample.jpg"
 curl -sS -m 60 "$BASE/products/deathnote-tee"
 curl -sS -m 60 "$BASE/products/deathnote-tee/related"
 curl -sS -m 60 "$BASE/serviceability?pincode=110001"
@@ -183,7 +189,9 @@ curl -sS -m 60 -X POST "$BASE/addresses" -H "Authorization: Bearer $ACCESS" -H '
   -d '{"fullName":"Postman Live","phone":"9876543210","line1":"12 Forge Lane","city":"Delhi","state":"DL","postalCode":"110001","isDefault":true}'
 curl -sS -m 60 "$BASE/reviews?productId=$PRODUCT_ID"
 curl -sS -m 60 -X POST "$BASE/reviews" -H "Authorization: Bearer $ACCESS" -H 'Content-Type: application/json' \
-  -d "{\"productId\":\"$PRODUCT_ID\",\"name\":\"Postman Live\",\"rating\":5,\"body\":\"Solid piece.\"}"
+  -d "{\"productId\":\"$PRODUCT_ID\",\"name\":\"Postman Live\",\"rating\":5,\"title\":\"Solid piece\",\"body\":\"Solid piece.\"}"
+# Author-only delete (replace REVIEW_ID):
+# curl -sS -m 60 -X DELETE "$BASE/reviews/$REVIEW_ID" -H "Authorization: Bearer $ACCESS"
 curl -sS -m 60 "$BASE/notifications" -H "Authorization: Bearer $ACCESS"
 curl -sS -m 60 -X POST "$BASE/notifications/read-all" -H "Authorization: Bearer $ACCESS"
 ```

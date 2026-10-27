@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   InteractionManager,
@@ -30,10 +30,12 @@ import { BundleBannerSlider } from '../../components/commerce/BundleBannerSlider
 import { ShopHeader } from '../../components/layout/ShopHeader';
 import { ShopDrawer } from '../../components/layout/ShopDrawer';
 import { Screen } from '../../components/ui/Screen';
+import { CameraSearchButton } from '../../components/ui/CameraSearchButton';
 import { CachedImage, prefetchImages } from '../../components/ui/CachedImage';
 import { useDailySale } from '../../lib/saleWindow';
 import { productRepository } from '../../services/data/productRepository';
 import { pingApiHealthIfStale } from '../../services/api/wakeApiServer';
+import { useAppSelector } from '../../app/store';
 import type { ShopCategory } from '../../lib/shopCategories';
 import type { RootStackParamList } from '../../app/navigation/types';
 import { trackEvent } from '../../lib/analytics';
@@ -190,11 +192,24 @@ function FlashSaleBar({ onPress }: { onPress: () => void }) {
 export function HomeScreen() {
   const navigation = useNavigation<Navigation>();
   const { width } = useWindowDimensions();
+  const recentItems = useAppSelector((state) => state.recent.items);
+  const wishlistItems = useAppSelector((state) => state.wishlist.items);
+  const recentIds = useMemo(() => recentItems.map((item) => item.id).slice(0, 12), [recentItems]);
+  const signalProducts = useMemo(() => {
+    const byId = new Map<string, Product>();
+    for (const item of [...recentItems, ...wishlistItems]) {
+      byId.set(item.id, item);
+    }
+    return [...byId.values()];
+  }, [recentItems, wishlistItems]);
   const [deals, setDeals] = useState<Product[]>(() => productRepository.peekDeals() ?? []);
   const [bestSellers, setBestSellers] = useState<Product[]>(
     () => productRepository.peekBestSellers() ?? [],
   );
   const [alsoLike, setAlsoLike] = useState<Product[]>(() => productRepository.peekAlsoLike(6) ?? []);
+  const [forYou, setForYou] = useState<Product[]>(
+    () => productRepository.peekForYou(recentIds, 8) ?? [],
+  );
   const [bundles, setBundles] = useState<
     Awaited<ReturnType<typeof productRepository.getBundles>>
   >(() => productRepository.peekBundles() ?? []);
@@ -220,10 +235,12 @@ export function HomeScreen() {
     const warmDeals = productRepository.peekDeals();
     const warmBest = productRepository.peekBestSellers();
     const warmAlso = productRepository.peekAlsoLike(6);
+    const warmForYou = productRepository.peekForYou(recentIds, 8);
     const warmBundles = productRepository.peekBundles();
     if (warmDeals?.length) setDeals(warmDeals);
     if (warmBest?.length) setBestSellers(warmBest);
     if (warmAlso?.length) setAlsoLike(warmAlso);
+    if (warmForYou?.length) setForYou(warmForYou);
     if (warmBundles?.length) setBundles(warmBundles);
 
     const empty =
@@ -243,9 +260,20 @@ export function HomeScreen() {
       void productRepository.getBestSellers({ refresh: true }).then(setBestSellers);
       void productRepository.getAlsoLike(6, { refresh: true }).then(setAlsoLike);
       void productRepository.getBundles({ refresh: true }).then(setBundles);
+      if (appConfig.features.personalizedHome) {
+        void productRepository
+          .getForYou({
+            recentIds,
+            signalProducts,
+            limit: 8,
+            refresh: true,
+          })
+          .then(setForYou)
+          .catch(() => undefined);
+      }
     });
     return () => task.cancel();
-  }, []);
+  }, [recentIds, signalProducts]);
 
   useFocusEffect(
     useCallback(() => {
@@ -291,6 +319,7 @@ export function HomeScreen() {
       navigation.navigate('Products', {
         title: item.name,
         category: item.category,
+        tag: item.tag,
         q: item.q,
         collection: item.collection,
       });
@@ -310,6 +339,12 @@ export function HomeScreen() {
               <Text style={styles.searchIcon}>⌕</Text>
               <Text style={styles.searchPlaceholder}>Search kits, desks, drops...</Text>
             </Pressable>
+            {appConfig.features.visualSearch ? (
+              <CameraSearchButton
+                onPress={() => navigation.navigate('Search', { openVisualSearch: true })}
+                size={40}
+              />
+            ) : null}
             {appConfig.features.aiAssistant ? (
               <Pressable
                 style={styles.aiChip}
@@ -344,6 +379,31 @@ export function HomeScreen() {
           {appConfig.features.characterVault ? (
             <View style={styles.section}>
               <CharacterVaultTeaser />
+            </View>
+          ) : null}
+          {appConfig.features.personalizedHome && forYou.length > 0 ? (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>For you</Text>
+                <Pressable
+                  onPress={() =>
+                    navigation.navigate('Products', { collection: 'for-you', title: 'For you' })
+                  }
+                >
+                  <Text style={styles.seeAll}>See all</Text>
+                </Pressable>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.bestTrack}
+              >
+                {forYou.map((product) => (
+                  <View key={product.id} style={styles.bestCard}>
+                    <SquareProductCard product={product} onPress={openProduct} />
+                  </View>
+                ))}
+              </ScrollView>
             </View>
           ) : null}
           <View style={styles.section}>

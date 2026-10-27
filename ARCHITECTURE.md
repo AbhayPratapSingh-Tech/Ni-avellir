@@ -27,8 +27,8 @@ The architecture is intentionally split into a React Native mobile app and a Nod
 
 ```text
 Nidavellir/
-  pnpm-workspace.yaml
-    # Declares apps/* and packages/* as pnpm workspaces.
+  package.json
+    # npm workspaces: apps/* and packages/* (`packageManager`: npm).
   turbo.json
     # Defines cached build, lint, test, and typecheck task pipeline.
   tsconfig.base.json
@@ -148,7 +148,7 @@ Nidavellir/
   packages/
     shared/
       package.json
-        # Package identity, e.g. @nidavellir/shared, consumed through pnpm workspace protocol.
+        # Package identity, e.g. @nidavellir/shared, consumed through npm workspaces.
       tsconfig.json
         # Extends ../../tsconfig.base.json for strict shared contracts.
       src/
@@ -371,7 +371,7 @@ Proposed native tooling pins for Phase 2:
 - Android Gradle Plugin: 8.7.3.
 - Gradle: 8.10.2.
 - Node.js: 22.11.0 LTS.
-- Package manager: pnpm 9.15.4.
+- Package manager: npm (see root `package.json` `packageManager`).
 
 These pins must be rechecked against the final React Native version selected in Phase 2 after the minimum supported Android/iOS versions are answered.
 
@@ -474,9 +474,9 @@ Customer:
 - `POST /api/v1/orders`
 - `GET /api/v1/orders`
 - `GET /api/v1/orders/:id`
+- `GET /api/v1/reviews?productId=`
 - `POST /api/v1/reviews`
-- `PATCH /api/v1/reviews/:id`
-- `DELETE /api/v1/reviews/:id`
+- `DELETE /api/v1/reviews/:id` (author only)
 - `GET /api/v1/notifications`
 - `PATCH /api/v1/notifications/:id/read`
 
