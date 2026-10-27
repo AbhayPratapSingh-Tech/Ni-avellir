@@ -13,6 +13,7 @@ export function CategoriesScreen() {
     navigation.navigate('Products', {
       title: item.name,
       category: item.category,
+      tag: item.tag,
       q: item.q,
       collection: item.collection,
     });

@@ -39,6 +39,8 @@ export interface ProductListQuery {
   category?: string;
   franchise?: string;
   search?: string;
+  /** Exact tag match (e.g. anime). */
+  tag?: string;
   collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone' | 'for-you';
   bundleTag?: string;
   sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
@@ -190,6 +192,10 @@ function listFromMock(query: ProductListQuery = {}): ProductListResult {
     items = items.filter(
       (p) => p.franchise.toLowerCase() === needle || p.brand.toLowerCase() === needle,
     );
+  }
+  if (query.tag?.trim()) {
+    const needle = query.tag.trim().toLowerCase();
+    items = items.filter((p) => p.tags.some((tag) => tag.toLowerCase() === needle));
   }
   if (query.bundleTag) {
     const tag = query.bundleTag;

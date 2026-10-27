@@ -10,6 +10,8 @@ export type ListProductsQuery = {
   category?: string;
   search?: string;
   franchise?: string;
+  /** Exact tag match (e.g. anime). Facet filter — not text search. */
+  tag?: string;
   collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone';
   /** Bundle code e.g. DEMON_PR — matches bundleTag or tags. */
   bundleTag?: string;
@@ -81,6 +83,9 @@ export class ProductService {
     }
     if (query.franchise) {
       filter.franchise = query.franchise;
+    }
+    if (query.tag?.trim()) {
+      filter.tags = query.tag.trim();
     }
     if (query.bundleTag) {
       filter.$or = [{ bundleTag: query.bundleTag }, { tags: query.bundleTag }];

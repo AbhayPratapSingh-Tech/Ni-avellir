@@ -41,6 +41,7 @@ export function ProductsScreen() {
   const route = useRoute();
   const params = (route.params ?? {}) as {
     category?: string;
+    tag?: string;
     franchise?: string;
     collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone' | 'for-you';
     title?: string;
@@ -54,6 +55,7 @@ export function ProductsScreen() {
   const [sort, setSort] = useState<SortValue>('newest');
   const [sortOpen, setSortOpen] = useState(false);
   const [category, setCategory] = useState<string | undefined>(params.category);
+  const [tag, setTag] = useState<string | undefined>(params.tag);
   const [franchise, setFranchise] = useState<string | undefined>(params.franchise);
   const [search, setSearch] = useState(params.q);
   const [collection, setCollection] = useState(params.collection);
@@ -68,6 +70,7 @@ export function ProductsScreen() {
   useEffect(() => {
     setSearch(params.q);
     setCollection(params.collection);
+    setTag(params.tag);
     if (params.franchise) {
       setFranchise(params.franchise);
       setCategory(undefined);
@@ -75,7 +78,7 @@ export function ProductsScreen() {
       setFranchise(undefined);
       setCategory(params.category);
     }
-  }, [params.category, params.franchise, params.q, params.collection]);
+  }, [params.category, params.tag, params.franchise, params.q, params.collection]);
 
   useEffect(() => {
     productRepository.getCategories().then(setCategories);
@@ -118,6 +121,7 @@ export function ProductsScreen() {
           const query = {
             sort,
             category,
+            tag,
             franchise,
             search,
             collection,
@@ -147,7 +151,7 @@ export function ProductsScreen() {
         loadingMoreRef.current = false;
       }
     },
-    [sort, category, franchise, search, collection, recentItems, wishlistItems],
+    [sort, category, tag, franchise, search, collection, recentItems, wishlistItems],
   );
 
   useEffect(() => {

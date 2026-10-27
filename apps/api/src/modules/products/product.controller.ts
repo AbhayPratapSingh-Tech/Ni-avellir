@@ -15,6 +15,7 @@ export class ProductController {
       category?: string;
       search?: string;
       franchise?: string;
+      tag?: string;
       collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone';
       bundleTag?: string;
       inStockOnly?: boolean;
@@ -27,6 +28,7 @@ export class ProductController {
       category: request.query.category as string | undefined,
       search: request.query.search as string | undefined,
       franchise: request.query.franchise as string | undefined,
+      tag: request.query.tag as string | undefined,
       collection: request.query.collection as
         | 'bestsellers'
         | 'deals'

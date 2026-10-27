@@ -2,7 +2,11 @@ export type ShopCategory = {
   id: string;
   name: string;
   image: string;
+  /** Product type category (apparel, collectibles, …). */
   category?: string;
+  /** Exact catalog tag facet (e.g. anime) — not text search. */
+  tag?: string;
+  /** Name/text search query. */
   q?: string;
   collection?: 'bestsellers' | 'deals' | 'also-like';
 };
@@ -78,7 +82,7 @@ export const shopCategories: ShopCategory[] = [
     id: 'anime',
     name: 'Anime',
     image: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx100891-vPfnfkzizYFe.jpg',
-    q: 'anime',
+    tag: 'anime',
   },
   {
     id: 'drops',

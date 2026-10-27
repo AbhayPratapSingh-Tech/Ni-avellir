@@ -63,6 +63,7 @@ curl -sS -m 90 "$BASE/health"
 
 ```bash
 curl -sS -m 60 "$BASE/products?limit=10"
+curl -sS -m 60 "$BASE/products?tag=anime&limit=10"
 curl -sS -m 60 "$BASE/products/featured"
 curl -sS -m 60 "$BASE/products/limited-drops"
 curl -sS -m 60 "$BASE/products/categories"

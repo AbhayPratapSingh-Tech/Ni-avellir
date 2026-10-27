@@ -38,6 +38,8 @@ export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   Products: {
     category?: string;
+    /** Exact tag facet (e.g. anime). */
+    tag?: string;
     q?: string;
     franchise?: string;
     collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone' | 'for-you';
