@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: College demo implemented (Phases 1–9) + live Render API + Character Vault v1. Optional testing and store deployment remain. See `PROJECT_PROGRESS.md`.
+Status: College demo (Phases 1–9) + live Render API on branch **`Nidavellir`** + Character Vault, All Reviews, visual search, For you, Anime tag facet. Next backlog is **`TODO.md` Phases 10–13** (reliability → ops/store → discovery/upgrades → release polish). See `PROJECT_PROGRESS.md`.
 
 ## Phase 1: Architecture
 

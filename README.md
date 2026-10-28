@@ -2,12 +2,12 @@
 
 Premium gaming merchandise marketplace — a full-stack mobile commerce app.
 
-**Status: Live API on Render + mobile wired.** Default `dataSource: 'api'` → `https://ni-avellir.onrender.com/api/v1`. Resend verify email live (`EMAIL_DEMO_MODE=false`). Character Vault v1 (Filament lobby) and All Reviews shipped. Local API via `npm run dev:api`. Mock via `appConfig.dataSource: 'mock'`. Render blueprint branch: **`reviews`**.
+**Status: Live API on Render + mobile wired.** Default `dataSource: 'api'` → `https://ni-avellir.onrender.com/api/v1`. Resend verify email live (`EMAIL_DEMO_MODE=false`). Character Vault, All Reviews, visual search, For you, Anime `tag` facet shipped. Local API via `npm run dev:api`. Mock via `appConfig.dataSource: 'mock'`. Render deploy branch: **`Nidavellir`**.
 
 ## What's Included
 
-- **Mobile app** (bare React Native CLI, no Expo): Onboarding, Login, Signup, OTP, Forgot/Reset/Change password, Devices & sessions (device/OS/IP), Email verify, Forge (Home + YouTube banner), Categories, Search, Products, Product Detail (+ reviews, All Reviews, write-review modal, bundles, SVG confidence icons), Cart (+ coupons), Checkout (+ serviceability), Order Confirmation (Rune XP), Orders, Order Details (cancel/return/exchange), Addresses, Wishlist, Notifications, Account, Edit Profile.
-- **Backend API** (Node.js + Express + MongoDB Atlas): auth/JWT, products + bundles, server cart, addresses, wishlist, coupons, reviews, notifications, serviceability, orders, Razorpay Test + COD, webhooks, Resend (branded verify/reset/order mail), health, seed. Hosted on **Render Free** (`ni-avellir.onrender.com`).
+- **Mobile app** (bare React Native CLI, no Expo): Onboarding, Login, Signup, OTP, Forgot/Reset/Change password, Devices & sessions (device/OS/IP), Email verify, Forge (Home + YouTube banner + Drop Zone + For you + Character Vault teaser), Categories, Search (+ visual search camera), Products (incl. Anime `tag` PLP), Product Detail (+ reviews, All Reviews, write-review modal, bundles, SVG confidence icons), Cart (+ coupons), Checkout (+ serviceability), Order Confirmation (Rune XP), Orders, Order Details (cancel/return/exchange), Addresses, Wishlist, Notifications, Account, Edit Profile, Ask Niðavellir, Store locator.
+- **Backend API** (Node.js + Express + MongoDB Atlas): auth/JWT, products + bundles + visual-search + for-you + `tag` filter, server cart, addresses, wishlist, coupons, reviews, notifications, serviceability, orders, Razorpay Test + COD, webhooks, Resend (branded verify/reset/order mail), AI chat, health, seed. Hosted on **Render Free** (`ni-avellir.onrender.com`).
 - **Shared package** (`@nidavellir/shared`): contracts, types, constants, Zod validation, mock catalog, bundle display hints.
 - **Loyalty:** Rune XP **100**/order, **500** for bundle orders (2+ SKUs same `bundleTag`).
 - **Payments**: native `react-native-razorpay` when live Test keys return `intent.demoMode === false` (demo sheet only without keys).
@@ -69,17 +69,22 @@ See also `API_DETAILS.example.md`, `DEVELOPER_GUIDE.md`, `AI_AGENT_GUIDE.md`.
 
 > After `npm install`, root `postinstall` builds `@nidavellir/shared`, and mobile `ensure-mobile-node-modules.js` restores RN symlinks for Android Gradle / Metro.
 
-## Documentation
+## Documentation (read these)
 
-- `AI_AGENT_GUIDE.md` — **required for AI agents**: keep mock/live API, payments, nav, and docs aligned on every change.
-- `PROJECT_INSIGHTS.md` — operating rules + live API / Razorpay / Render notes.
-- `DEVELOPER_GUIDE.md` — feature→file map and run instructions.
-- `API_DETAILS.live.example.md` — **live Render cURLs for Postman**.
-- `API_DETAILS.example.md` — how to generate JWT sheets (local + `--live`).
-- `ARCHITECTURE.md` — full architecture plan.
-- `INSTALLATION.md` — native tooling prerequisites.
-- `TODO.md` / `PROJECT_PROGRESS.md` — project status and roadmap (Resend live, Rune XP 100/500, sessions, polish).
-- `render.yaml` — Render Blueprint (build/start API only, not Metro).
+| Priority | File | Why |
+|----------|------|-----|
+| 1 | `AI_AGENT_GUIDE.md` | How to change the app without breaking mock/live/payments |
+| 2 | `PROJECT_PROGRESS.md` | What’s done / next |
+| 3 | `TODO.md` | Done vs deferred backlog |
+| 4 | `PROJECT_INSIGHTS.md` | Live switch, Razorpay, Render, vault / reviews / visual search notes |
+| 5 | `DEVELOPER_GUIDE.md` | Feature → file map + run commands |
+| 6 | `README.md` | This file — clone / smoke / stack |
+| — | `API_DETAILS.live.example.md` | Live Render cURLs for Postman |
+| — | `API_DETAILS.example.md` | How to generate JWT sheets (local + `--live`) |
+| — | `ARCHITECTURE.md` | Full architecture plan |
+| — | `INSTALLATION.md` | Native tooling prerequisites |
+| — | `CHANGELOG.md` | Notable shipped changes |
+| — | `render.yaml` | Render Blueprint (API only, branch **`Nidavellir`**) |
 
 ## Tech Stack
 
