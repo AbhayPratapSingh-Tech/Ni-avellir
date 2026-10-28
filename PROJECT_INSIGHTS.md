@@ -123,6 +123,7 @@ Mobile defaults to **`api`** via `apps/mobile/src/config/appConfig.ts` (set `'mo
 5f. **For you (v1):** Home rail + PLP via `GET /api/v1/products/for-you?recentIds=` (optional JWT adds wishlist + recent order lines). Score franchise/category/tags; pad with bestsellers. Flag `features.personalizedHome`. Other Home shelves unchanged.
 5g. **Anime facet:** Home / Categories / drawer use `GET /products?tag=anime` (seed tags). Do **not** treat anime as a `ProductCategory` enum value — that would pull items out of apparel/collectibles/desk-gear. Live smoke: `curl '…/products?tag=anime&limit=3'` → `pagination.total` ~35.
 5h. **Render deploy:** Blueprint + dashboard branch **`Nidavellir`**. Keep them aligned or auto-sync builds the wrong git ref.
+5i. **Idempotent checkout + reconcile:** `Idempotency-Key` on `POST /orders`; intent reuse; atomic paid + `runeXpAwarded`. In-process reconciler + Order Details: Razorpay capture → paid; unpaid after `PENDING_PAYMENT_EXPIRE_MINUTES` (30) → `payment_expired`. Webhook `payment.failed` ≠ order cancel — expiry cleans abandoned orders.
 6. Rune XP is **flat per order** (100 / 500 bundle), not per-SKU sum. Product `sku` / `runeXp` fields remain for display / backfill (`npm run seed:sku --workspace apps/api`).
 
 **Backend path**

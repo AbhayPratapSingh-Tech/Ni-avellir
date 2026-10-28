@@ -105,6 +105,27 @@ export class RazorpayProvider implements PaymentProvider {
       .digest('hex');
   }
 
+  /**
+   * Look up a captured/authorized payment for a Razorpay order id (providerIntentId).
+   * Used by reconciliation when client /confirm never arrived.
+   */
+  async findCapturedPayment(
+    providerIntentId: string,
+  ): Promise<{ id: string; status: string } | null> {
+    if (this.demoMode || !this.client) {
+      return null;
+    }
+    try {
+      const result = await this.client.orders.fetchPayments(providerIntentId);
+      const items = (result as { items?: Array<{ id?: string; status?: string }> }).items ?? [];
+      const hit = items.find((p) => p.status === 'captured' || p.status === 'authorized');
+      if (!hit?.id) return null;
+      return { id: String(hit.id), status: String(hit.status) };
+    } catch {
+      return null;
+    }
+  }
+
   get isDemoMode() {
     return this.demoMode;
   }

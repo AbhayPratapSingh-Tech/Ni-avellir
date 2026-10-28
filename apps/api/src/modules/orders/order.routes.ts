@@ -2,13 +2,15 @@ import { Router } from 'express';
 import type { Env } from '../../config/env.js';
 import { asyncHandler } from '../../common/middleware/async-handler.js';
 import { createRequireAuth, optionalAuth } from '../../common/middleware/require-auth.js';
+import { createPaymentStack } from '../payments/payment.factory.js';
 import { OrderController } from './order.controller.js';
 import { OrderService } from './order.service.js';
 
 export function createOrderRouter(env: Env) {
   const router = Router();
   const service = new OrderService();
-  const controller = new OrderController(service);
+  const { service: paymentService } = createPaymentStack(env);
+  const controller = new OrderController(service, paymentService);
   const authOptional = optionalAuth(env);
   const requireAuth = createRequireAuth(env);
 

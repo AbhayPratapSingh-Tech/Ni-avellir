@@ -90,6 +90,10 @@ type AddressErrors = Partial<{
   postalCode: string;
 }>;
 
+function newCheckoutIdempotencyKey() {
+  return `chk_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`;
+}
+
 export function CheckoutScreen() {
   const navigation = useNavigation<Navigation>();
   const insets = useSafeAreaInsets();
@@ -103,6 +107,8 @@ export function CheckoutScreen() {
   const [triedAddress, setTriedAddress] = useState(false);
   const [razorpayPending, setRazorpayPending] = useState<PendingRazorpay | null>(null);
   const [paying, setPaying] = useState(false);
+  /** Stable for one checkout attempt so double-tap / retry cannot create two orders. */
+  const checkoutIdempotencyKeyRef = useRef(newCheckoutIdempotencyKey());
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [addressPanel, setAddressPanel] = useState<'list' | 'form'>('list');
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
@@ -584,6 +590,7 @@ export function CheckoutScreen() {
       );
     });
     setRazorpayPending(null);
+    checkoutIdempotencyKeyRef.current = newCheckoutIdempotencyKey();
     navigation.replace('OrderConfirmation', {
       orderId: order.orderNumber ?? orderId,
       awardedXp: order.awardedXp ?? 100,
@@ -591,6 +598,8 @@ export function CheckoutScreen() {
   };
 
   const placeOrder = async () => {
+    if (submitting || paying) return;
+
     const shipping = resolveShippingAddress();
     if (!shipping) {
       toast.show('Shipping address is incomplete — update it to place the order');
@@ -617,19 +626,22 @@ export function CheckoutScreen() {
         user && !user.isGuest && user.email.trim()
           ? user.email.trim()
           : 'demo@nidavellir.app';
-      const order = await productRepository.createOrder({
-        customer: { name: shipping.fullName, email, phone: shipping.phone },
-        items: itemInputs,
-        shippingAddress: {
-          fullName: shipping.fullName,
-          phone: shipping.phone,
-          line1: shipping.line1,
-          city: shipping.city,
-          state: shipping.state,
-          postalCode: shipping.postalCode,
+      const order = await productRepository.createOrder(
+        {
+          customer: { name: shipping.fullName, email, phone: shipping.phone },
+          items: itemInputs,
+          shippingAddress: {
+            fullName: shipping.fullName,
+            phone: shipping.phone,
+            line1: shipping.line1,
+            city: shipping.city,
+            state: shipping.state,
+            postalCode: shipping.postalCode,
+          },
+          paymentMethod: payment,
         },
-        paymentMethod: payment,
-      });
+        { idempotencyKey: checkoutIdempotencyKeyRef.current },
+      );
 
       if (payment === 'cash_on_delivery') {
         finishOrder(order);

@@ -3,6 +3,8 @@ import { loadEnv } from './config/env.js';
 import { logger } from './common/logger/logger.js';
 import { connectDatabase } from './database/connect.js';
 import { createEmailService } from './integrations/email/email.factory.js';
+import { createPaymentStack } from './modules/payments/payment.factory.js';
+import { startPaymentReconciler } from './modules/payments/payment-reconciler.js';
 
 async function main() {
   const env = loadEnv();
@@ -19,6 +21,11 @@ async function main() {
     );
     process.exit(1);
   }
+
+  const { service: paymentService } = createPaymentStack(env);
+  startPaymentReconciler(paymentService, {
+    intervalMs: env.paymentReconcileIntervalMs,
+  });
 
   // Bind 0.0.0.0 so cloud hosts (Render, Railway, etc.) can reach the process.
   app.listen(env.port, '0.0.0.0', () => {
