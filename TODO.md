@@ -35,71 +35,143 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 
 ---
 
-## Explicitly deferred (do not implement until asked)
+## Shipped product extras (COMPLETE — do not re-open as new work)
 
-- [ ] **Shipment tracking** — carrier tracking numbers + timeline beyond status labels.
-- [ ] **Invoice / PDF** — downloadable tax invoice for orders.
 - [x] **Payment webhooks** — Razorpay `POST /payments/razorpay/webhook` (idempotent, raw-body HMAC verify) beside client `/confirm`.
-- [ ] **Push notifications (FCM / APNs)** — device tokens + backend fan-out (in-app Notifications API already exists).
-- [ ] **Automated tests** — Jest + RNTL + Supertest.
-- [ ] Coupon admin UI / CMS (API + seed only for now).
-- [x] **Serviceability picker UI on checkout** — checks pincode from selected/entered address; shows ETA / shipping / COD; hides COD when unavailable (`serviceabilityRepository` + Checkout).
-- [ ] **Custom Resend domain** — send verify/order mail to any address (currently limited by `onboarding@resend.dev`).
+- [x] **Serviceability picker UI on checkout** — pincode ETA / shipping / COD gate (`serviceabilityRepository` + Checkout).
+- [x] **API on Render Free** — `https://ni-avellir.onrender.com` (`render.yaml` + dashboard branch **`Nidavellir`**, `build:api` / `start:api`, Atlas, Razorpay Test, Resend live). Mobile `apiBaseUrl` + `/health` keep-alive (`wakeApiServer.ts`).
+- [x] **Frictionless visual search (v1)** — Search/Home camera → `POST /products/visual-search`. Flag `features.visualSearch`.
+- [x] **Personalized home feed (v1)** — Home **For you** + `GET /products/for-you`. Flag `features.personalizedHome`.
+- [x] **Character Vault (v1)** — Filament lobby; Goku/Vegeta + Kid Levi (idle clip **8**). Flag `features.characterVault`.
+- [x] **AI Merch Assistant** — `POST /api/v1/ai/chat` + mobile hub/mic; stub without LLM key.
+- [x] **Drop Zone** — daily rotation via `drop-zone-eligible` + Asia/Kolkata date hash (no daily re-seed).
+- [x] **Bundle products** — `bundleTag` / `isBundleMain` + `GET /products/bundles`; PDP complete-the-bundle; Home banner slider.
+- [x] **Rune XP (loyalty)** — 100 / 500; Profile tiers; confirmation award.
+- [x] **Devices & sessions** — device / OS / IP.
+- [x] **Email verify (Resend)** — branded templates; Account `emailVerified`.
+- [x] SVG `AppIcon`, `CachedImage` fallback, Home `VideoBanner` retries, PDP confidence 2×2 + specs/reviews above carousels.
+- [x] **All Reviews** — teaser + `ProductReviews`; write modal; author Remove; hosted avatar; outline Add to cart.
+- [x] **Anime facet** — `GET /products?tag=anime` (not name search / not a fifth category enum).
+
+> Upgrades for these shipped features are listed under **Upgrade shipped features** below — do not treat v1 as unfinished.
 
 ---
 
-## HTTPS / production deploy
+## Phase 10 — Reliability & security
 
-> Putting API + Mongo + app on real servers (Railway / Render / AWS + Play Store / TestFlight), with real env secrets — **not your laptop.**
+> Prefer this phase before real money / store users. Do not implement until asked.
 
-- [x] **API on Render Free** — `https://ni-avellir.onrender.com` (`render.yaml` deploys branch **`reviews`**, `npm run build:api` / `start:api`, Atlas Mongo, Razorpay Test keys, **Resend verify email live**). Mobile `apiBaseUrl` + `/health` keep-alive (`wakeApiServer.ts`). Sync the Render dashboard branch to `reviews` or blueprint auto-sync will keep building `improve`.
+- [ ] **Automated tests** — Jest + Supertest for cart totals, coupons, webhook HMAC, order/payment paths, Rune XP award; RNTL for login → cart → checkout critical flows.
+- [ ] **CI** — GitHub Actions: lint, typecheck, tests, and production builds on every PR.
+- [ ] **Payment / order reconciliation** — detect intent vs provider mismatch; auditable recovery; no silent fake paid orders in API mode.
+- [ ] **Idempotent checkout** — idempotency keys / optimistic lock so double-tap Pay cannot create two orders, double-charge, or double-award XP.
+- [ ] **Atomic inventory** — reserve stock on checkout; release on expiry/failure; `findOneAndUpdate` stock check so last unit cannot oversell.
+- [ ] **Unpaid order expiry cron** — expire pending orders and release reserved stock when `/confirm` never arrives (webhook remains source of truth when payment succeeds).
+- [ ] **Authz + rate limits audit** — OTP/login per phone + IP (SMS-bombing); refresh-token rotation / revoke / logout-other-devices; authorization on every user-owned resource.
+- [ ] **Account deletion** — in-app request + confirmation (Play/App Store requirement) + documented retention for legal order records.
+- [ ] **Data export / privacy controls** — user request for account data; document what is collected, retained, deleted (IP, avatars, visual-search policy).
+- [ ] **Crash / error reporting** — Sentry or Firebase Crashlytics on mobile; structured API error tracking + latency metrics + alerts (failed payments / webhooks).
+- [ ] **Mongo backups** — Atlas M0 has no automated backups; scheduled `mongodump` + restore drill; document recovery for users/orders/catalog.
+- [ ] **Offline / timeout / duplicate-checkout** — regression tests for flaky network, app kill mid-pay, retry UX.
+- [ ] **Seed safety guard** — block `npm run seed` from wiping production Atlas by accident.
+- [ ] **Secrets hygiene / env separation** — distinct dev / staging / prod keys; never real Razorpay Live from a test build.
+
+---
+
+## Phase 11 — Customer operations & store
+
+> Ops + compliance so the shop can run without a developer reseeding Atlas.
+
+- [ ] **Shipment tracking** — manual timeline first (confirmed → processing → packed → shipped → out for delivery → delivered); carrier + tracking link later.
+- [ ] **Invoice / PDF** — GST-ready tax invoice from trusted server order data (not client totals); Order Details download.
+- [ ] **Refund status UI** — refund initiated → processed (pairs with existing cancel/return/exchange).
+- [ ] **Support tickets** — order-linked Help & Support form (case number, status, attachments, response history); reuse FAQ RAG where useful.
+- [ ] **Admin / CMS web** — protected admin for products, stock, orders, returns, coupons, Home banners, Drop Zone pool, bundle tags (replaces seed-only ops).
+- [ ] **Custom Resend domain** — DNS auth so verify/order mail reaches any address (today limited by `onboarding@resend.dev`).
+- [ ] **Push notifications (FCM / APNs)** — device tokens + backend fan-out; user preferences (order vs marketing); token lifecycle. (In-app Notifications API already exists.)
+- [ ] **Smart push** — interest / cart / drop aware — needs FCM first.
+- [ ] **Legal screens + public URLs** — Privacy Policy, Terms of Service, Refund/Return Policy (store rejection without these).
+- [ ] **Consent copy** — camera / mic / photo upload; note that visual-search photos are not stored.
 - [ ] **HTTPS / store deploy (remaining)**
-  - Paid always-on host if cold starts are unacceptable for store users.
-  - Point production builds at HTTPS API; `dataSource: 'api'`, `allowMockFallback: false`.
-  - Android: Play Console internal testing → upload release APK/AAB (`npm run gradlew-android`).
+  - Paid always-on host if Free cold starts are unacceptable.
+  - Production builds: `dataSource: 'api'`, `allowMockFallback: false`, HTTPS API only.
+  - Android: Play Console internal testing → release APK/AAB (`npm run gradlew-android`).
   - iOS: Apple Developer + TestFlight (signing, privacy nutrition labels, Razorpay URL schemes if needed).
-  - CORS: set `CORS_ORIGINS` appropriately (mobile apps don’t use browser CORS the same way; still lock down if you add a web admin).
-  - TLS terminates at the host; do not run plain HTTP in production.
-  - Razorpay Live keys + webhook secret only when charging real money.
+  - CORS / TLS at host; Razorpay **Live** keys + webhook secret only when charging real money.
+- [ ] **Uptime monitor** — external ping of `/health` (helps notice Render sleep / outages).
+
 ---
 
-## Optional / backlog product ideas
+## Phase 12 — Discovery, retention & merchandising
 
-### Discovery & personalization
-- [ ] Smart push notifications (interest / cart / drop aware) — needs FCM first.
-- [x] **Frictionless visual search (v1)** — Search/Home camera → `POST /products/visual-search` (vision LLM → catalog `search`). Needs live API + `OPENAI_*` / vision-capable model. Photos not persisted. Flag `features.visualSearch`.
-- [x] **Personalized home feed (v1)** — Home **For you** rail + PLP from `GET /products/for-you` (recent + wishlist + orders). Guests/no signals → bestsellers. Flag `features.personalizedHome`.
-- [x] **Character Vault (v1) — done** — Filament lobby (`CharacterVault`), Home teaser under Drop Zone. Roster: Goku/Vegeta (`Dragon Ball`, no clips) + Kid Levi (`Attack on Titan`, idle clip **8**, `enableIdleAnimation: true`) → PLP `{name}'s Vault`. Orbit + unit-cube/`displayScale`, Animator only when `enableIdleAnimation`, loader held ~1.2s after decode, CTA outline + press/hover fill, GLB warm from Home teaser, Heimdall `openCharacterVault` (`goku` / `vegeta` / `kid-levi`). Flag `features.characterVault`. Shipped on `reviews` (vault work originally landed on `char_valut`). Next (optional): licensed idle-loop models / more champions / CDN assets.
-- [x] **AI Merch Assistant** — `POST /api/v1/ai/chat` (tools over live catalog/cart/wishlist/orders + FAQ RAG); mobile hub/chat UI + Search mic (`@react-native-voice/voice`); stub without LLM key, Groq/OpenAI via env.
+### New product capabilities
+- [ ] **Back-in-stock alerts** — wishlist / PDP subscribe; in-app notification now, push later; dedupe.
+- [ ] **Price-drop alerts** — threshold or any drop; preferences + dedupe.
+- [ ] **Product comparison** — 2–4 SKUs side-by-side (price, rating, specs, stock, discount).
+- [ ] **PLP filters upgrade** — price range, franchise, rating, in-stock, size (beyond current sort).
+- [ ] **Product variants** — size / color with per-variant stock (apparel without sizes is weak).
+- [ ] **Search improvements** — recent + trending, typo tolerance / synonyms, autocomplete, zero-result analytics (Atlas Search if Mongo text is weak).
+- [ ] **Reorder** — one-tap from past Order Details.
+- [ ] **Deep links** — `nidavellir://product/:id` (+ web fallback) for share, push, marketing.
+- [ ] **Gift options** — gift wrap / message / ship-to-someone-else.
+- [ ] **Low-stock urgency** — “Only N left” on PDP/PLP.
+- [ ] **COD safeguards** — COD limits / confirmation to cut fake COD and RTO.
+- [ ] **Multiple Razorpay methods** — confirm UPI / wallets / EMI-Pay Later enabled and tested (India).
+- [ ] **Referral program** — invite friend → XP + coupon (fits Rune XP).
+- [ ] **Abandoned cart reminders** — Resend email now; push later.
+- [ ] **Product analytics** — views, search, ATC, checkout start, payment outcome, orders (PostHog / Firebase / Mixpanel); avoid unnecessary PII.
+- [ ] **App rating prompt** — after successful delivery.
+- [ ] **Wishlist sharing** + move wishlist → cart.
+- [ ] **Limited-drop waitlist** — notify-me / queue for hot Drop Zone SKUs.
+- [ ] **Franchise hubs / collector showcase** — lore or “shelf” of purchased items (brand differentiator).
+- [ ] **Pre-order products** — inventory + pricing + cart rules before UI.
+- [ ] **Mystery boxes** — inventory + pricing + cart rules before UI.
+- [ ] **Community blog**.
 
-### Merchandising & drops
-- [x] **Drop Zone** — Home countdown bar → PLP `collection=drop-zone`. Eligible pool tagged `drop-zone-eligible` once in seed; daily rotation by Asia/Kolkata date hash (no daily re-seed). Re-seed once after tag change.
-- [ ] Pre-order products.
-- [x] **Bundle products** — driven by live product `bundleTag` / `isBundleMain` + `GET /products/bundles` (not mock membership). PDP “Complete the bundle”; Home banner slider after bestsellers. Re-seed after catalog changes. Banner art hints are placeholders until creatives land.
-- [ ] Mystery boxes.
+### Upgrade shipped features
+- [ ] **AI Merch Assistant (upgrade)** — budget / franchise / “setup under ₹X” intents; product cards with live price/stock/PDP links; confirm before cart mutations; tool-level authz (never leak other users’ data); rate / cost / timeout limits + safe fallbacks.
+- [ ] **Visual search (upgrade)** — optional budget/category/franchise/availability filters; related matches when no exact hit; never invent SKUs; track view/purchase conversion.
+- [ ] **For you (upgrade)** — stronger signals / feedback loop (optional); keep guests → bestsellers fallback.
+- [ ] **Rune XP (upgrade)** — auditable server ledger; no double-award per order; redemption catalogue / tier perks (free shipping, early Drop Zone, exclusive coupons); define economics before redeem.
+- [ ] **All Reviews (upgrade)** — verified-purchase badge; helpful votes; customer photo reviews; report / moderation (“How they get along” / customer images).
+- [ ] **Character Vault (upgrade)** — licensed idle-loop GLBs; CDN assets; more champions; keep New Arch off until Voice/Razorpay/Reanimated spike passes.
+- [ ] **Bundles / Drop Zone / banners (upgrade)** — server CMS for creatives + eligible pool (no app release / re-seed for art changes).
+- [ ] **Cart / checkout (upgrade)** — payment retry after failure; clearer discount/shipping breakdown; cold-start **“Waking the forge…”** UX when Render sleeps; preserve draft state safely.
+- [ ] **Sessions (upgrade)** — polish logout-all / revoke-other-devices if gaps remain after Devices UI.
 
-### Loyalty & profile
-- [x] **Rune XP (loyalty)** — **100 XP per normal order**, **500 XP** for bundle orders (2+ SKUs same `bundleTag`). Profile bar + Apprentice→Master tiers; confirmation shows awarded amount.
-- [x] **Devices & sessions** — named device / OS / IP (not “This device”).
-- [x] **Email verify (Resend)** — branded templates; live on Render; Account tracks `emailVerified`.
+---
 
-### App polish (shipped)
-- [x] SVG `AppIcon` on PDP confidence + Account menu (Android-safe; no blank Unicode).
-- [x] `CachedImage` placeholder + `onError` fallback.
-- [x] Home `VideoBanner` muted autoplay retries (load / focus / AppState).
-- [x] PDP specs/reviews above recommendation carousels; confidence **2×2** grid.
-- [x] **All Reviews** — PDP teaser (2 rows) + **View all** → `ProductReviews`; write-review modal (title / experience / stars); author **Remove**; hosted profile photo on create. Outline **Add to cart** on PDP.
+## Phase 13 — Premium UX & release polish
 
-### PDP & community
-- [ ] “How they get along” / customer images.
-- [ ] Make your own Gaming Setup.
-- [ ] Community blog.
+- [ ] **Gaming setup builder** — interactive loadout (keyboard/mouse/headset/desk/…); combined price; save/share; add available items to cart; optional compatibility + budget (expands “Make your own Gaming Setup”; can pair with AI intents).
+- [ ] **Accessibility audit** — screen-reader labels, scalable text, contrast, ≥44px targets, reduced motion.
+- [ ] **Performance baselines** — cold start, PLP scroll, images, Character Vault on mid-range Android + supported iOS.
+- [ ] **Skeleton loaders** — Home / PLP instead of bare spinners where missing.
+- [ ] **Offline banner** + safe cached browse when offline.
+- [ ] **Image CDN** — resized WebP/AVIF (Cloudinary / ImageKit).
+- [ ] **Force-update / maintenance mode** — block broken old clients.
+- [ ] **Remote feature flags** — server-driven toggles for visual search / AI / vault (vs rebuild `appConfig.ts`).
+- [ ] **Biometric app lock** — Face ID / fingerprint (Keychain already holds tokens).
+- [ ] **Localization** — Hindi (optional) + consistent ₹ formatting.
+- [ ] **Dark mode toggle** (optional — current brand is light esports).
+- [ ] **AR view-in-room** for posters/figures (optional demo piece; heavy).
+- [ ] **Staging vs production** app configs + production smoke tests, rollback plan, incident/recovery runbook.
+- [ ] **API min-app-version check** — break API safely without bricking old installs.
+- [ ] **Seasonal events** — Comic-Con-style sales driven by server config / admin.
+
+---
 
 ### Notes for implementers
 - Visual search v1: photos stay in memory on the API; set a vision-capable `OPENAI_VISION_MODEL` if `OPENAI_MODEL` is text-only (e.g. some Groq chat models). Smart pushes still need FCM.
+- Anime chip uses `tag=anime` (seed already tags anime franchises). Do not add a fifth product `category` for anime — that would steal items from apparel/collectibles.
 - AI assistant: set `AI_ENABLED` + optional `OPENAI_*` on Render; without a key the API uses stub intents + real commerce tools.
 - Pre-order and mystery boxes need inventory + pricing + cart rules before UI.
 - After bundle seed changes on Render, run seed against Atlas (or redeploy with seed job) so live API gets `bundleTag` products.
 - Drop Zone: do **not** re-seed daily — only re-seed when changing the `drop-zone-eligible` pool. Cart tab has no stack back chevron (avoids unhandled `GO_BACK`).
 - Character Vault (v1 shipped): dedicated stack screen (not mid-Home Filament); one `FilamentScene`, `addToScene` per character; Kid Levi idle is clip **8** (not 0); Goku/Vegeta stay `enableIdleAnimation: false`; loader clears ~1.2s after decode; CTA press + hover fill; warm GLBs from Home teaser (`preloadVaultModels`); metro `assetExts: glb`; CDN/licensed GLBs before store ship; don’t flip New Arch until Voice/Razorpay/Reanimated pass on spike.
 - Email template edits: `apps/api/src/integrations/email/email.factory.ts` → push → redeploy Render.
+- **Account deletion** is a store requirement (Google Play / Apple), not a nice-to-have — schedule with Phase 10/11 legal screens.
+- **Atlas M0** has no automatic backups — treat Phase 10 mongodump as mandatory before real orders.
+- **Variants** before scaling apparel; **admin CMS** before relying on seed for day-to-day ops.
+- Payment webhook + client `/confirm` are complementary: reconcile from trusted provider data; every money transition must be safe to retry.
+- Prefer Phase **10 → 11 → 12 → 13** unless the immediate goal is a college demo (then tests + one standout like setup builder + signed release may be enough).

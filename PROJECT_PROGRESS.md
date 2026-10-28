@@ -2,7 +2,7 @@
 
 ## Status
 
-The Niðavellir marketplace is **demo-ready on a live hosted API**. Mobile defaults to `dataSource: 'api'` against **Render Free** (`https://ni-avellir.onrender.com/api/v1`) + MongoDB Atlas. Razorpay Test Mode + webhooks are wired. Mock mode remains available for offline college demos.
+The Niðavellir marketplace is **demo-ready on a live hosted API**. Mobile defaults to `dataSource: 'api'` against **Render Free** (`https://ni-avellir.onrender.com/api/v1`) + MongoDB Atlas. Razorpay Test Mode + webhooks are wired. Mock mode remains available for offline college demos. Render deploys from branch **`Nidavellir`**.
 
 The shop opens behind onboarding + login/signup. Commerce screens use a light esports theme.
 
@@ -14,16 +14,17 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 ### Live API (Atlas) + hosted deploy
 - Auth JWT, OTP (demo/SMS), Keychain hydrate, server cart + coupons, addresses, wishlist, reviews, notifications, serviceability, orders, cancel/return/exchange.
 - Razorpay: intents, native SDK confirm, webhook idempotency, demo-complete blocked when real keys set.
-- **Render Free** deploy (`render.yaml` branch **`reviews`**, `build:api` / `start:api`) — health OK at `/health`. Dashboard branch must match or deploys stay on stale `improve`.
+- **Render Free** deploy (`render.yaml` + dashboard branch **`Nidavellir`**, `build:api` / `start:api`) — health OK at `/health`. Verified `GET /products?tag=anime` returns catalog (~35 tagged SKUs).
 - Mobile `apiBaseUrl` → Render; silent `/health` keep-alive on bootstrap + every 20 min (`wakeApiServer.ts`).
 - Postman/cURL docs: `API_DETAILS.live.example.md` + `generate-api-details-local.py --live`.
 - **Anime bundles** — `bundleTag` / `isBundleMain`, `GET /products/bundles`, PDP complete-the-bundle, Home banner slider.
+- **Anime Home facet** — `tag=anime` PLP (not a product-type category).
 - **Checkout serviceability** — pincode ETA / shipping / COD gate on Checkout.
 - **Resend email (live on Render)** — verify / reset / order templates branded in `email.factory.ts`; `EMAIL_DEMO_MODE=false` + `RESEND_API_KEY`.
 - **Sessions** — `deviceLabel` / `os` / `ip` on refresh tokens; Devices & sessions UI.
 - **Rune XP** — flat **100**/order, **500** for bundle orders (2+ same `bundleTag`); confirmation shows award.
 - **UI polish** — SVG `AppIcon`, `CachedImage` error placeholder, Home YouTube `VideoBanner` autoplay retries, PDP confidence 2×2 + specs/reviews above carousels.
-- **Character Vault v1** — Home teaser under Drop Zone → `CharacterVault` (react-native-filament orbit). Roster: Goku/Vegeta + Kid Levi (idle clip 8). Visit CTA → PLP `{name}'s Vault`. Animator gated by `enableIdleAnimation`; Heimdall `openCharacterVault` (`goku` / `vegeta` / `kid-levi`); flag `features.characterVault`. On `reviews` (originally `char_valut`).
+- **Character Vault v1** — Home teaser under Drop Zone → `CharacterVault` (react-native-filament orbit). Roster: Goku/Vegeta + Kid Levi (idle clip 8). Visit CTA → PLP `{name}'s Vault`. Animator gated by `enableIdleAnimation`; Heimdall `openCharacterVault` (`goku` / `vegeta` / `kid-levi`); flag `features.characterVault`. Merged to **`Nidavellir`** (via `todo` / `reviews`; originally `char_valut`).
 - **All Reviews** — `ProductReviews` screen, review title + hosted avatar, `DELETE /reviews/:id` for the author, Render `tsc` param cast.
 - **Visual search + For you** — `POST /products/visual-search` (vision → catalog), Home For you rail via `GET /products/for-you`; flags `visualSearch` / `personalizedHome`.
 
@@ -96,7 +97,14 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 
 ## Next Step
 
-Optional: custom Resend domain (any recipient), automated tests, FCM push, store builds (Play / TestFlight), paid always-on Render if Free cold starts are unacceptable, licensed Character Vault GLBs / more champions. Core app + hosted API + live verify email + Character Vault v1 are demo-ready.
+Core app + hosted API on **`Nidavellir`** + live verify email + vault + All Reviews + visual search + For you + Anime tag facet are **demo-ready**.
+
+Backlog is tracked in **`TODO.md` Phases 10–13** (not started — plan before implementing):
+
+- **10** Reliability & security (tests, CI, inventory, account deletion, monitoring, backups)
+- **11** Customer operations & store (tracking, invoices, admin, legal, FCM, Play/TestFlight)
+- **12** Discovery / retention + **upgrade shipped features** (AI, visual search, XP redemption, reviews, etc.)
+- **13** Premium UX & release polish (setup builder, a11y, remote flags, staging)
 
 ## Approval Log
 
@@ -113,5 +121,9 @@ Optional: custom Resend domain (any recipient), automated tests, FCM push, store
 - Resend verify + branded templates + session labels + Rune XP 100/500: **Complete**.
 - Character Vault v1 (Filament lobby + Heimdall navigate): **Complete**.
 - PDP All Reviews + author delete + hosted review avatar: **Complete**.
-- Phase 10 testing hardening: Not started (optional).
-- Phase 11 store deployment: Not started (optional).
+- Visual search + For you Home rail: **Complete**.
+- Anime `tag` facet + Render on **`Nidavellir`**: **Complete**.
+- Phase 10 reliability & security: Not started (see `TODO.md`).
+- Phase 11 customer ops & store: Not started (see `TODO.md`).
+- Phase 12 discovery / upgrades: Not started (see `TODO.md`).
+- Phase 13 premium UX & release polish: Not started (see `TODO.md`).

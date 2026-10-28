@@ -8,9 +8,8 @@ services:
     runtime: node
     plan: free
     region: oregon
-    # Deploy the branch that has vault + reviews (not stale `improve`).
-    # Dashboard must match this name, or blueprint sync will keep building the old branch.
-    branch: reviews
+    # Production deploy branch (dashboard must match, or auto-sync will build the wrong branch).
+    branch: Nidavellir
     rootDir: .
     buildCommand: NPM_CONFIG_PRODUCTION=false npm install && npm run build:api
     startCommand: npm run start:api

@@ -4,10 +4,15 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Deploy + Anime facet
+
+- Render production branch is **`Nidavellir`** (`render.yaml` + dashboard). Smoke: `/health` OK; `GET /products?tag=anime` returns tagged catalog.
+- Home / Categories / drawer **Anime** uses `tag=anime` (not `q=anime` name search). Product type enum unchanged (apparel / collectibles / desk-gear / limited-drops).
+
 ### Visual search + For you
 
 - `POST /api/v1/products/visual-search` — multipart image (memory only, rate-limited) → vision LLM keywords → `ProductService.list`. Empty / `vision_unavailable` when AI key missing. Optional `OPENAI_VISION_MODEL`.
-- Mobile Search + Home camera control (`features.visualSearch`); gallery/camera → FormData; mock mode toasts that live API is required.
+- Mobile Search + Home camera control (`features.visualSearch`); gallery/camera → FormData; mock mode toasts that live API is required. Android: request CAMERA before launch + toast on NativeEventEmitter failures.
 - `GET /api/v1/products/for-you?recentIds=` (optional JWT) ranks from recent views + wishlist + orders; pads with bestsellers.
 - Home **For you** rail + View all PLP (`features.personalizedHome`). Existing Home shelves unchanged.
 
@@ -18,7 +23,7 @@ All notable changes to this project will be documented here.
 - PDP **Add to cart** is an outline button; **Buy now** stays solid.
 - Render `tsc`: cast `request.params.id` on review delete.
 - Review photo shows on the list row; gallery picks stay on-device unless the URL is already `http(s)`.
-- Repo hygiene: npm (not pnpm) install docs, one Prettier + ESLint 8 config, Render blueprint `branch: reviews`.
+- Repo hygiene: npm (not pnpm) install docs, one Prettier + ESLint 8 config; Render blueprint now `branch: Nidavellir`.
 
 ### Character Vault (v1)
 
