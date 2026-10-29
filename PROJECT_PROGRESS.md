@@ -123,7 +123,7 @@ Backlog is tracked in **`TODO.md` Phases 10–13** (not started — plan before 
 - PDP All Reviews + author delete + hosted review avatar: **Complete**.
 - Visual search + For you Home rail: **Complete**.
 - Anime `tag` facet + Render on **`Nidavellir`**: **Complete**.
-- Phase 10 reliability & security: Not started (see `TODO.md`).
+- Phase 10 reliability & security: Partial — idempotent checkout + payment reconcile/30m expiry **Complete**; other Phase 10 items still open (see `TODO.md`).
 - Phase 11 customer ops & store: Not started (see `TODO.md`).
 - Phase 12 discovery / upgrades: Not started (see `TODO.md`).
 - Phase 13 premium UX & release polish: Not started (see `TODO.md`).

@@ -517,15 +517,17 @@ export function ProductDetailScreen() {
           style={[styles.buyBtn, product.stock === 0 && styles.addBtnDisabled]}
           disabled={product.stock === 0}
           onPress={() => {
-            if (cartQty === 0) {
-              void addProductToCart({ product, dispatch, toast }).then((ok) => {
-                if (ok) toast.show('Struck the cart ⚡');
-              });
-            }
-            if (!requireLogin({ user, dispatch, toast, reason: 'checkout' })) {
-              return;
-            }
-            navigation.navigate('Checkout');
+            void (async () => {
+              // Ensure line is in cart for Checkout / abandon → Cart, but no success toast on Buy now.
+              if (cartQty === 0) {
+                const ok = await addProductToCart({ product, dispatch, toast });
+                if (!ok) return;
+              }
+              if (!requireLogin({ user, dispatch, toast, reason: 'checkout' })) {
+                return;
+              }
+              navigation.navigate('Checkout');
+            })();
           }}
         >
           <Text style={styles.buyBtnText}>Buy now</Text>

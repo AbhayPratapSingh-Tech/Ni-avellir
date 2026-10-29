@@ -1,11 +1,12 @@
 import { nanoid } from 'nanoid';
 import { PaymentProviderCode } from '@nidavellir/shared/contracts';
 import { AppError } from '../../common/errors/app-error.js';
+import { logger } from '../../common/logger/logger.js';
 import { Order } from '../orders/order.model.js';
 import { Product } from '../products/product.model.js';
 import { Payment } from './payment.model.js';
 import { PaymentWebhookEvent } from './payment-webhook-event.model.js';
-import { awardOrderRuneXp } from '../orders/rune-xp.js';
+import { awardOrderRuneXp, computeOrderRuneXp } from '../orders/rune-xp.js';
 import type {
   CreatePaymentIntentInput,
   CreatePaymentIntentResult,
@@ -27,13 +28,21 @@ type RazorpayWebhookPayload = {
   };
 };
 
+export type ReconcileAction = 'noop' | 'paid' | 'expired' | 'waiting' | 'failed_marked';
+
 export class PaymentService {
   private readonly providers: Map<PaymentProviderCode, PaymentProvider>;
   private readonly razorpay: RazorpayProvider;
+  private readonly pendingExpireMinutes: number;
 
-  constructor(providers: PaymentProvider[], razorpay: RazorpayProvider) {
+  constructor(
+    providers: PaymentProvider[],
+    razorpay: RazorpayProvider,
+    options?: { pendingExpireMinutes?: number },
+  ) {
     this.providers = new Map(providers.map((provider) => [provider.code, provider]));
     this.razorpay = razorpay;
+    this.pendingExpireMinutes = options?.pendingExpireMinutes ?? 30;
   }
 
   createIntent(
@@ -57,6 +66,32 @@ export class PaymentService {
     }
     if (order.status === 'paid' || order.status === 'confirmed') {
       throw new AppError('Order is already paid', 409);
+    }
+    if (order.status === 'cancelled') {
+      throw new AppError('Order is cancelled', 409);
+    }
+
+    // Reuse an existing open intent so retries / double-tap do not mint a second Razorpay order.
+    const existingPayment = await Payment.findOne({
+      orderId: String(order._id),
+      status: { $in: ['created', 'paid'] },
+    }).sort({ createdAt: -1 });
+
+    if (existingPayment?.status === 'paid') {
+      throw new AppError('Order is already paid', 409);
+    }
+    if (existingPayment?.status === 'created') {
+      return {
+        orderId: String(order._id),
+        orderNumber: order.orderNumber,
+        provider: existingPayment.provider,
+        providerIntentId: existingPayment.providerIntentId,
+        keyId: this.razorpay.publicKeyId,
+        amountMinor: existingPayment.amountMinor,
+        currency: existingPayment.currency,
+        demoMode: Boolean(existingPayment.demoMode),
+        reused: true as const,
+      };
     }
 
     const amountMinor = Math.round(order.total * 100);
@@ -86,6 +121,7 @@ export class PaymentService {
       orderId: String(order._id),
       orderNumber: order.orderNumber,
       ...intent,
+      reused: false as const,
     };
   }
 
@@ -108,7 +144,12 @@ export class PaymentService {
       throw new AppError('Payment does not belong to this order', 400);
     }
     if (payment.status === 'paid') {
-      return { order, payment, alreadyPaid: true, awardedXp: 0 };
+      return {
+        order,
+        payment,
+        alreadyPaid: true,
+        awardedXp: Number(order.runeXpAwarded ?? 0),
+      };
     }
 
     const ok = await this.razorpay.verifyPayment({
@@ -204,6 +245,79 @@ export class PaymentService {
     });
   }
 
+  /**
+   * Reconcile one order: if Razorpay captured → finalize paid;
+   * if still unpaid after PENDING_PAYMENT_EXPIRE_MINUTES → cancel (payment_expired).
+   * Razorpay `payment.failed` already marks Payment failed; expiry cleans abandoned Orders.
+   */
+  async reconcileOrderById(orderId: string): Promise<{ action: ReconcileAction }> {
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return { action: 'noop' };
+    }
+    if (order.status !== 'pending_payment') {
+      return { action: 'noop' };
+    }
+
+    const payment = await Payment.findOne({ orderId: String(order._id) }).sort({ createdAt: -1 });
+
+    if (payment && payment.status !== 'paid' && !this.razorpay.isDemoMode) {
+      const captured = await this.razorpay.findCapturedPayment(payment.providerIntentId);
+      if (captured) {
+        await this.markRazorpayPaid(payment, captured.id, {
+          reconciled: true,
+          providerStatus: captured.status,
+        });
+        logger.info(
+          { orderId: String(order._id), orderNumber: order.orderNumber },
+          'Reconciled pending order as paid from Razorpay',
+        );
+        return { action: 'paid' };
+      }
+    }
+
+    const ageMs = Date.now() - new Date(order.createdAt).getTime();
+    const expireMs = this.pendingExpireMinutes * 60_000;
+    if (ageMs < expireMs) {
+      return { action: 'waiting' };
+    }
+
+    order.status = 'cancelled';
+    order.cancelReason = 'payment_expired';
+    await order.save();
+    if (payment && payment.status !== 'paid') {
+      payment.status = 'failed';
+      await payment.save();
+    }
+    logger.info(
+      {
+        orderId: String(order._id),
+        orderNumber: order.orderNumber,
+        expireMinutes: this.pendingExpireMinutes,
+      },
+      'Expired unpaid pending_payment order',
+    );
+    return { action: 'expired' };
+  }
+
+  /** Batch reconcile (in-process timer). Caps batch size to keep dyno work bounded. */
+  async reconcileStalePending(limit = 50) {
+    const orders = await Order.find({ status: 'pending_payment' })
+      .sort({ createdAt: 1 })
+      .limit(limit)
+      .select('_id');
+    const summary = { paid: 0, expired: 0, waiting: 0, noop: 0, failed_marked: 0 };
+    for (const row of orders) {
+      try {
+        const { action } = await this.reconcileOrderById(String(row._id));
+        summary[action] += 1;
+      } catch (error) {
+        logger.warn({ err: error, orderId: String(row._id) }, 'Reconcile order failed');
+      }
+    }
+    return summary;
+  }
+
   private async processRazorpayWebhookEvent(payload: RazorpayWebhookPayload) {
     const paymentEntity = payload.payload?.payment?.entity;
     const providerIntentId = paymentEntity?.order_id;
@@ -257,41 +371,81 @@ export class PaymentService {
     providerPaymentId: string,
     raw?: Record<string, unknown>,
   ) {
+    const claimedPayment = await Payment.findOneAndUpdate(
+      { _id: payment._id, status: { $ne: 'paid' } },
+      {
+        $set: {
+          status: 'paid',
+          providerPaymentId,
+          ...(raw ? { raw } : {}),
+        },
+      },
+      { new: true },
+    );
+
     const order = await Order.findById(payment.orderId);
     if (!order) {
       throw new AppError('Order not found', 404);
     }
-    if (payment.status === 'paid') {
-      return { order, payment, alreadyPaid: true, awardedXp: 0 };
-    }
 
-    payment.status = 'paid';
-    payment.providerPaymentId = providerPaymentId;
-    if (raw) payment.raw = raw;
-    await payment.save();
+    if (!claimedPayment) {
+      return {
+        order,
+        payment: (await Payment.findById(payment._id)) ?? payment,
+        alreadyPaid: true,
+        awardedXp: Number(order.runeXpAwarded ?? 0),
+      };
+    }
 
     let awardedXp = 0;
     if (order.status === 'pending_payment') {
       awardedXp = await this.finalizePaidOrder(order);
+    } else {
+      awardedXp = Number(order.runeXpAwarded ?? 0);
     }
 
-    return { order, payment, alreadyPaid: false, awardedXp };
+    const freshOrder = (await Order.findById(order._id)) ?? order;
+    return {
+      order: freshOrder,
+      payment: claimedPayment,
+      alreadyPaid: false,
+      awardedXp,
+    };
   }
 
   private async finalizePaidOrder(order: InstanceType<typeof Order>) {
-    order.status = 'paid';
-    await order.save();
+    const xp = await computeOrderRuneXp(
+      order.items.map((item) => ({ productId: String(item.productId), quantity: item.quantity })),
+    );
+
+    const claimed = await Order.findOneAndUpdate(
+      { _id: order._id, status: 'pending_payment' },
+      { $set: { status: 'paid', runeXpAwarded: xp } },
+      { new: true },
+    );
+
+    if (!claimed) {
+      const current = await Order.findById(order._id);
+      return Number(current?.runeXpAwarded ?? 0);
+    }
 
     await Promise.all(
-      order.items.map((item) =>
+      claimed.items.map((item) =>
         Product.updateOne({ _id: item.productId }, { $inc: { stock: -item.quantity } }),
       ),
     );
 
-    return awardOrderRuneXp(
-      order.userId ? String(order.userId) : undefined,
-      order.items.map((item) => ({ productId: String(item.productId), quantity: item.quantity })),
-    );
+    if (xp > 0 && claimed.userId) {
+      await awardOrderRuneXp(
+        String(claimed.userId),
+        claimed.items.map((item) => ({
+          productId: String(item.productId),
+          quantity: item.quantity,
+        })),
+      );
+    }
+
+    return xp;
   }
 
   private getProvider(providerCode: PaymentProviderCode): PaymentProvider {

@@ -85,6 +85,7 @@ Checklist when flipping live:
 14. **For you Home rail (v1):** `features.personalizedHome` → `GET /api/v1/products/for-you?recentIds=` (optional JWT + wishlist/orders). Guests/no signals → bestsellers. Does not replace Deals/Bestsellers/Also like.
 15. **Anime facet:** use `tag: 'anime'` / `?tag=anime` for Home/Categories/drawer — never `q=anime` alone (name search misses tag-only hits) and never a fifth product category enum.
 16. **Render:** `render.yaml` `branch: Nidavellir` must match the Render dashboard deploy branch.
+17. **Checkout money paths:** send `Idempotency-Key` on `POST /orders`; never invent paid without Razorpay capture / verified confirm / webhook. Unpaid `pending_payment` expires after `PENDING_PAYMENT_EXPIRE_MINUTES` (30) via reconciler + Order Details.
 
 ---
 

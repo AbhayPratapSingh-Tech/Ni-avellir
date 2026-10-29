@@ -34,6 +34,10 @@ export interface OrderDocument {
   status: string;
   estimatedDelivery: string;
   cancelReason?: string;
+  /** Client Idempotency-Key for POST /orders (unique sparse). */
+  idempotencyKey?: string;
+  /** XP already awarded for this order (0 = none; >0 = awarded once). */
+  runeXpAwarded?: number;
   returnRequest?: {
     reason: string;
     status: 'requested' | 'approved' | 'rejected' | 'completed';
@@ -85,6 +89,8 @@ const orderSchema = new Schema<OrderDocument>(
     status: { type: String, default: 'confirmed' },
     estimatedDelivery: { type: String, required: true },
     cancelReason: { type: String },
+    idempotencyKey: { type: String, trim: true },
+    runeXpAwarded: { type: Number, min: 0, default: 0 },
     returnRequest: {
       reason: { type: String },
       status: { type: String, enum: ['requested', 'approved', 'rejected', 'completed'] },
@@ -100,5 +106,9 @@ const orderSchema = new Schema<OrderDocument>(
 );
 
 orderSchema.index({ 'customer.email': 1 });
+orderSchema.index(
+  { idempotencyKey: 1 },
+  { unique: true, sparse: true, partialFilterExpression: { idempotencyKey: { $type: 'string' } } },
+);
 
 export const Order: Model<OrderDocument> = model<OrderDocument>('Order', orderSchema);

@@ -11,7 +11,9 @@ export function createPaymentStack(env: Env) {
     env.razorpayWebhookSecret,
   );
   const cod = new CashOnDeliveryProvider();
-  const service = new PaymentService([razorpay, cod], razorpay);
+  const service = new PaymentService([razorpay, cod], razorpay, {
+    pendingExpireMinutes: env.pendingPaymentExpireMinutes,
+  });
   const controller = new PaymentController(service);
   return { razorpay, service, controller };
 }

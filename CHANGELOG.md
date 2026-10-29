@@ -4,6 +4,18 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Register + Buy now fixes
+
+- `POST /auth/register` still returns 201 with tokens if verify-email (Resend) fails after user create; `emailVerification: { sent: false, reason: 'send_failed' }`.
+- PDP **Buy now** awaits add-to-cart without the “Struck the cart” toast (Add to cart keeps the toast); abandoned checkout still leaves the item in cart.
+
+### Idempotent checkout + payment reconciliation
+
+- `POST /orders` accepts `Idempotency-Key` (header or body); unique sparse `idempotencyKey`; retries return the same order (`replayed: true`).
+- Payment intents reuse an open Razorpay/Payment row per order; confirm/webhook atomically claim Payment + Order and set `runeXpAwarded` once.
+- In-process reconciler (default every 5 min while awake) + Order Details reconcile: capture → paid; unpaid after **30 min** → `cancelled` / `payment_expired`. Env: `PENDING_PAYMENT_EXPIRE_MINUTES`, `PAYMENT_RECONCILE_INTERVAL_MS`.
+- Mobile Checkout sends idempotency key and blocks double place-order while submitting/paying.
+
 ### Deploy + Anime facet
 
 - Render production branch is **`Nidavellir`** (`render.yaml` + dashboard). Smoke: `/health` OK; `GET /products?tag=anime` returns tagged catalog.

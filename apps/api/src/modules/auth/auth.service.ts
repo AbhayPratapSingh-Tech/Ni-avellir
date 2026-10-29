@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
 import type { Env } from '../../config/env.js';
 import { AppError } from '../../common/errors/app-error.js';
+import { logger } from '../../common/logger/logger.js';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../common/utils/jwt.js';
 import {
   buildResetPasswordHtml,
@@ -130,7 +131,21 @@ export class AuthService {
     const device = pickDeviceMeta(input);
     const tokens = this.issueTokens(user, device.deviceId);
     await this.persistRefreshToken(String(user._id), tokens.refreshToken, device);
-    const emailVerification = await this.sendEmailVerification(String(user._id));
+
+    // Verify-email failure must not 500 registration — account + session already exist.
+    let emailVerification:
+      | Awaited<ReturnType<AuthService['sendEmailVerification']>>
+      | { sent: false; reason: 'send_failed' };
+    try {
+      emailVerification = await this.sendEmailVerification(String(user._id));
+    } catch (error) {
+      logger.warn(
+        { err: error, userId: String(user._id), email: user.email },
+        'Verify email failed after register; returning session anyway',
+      );
+      emailVerification = { sent: false, reason: 'send_failed' };
+    }
+
     return { user: this.sanitizeUser(user), ...tokens, emailVerification };
   }
 

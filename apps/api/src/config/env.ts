@@ -47,6 +47,10 @@ const envSchema = z.object({
   OPENAI_MODEL: z.string().optional().default('gpt-4o-mini'),
   /** Optional vision model for POST /products/visual-search (defaults to OPENAI_MODEL). */
   OPENAI_VISION_MODEL: z.string().optional(),
+  /** Cancel unpaid pending_payment orders after this many minutes if Razorpay is not captured. */
+  PENDING_PAYMENT_EXPIRE_MINUTES: z.coerce.number().int().positive().default(30),
+  /** In-process payment/order reconcile interval (ms). Only runs while the dyno is awake. */
+  PAYMENT_RECONCILE_INTERVAL_MS: z.coerce.number().int().positive().default(300_000),
 });
 
 export type Env = ReturnType<typeof loadEnv>;
@@ -96,5 +100,7 @@ export function loadEnv() {
     openaiBaseUrl: parsed.OPENAI_BASE_URL,
     openaiModel: parsed.OPENAI_MODEL,
     openaiVisionModel: parsed.OPENAI_VISION_MODEL || undefined,
+    pendingPaymentExpireMinutes: parsed.PENDING_PAYMENT_EXPIRE_MINUTES,
+    paymentReconcileIntervalMs: parsed.PAYMENT_RECONCILE_INTERVAL_MS,
   };
 }

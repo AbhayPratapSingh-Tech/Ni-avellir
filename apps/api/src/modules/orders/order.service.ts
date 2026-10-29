@@ -21,7 +21,18 @@ export type CreateOrderInput = {
   paymentMethod: string;
   discount?: number;
   couponCode?: string;
+  /** Optional body fallback; prefer Idempotency-Key header. */
+  idempotencyKey?: string;
 };
+
+function isDuplicateKeyError(error: unknown): boolean {
+  return Boolean(
+    error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code?: number }).code === 11000,
+  );
+}
 
 type LeanOrderProduct = {
   _id: unknown;
@@ -32,7 +43,23 @@ type LeanOrderProduct = {
 };
 
 export class OrderService {
-  async create(input: CreateOrderInput, userId?: string) {
+  async create(input: CreateOrderInput, userId?: string, idempotencyKey?: string) {
+    const key = (idempotencyKey ?? input.idempotencyKey)?.trim() || undefined;
+
+    if (key) {
+      const existing = await Order.findOne({ idempotencyKey: key });
+      if (existing) {
+        if (userId && existing.userId && String(existing.userId) !== userId) {
+          throw new AppError('Idempotency key already used by another account', 409);
+        }
+        return {
+          order: existing,
+          awardedXp: Number(existing.runeXpAwarded ?? 0),
+          replayed: true as const,
+        };
+      }
+    }
+
     const productIds = input.items.map((item) => item.productId);
     const products = (await Product.find({ _id: { $in: productIds } }).lean()) as LeanOrderProduct[];
     const productMap = new Map(products.map((product) => [String(product._id), product]));
@@ -70,7 +97,7 @@ export class OrderService {
       .slice(0, 10);
 
     const isCod = input.paymentMethod === 'cash_on_delivery';
-    const order = await Order.create({
+    const payload = {
       userId,
       orderNumber,
       customer: input.customer,
@@ -85,7 +112,26 @@ export class OrderService {
       currency: 'INR',
       status: isCod ? 'confirmed' : 'pending_payment',
       estimatedDelivery,
-    });
+      idempotencyKey: key,
+      runeXpAwarded: 0,
+    };
+
+    let order;
+    try {
+      order = await Order.create(payload);
+    } catch (error) {
+      if (key && isDuplicateKeyError(error)) {
+        const existing = await Order.findOne({ idempotencyKey: key });
+        if (existing) {
+          return {
+            order: existing,
+            awardedXp: Number(existing.runeXpAwarded ?? 0),
+            replayed: true as const,
+          };
+        }
+      }
+      throw error;
+    }
 
     if (userId) {
       await notificationService.notifyOrderEvent(String(userId), 'order_placed', orderNumber);
@@ -112,9 +158,11 @@ export class OrderService {
         userId,
         items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
       );
+      order.runeXpAwarded = awardedXp;
+      await order.save();
     }
 
-    return { order, awardedXp };
+    return { order, awardedXp, replayed: false as const };
   }
 
   async list(userId: string) {

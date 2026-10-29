@@ -670,7 +670,10 @@ export class ProductRepository {
     });
   }
 
-  async createOrder(input: CreateOrderInput): Promise<{
+  async createOrder(
+    input: CreateOrderInput,
+    options?: { idempotencyKey?: string },
+  ): Promise<{
     id: string;
     _id?: string;
     orderNumber?: string;
@@ -686,10 +689,21 @@ export class ProductRepository {
     customer?: Record<string, unknown>;
     createdAt?: string;
     awardedXp?: number;
+    replayed?: boolean;
   }> {
     return this.withFallback(
       async () => {
-        const { data } = await apiClient.post('/orders', input);
+        const headers: Record<string, string> = {};
+        if (options?.idempotencyKey) {
+          headers['Idempotency-Key'] = options.idempotencyKey;
+        }
+        const { data } = await apiClient.post(
+          '/orders',
+          options?.idempotencyKey
+            ? { ...input, idempotencyKey: options.idempotencyKey }
+            : input,
+          { headers },
+        );
         const order = data.data.order as Record<string, unknown>;
         const awardedXp =
           data.data.awardedXp !== undefined ? Number(data.data.awardedXp) : undefined;
@@ -712,18 +726,17 @@ export class ProductRepository {
           customer: order.customer as Record<string, unknown> | undefined,
           createdAt: order.createdAt ? String(order.createdAt) : undefined,
           awardedXp,
+          replayed: Boolean(data.data.replayed),
         };
       },
       () => {
       let subtotal = 0;
-      let itemCount = 0;
       const lines = [];
       for (const line of input.items) {
         const product = demoProducts.find((p) => p.id === line.productId);
         if (!product) continue;
         const lineTotal = product.price * line.quantity;
         subtotal += lineTotal;
-        itemCount += line.quantity;
         lines.push({
           productId: product.id,
           name: product.name,
@@ -752,6 +765,7 @@ export class ProductRepository {
         customer: input.customer,
         createdAt: new Date().toISOString(),
         awardedXp: isCod ? 100 : 0,
+        replayed: false,
       };
     },
       { critical: true },

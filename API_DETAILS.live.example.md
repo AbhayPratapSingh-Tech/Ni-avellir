@@ -216,8 +216,9 @@ curl -sS -m 60 -X POST "$BASE/orders" -H "Authorization: Bearer $ACCESS" -H 'Con
 ### Razorpay Test (native checkout path)
 
 ```bash
-# 1) Create pending_payment order
-curl -sS -m 60 -X POST "$BASE/orders" -H "Authorization: Bearer $ACCESS" -H 'Content-Type: application/json' \
+# 1) Create pending_payment order (Idempotency-Key: same key retries return the same order)
+curl -sS -m 60 -X POST "$BASE/orders" -H "Authorization: Bearer $ACCESS" \
+  -H 'Content-Type: application/json' -H "Idempotency-Key: chk_postman_$(date +%s)" \
   -d "{
     \"paymentMethod\":\"razorpay_demo\",
     \"customer\":{\"name\":\"Postman Live\",\"email\":\"you@example.com\",\"phone\":\"9876543210\"},
@@ -225,7 +226,7 @@ curl -sS -m 60 -X POST "$BASE/orders" -H "Authorization: Bearer $ACCESS" -H 'Con
     \"items\":[{\"productId\":\"$PRODUCT_ID\",\"quantity\":1}]
   }"
 
-# 2) Create payment intent (demoMode should be false when Test keys are set on Render)
+# 2) Create payment intent (reuses open intent for this order; demoMode false when Test keys set)
 curl -sS -m 60 -X POST "$BASE/payments/intents" -H "Authorization: Bearer $ACCESS" -H 'Content-Type: application/json' \
   -d "{\"orderId\":\"$ORDER_ID\"}"
 
