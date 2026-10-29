@@ -101,6 +101,8 @@ curl -sS -m 60 -X POST "$BASE/auth/register/check" -H 'Content-Type: application
 
 ### Register
 
+Use a unique email + phone. Expect **201** + tokens even if Resend cannot deliver verify mail (response may include `emailVerification: { "sent": false, "reason": "send_failed" }`).
+
 ```bash
 curl -sS -m 60 -X POST "$BASE/auth/register" -H 'Content-Type: application/json' \
   -d '{

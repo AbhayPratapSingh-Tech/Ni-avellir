@@ -4,10 +4,16 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
-### Register + Buy now fixes
+### Docs sync after `todo` → `Nidavellir` (PR #22)
+
+- Status docs (`TODO`, `PROJECT_PROGRESS`, `README`, `ROADMAP`, `PROJECT_INSIGHTS`, `AI_AGENT_GUIDE`) aligned with merged production branch **`Nidavellir`**.
+
+### Register + Buy now + Payment summary
 
 - `POST /auth/register` still returns 201 with tokens if verify-email (Resend) fails after user create; `emailVerification: { sent: false, reason: 'send_failed' }`.
 - PDP **Buy now** awaits add-to-cart without the “Struck the cart” toast (Add to cart keeps the toast); abandoned checkout still leaves the item in cart.
+- Checkout **Payment** step: Payment summary (images + totals) above methods; only product cards scroll when **>3**; outer page does not scroll on that step.
+- Native Razorpay cancel body: “You have cancelled the Payment” (not `undefined (BAD_REQUEST_ERROR)`).
 
 ### Idempotent checkout + payment reconciliation
 

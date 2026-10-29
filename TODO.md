@@ -48,12 +48,18 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [x] **Bundle products** — `bundleTag` / `isBundleMain` + `GET /products/bundles`; PDP complete-the-bundle; Home banner slider.
 - [x] **Rune XP (loyalty)** — 100 / 500; Profile tiers; confirmation award.
 - [x] **Devices & sessions** — device / OS / IP.
-- [x] **Email verify (Resend)** — branded templates; Account `emailVerified`.
+- [x] **Email verify (Resend)** — branded templates; Account `emailVerified`. **Register resilience:** verify-email send failure after user create still returns **201** + tokens (`emailVerification: { sent: false, reason: 'send_failed' }`) — does not 500 signup.
 - [x] SVG `AppIcon`, `CachedImage` fallback, Home `VideoBanner` retries, PDP confidence 2×2 + specs/reviews above carousels.
 - [x] **All Reviews** — teaser + `ProductReviews`; write modal; author Remove; hosted avatar; outline Add to cart.
 - [x] **Anime facet** — `GET /products?tag=anime` (not name search / not a fifth category enum).
+- [x] **Idempotent checkout + payment reconcile** — `Idempotency-Key`, intent reuse, 30m unpaid expiry, Order Details reconcile (see Phase 10 checked items).
+- [x] **Checkout Payment summary (step 2)** — product image rows above payment methods; only product cards scroll when **>3**; page/methods do not scroll for ≤3.
+- [x] **Buy now UX** — awaits add-to-cart with **no** “Struck the cart” toast; item remains in cart if checkout abandoned. Add to cart keeps the toast.
+- [x] **Razorpay cancel copy** — native cancel shows “You have cancelled the Payment” (title stays Payment failed); not `undefined (BAD_REQUEST_ERROR)`.
 
 > Upgrades for these shipped features are listed under **Upgrade shipped features** below — do not treat v1 as unfinished.
+>
+> **Branch sync (Oct 2026):** feature work merged **`todo` → `Nidavellir`** (PR #22). Prefer developing against **`Nidavellir`** (or a fresh branch off it). Keep Render dashboard deploy branch **`Nidavellir`** aligned with [`render.yaml`](render.yaml).
 
 ---
 
@@ -176,3 +182,4 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - Payment webhook + client `/confirm` are complementary: reconcile from trusted provider data; every money transition must be safe to retry.
 - **Idempotent checkout / reconcile (shipped):** always send a fresh `Idempotency-Key` per checkout attempt (CheckoutScreen regenerates after success). Replays return the same order — do not treat 200+`replayed` as a new purchase. Tune `PENDING_PAYMENT_EXPIRE_MINUTES` / `PAYMENT_RECONCILE_INTERVAL_MS` in API env. Reconciler only runs while Render dyno is awake; Order Details `GET /orders/:id` also reconciles that order.
 - Prefer Phase **10 → 11 → 12 → 13** unless the immediate goal is a college demo (then tests + one standout like setup builder + signed release may be enough).
+- **Docs / branch:** after PR #22, `origin/todo` and `origin/Nidavellir` share the payment + register/checkout UX commits. Next work: branch from **`Nidavellir`**, keep `TODO.md` / `PROJECT_PROGRESS.md` updated when shipping.

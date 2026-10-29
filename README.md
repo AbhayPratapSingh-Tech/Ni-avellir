@@ -2,12 +2,12 @@
 
 Premium gaming merchandise marketplace — a full-stack mobile commerce app.
 
-**Status: Live API on Render + mobile wired.** Default `dataSource: 'api'` → `https://ni-avellir.onrender.com/api/v1`. Resend verify email live (`EMAIL_DEMO_MODE=false`). Character Vault, All Reviews, visual search, For you, Anime `tag` facet shipped. Local API via `npm run dev:api`. Mock via `appConfig.dataSource: 'mock'`. Render deploy branch: **`Nidavellir`**.
+**Status: Live API on Render + mobile wired.** Default `dataSource: 'api'` → `https://ni-avellir.onrender.com/api/v1`. Production git branch **`Nidavellir`** (PR #22 includes `todo` hardening). Resend verify email live; register still succeeds if verify-mail send fails. Character Vault, All Reviews, visual search, For you, Anime facet, idempotent checkout + reconcile shipped. Local API via `npm run dev:api`. Mock via `appConfig.dataSource: 'mock'`. Render deploy branch: **`Nidavellir`**.
 
 ## What's Included
 
-- **Mobile app** (bare React Native CLI, no Expo): Onboarding, Login, Signup, OTP, Forgot/Reset/Change password, Devices & sessions (device/OS/IP), Email verify, Forge (Home + YouTube banner + Drop Zone + For you + Character Vault teaser), Categories, Search (+ visual search camera), Products (incl. Anime `tag` PLP), Product Detail (+ reviews, All Reviews, write-review modal, bundles, SVG confidence icons), Cart (+ coupons), Checkout (+ serviceability), Order Confirmation (Rune XP), Orders, Order Details (cancel/return/exchange), Addresses, Wishlist, Notifications, Account, Edit Profile, Ask Niðavellir, Store locator.
-- **Backend API** (Node.js + Express + MongoDB Atlas): auth/JWT, products + bundles + visual-search + for-you + `tag` filter, server cart, addresses, wishlist, coupons, reviews, notifications, serviceability, orders, Razorpay Test + COD, webhooks, Resend (branded verify/reset/order mail), AI chat, health, seed. Hosted on **Render Free** (`ni-avellir.onrender.com`).
+- **Mobile app** (bare React Native CLI, no Expo): Onboarding, Login, Signup, OTP, Forgot/Reset/Change password, Devices & sessions (device/OS/IP), Email verify, Forge (Home + YouTube banner + Drop Zone + For you + Character Vault teaser), Categories, Search (+ visual search camera), Products (incl. Anime `tag` PLP), Product Detail (+ reviews, All Reviews, write-review modal, bundles, SVG confidence icons, Buy now → Checkout), Cart (+ coupons), Checkout (+ serviceability, Payment summary, Razorpay / COD), Order Confirmation (Rune XP), Orders, Order Details (cancel/return/exchange), Addresses, Wishlist, Notifications, Account, Edit Profile, Ask Niðavellir, Store locator.
+- **Backend API** (Node.js + Express + MongoDB Atlas): auth/JWT (register resilient to verify-email send failure), products + bundles + visual-search + for-you + `tag` filter, server cart, addresses, wishlist, coupons, reviews, notifications, serviceability, orders (`Idempotency-Key`), Razorpay Test + COD + reconcile/expiry, webhooks, Resend, AI chat, health, seed. Hosted on **Render Free** (`ni-avellir.onrender.com`).
 - **Shared package** (`@nidavellir/shared`): contracts, types, constants, Zod validation, mock catalog, bundle display hints.
 - **Loyalty:** Rune XP **100**/order, **500** for bundle orders (2+ SKUs same `bundleTag`).
 - **Payments**: native `react-native-razorpay` when live Test keys return `intent.demoMode === false` (demo sheet only without keys).
@@ -18,7 +18,7 @@ Premium gaming merchandise marketplace — a full-stack mobile commerce app.
 ```bash
 git clone <url> Ni-avellir
 cd Ni-avellir
-git checkout <your-branch>   # if not main
+git checkout Nidavellir      # production / default remote HEAD
 
 # 1. Install (also builds @nidavellir/shared via postinstall)
 npm install
