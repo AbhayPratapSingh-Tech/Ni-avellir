@@ -103,7 +103,7 @@ Nidavellir is intended to become a real premium gaming merchandise marketplace, 
 
 ## Current Status
 
-Phases 1–9 + live API features are complete for the college/demo ship. **Live default:** mobile `dataSource: 'api'` → Render Free + Atlas (`ni-avellir.onrender.com`). Deploy branch **`Nidavellir`**. Resend verify email live (`EMAIL_DEMO_MODE=false`). Also shipped: Character Vault v1, All Reviews, visual search, For you, Anime `tag` facet, Drop Zone, bundles, AI assistant, store locator. Optional next: custom email domain, FCM, automated tests, store builds, licensed vault GLBs. Tracking: `PROJECT_PROGRESS.md` and `TODO.md`.
+Phases 1–9 + live API features are complete for the college/demo ship. **Live default:** mobile `dataSource: 'api'` → Render Free + Atlas (`ni-avellir.onrender.com`). Git + Render deploy branch **`Nidavellir`** (PR #22 merged latest `todo`). Resend verify email live (`EMAIL_DEMO_MODE=false`); register returns tokens even if verify-email send fails. Also shipped: Character Vault v1, All Reviews, visual search, For you, Anime `tag` facet, Drop Zone, bundles, AI assistant, store locator, idempotent checkout + 30m payment reconcile, Checkout Payment summary / Buy now / Razorpay cancel UX. Optional next: custom email domain, FCM, automated tests, store builds, licensed vault GLBs. Tracking: `PROJECT_PROGRESS.md` and `TODO.md`.
 
 ## Live Database + API (how to go beyond mock)
 
@@ -124,6 +124,7 @@ Mobile defaults to **`api`** via `apps/mobile/src/config/appConfig.ts` (set `'mo
 5g. **Anime facet:** Home / Categories / drawer use `GET /products?tag=anime` (seed tags). Do **not** treat anime as a `ProductCategory` enum value — that would pull items out of apparel/collectibles/desk-gear. Live smoke: `curl '…/products?tag=anime&limit=3'` → `pagination.total` ~35.
 5h. **Render deploy:** Blueprint + dashboard branch **`Nidavellir`**. Keep them aligned or auto-sync builds the wrong git ref.
 5i. **Idempotent checkout + reconcile:** `Idempotency-Key` on `POST /orders`; intent reuse; atomic paid + `runeXpAwarded`. In-process reconciler + Order Details: Razorpay capture → paid; unpaid after `PENDING_PAYMENT_EXPIRE_MINUTES` (30) → `payment_expired`. Webhook `payment.failed` ≠ order cancel — expiry cleans abandoned orders.
+5j. **Register + checkout UX:** `POST /auth/register` must not 500 when Resend rejects the verify email — return `emailVerification: { sent: false, reason: 'send_failed' }`. PDP Buy now: await cart add, **no** success toast; Payment step: summary above methods, scroll product cards only if **>3**; Razorpay cancel → “You have cancelled the Payment”.
 6. Rune XP is **flat per order** (100 / 500 bundle), not per-SKU sum. Product `sku` / `runeXp` fields remain for display / backfill (`npm run seed:sku --workspace apps/api`).
 
 **Backend path**

@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: College demo (Phases 1–9) + live Render API on branch **`Nidavellir`** + Character Vault, All Reviews, visual search, For you, Anime tag facet. Next backlog is **`TODO.md` Phases 10–13** (reliability → ops/store → discovery/upgrades → release polish). See `PROJECT_PROGRESS.md`.
+Status: College demo (Phases 1–9) + live Render API on **`Nidavellir`** (merged from `todo` via PR #22) + vault, All Reviews, visual search, For you, Anime tag, idempotent checkout / reconcile, register + checkout UX polish. Remaining: **`TODO.md` Phases 10–13** (Phase 10 partial). See `PROJECT_PROGRESS.md`.
 
 ## Phase 1: Architecture
 

@@ -27,6 +27,9 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 - **Character Vault v1** — Home teaser under Drop Zone → `CharacterVault` (react-native-filament orbit). Roster: Goku/Vegeta + Kid Levi (idle clip 8). Visit CTA → PLP `{name}'s Vault`. Animator gated by `enableIdleAnimation`; Heimdall `openCharacterVault` (`goku` / `vegeta` / `kid-levi`); flag `features.characterVault`. Merged to **`Nidavellir`** (via `todo` / `reviews`; originally `char_valut`).
 - **All Reviews** — `ProductReviews` screen, review title + hosted avatar, `DELETE /reviews/:id` for the author, Render `tsc` param cast.
 - **Visual search + For you** — `POST /products/visual-search` (vision → catalog), Home For you rail via `GET /products/for-you`; flags `visualSearch` / `personalizedHome`.
+- **Idempotent checkout + reconcile** — `Idempotency-Key`, intent reuse, in-process + Order Details reconcile, 30m `payment_expired`.
+- **Register resilience** — Resend verify-email failure does not 500 signup (`send_failed`).
+- **Checkout UX** — Payment step summary (scroll products only if >3); Buy now silent cart add; Razorpay cancel message.
 
 ### Phase 1: Architecture
 - Full architecture plan (monorepo, bare React Native CLI, backend, shared contracts).
@@ -97,14 +100,16 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 
 ## Next Step
 
-Core app + hosted API on **`Nidavellir`** + live verify email + vault + All Reviews + visual search + For you + Anime tag facet are **demo-ready**.
+Core app + hosted API on **`Nidavellir`** (PR #22 merged `todo`) are **demo-ready**: vault, All Reviews, visual search, For you, Anime tag, idempotent checkout, payment reconcile/30m expiry, resilient register, Buy now + Payment summary UX.
 
-Backlog is tracked in **`TODO.md` Phases 10–13** (not started — plan before implementing):
+Remaining backlog: **`TODO.md` Phases 10–13** (plan before implementing):
 
-- **10** Reliability & security (tests, CI, inventory, account deletion, monitoring, backups)
+- **10** (partial) — still open: tests, CI, atomic inventory, account deletion, monitoring, backups, …
 - **11** Customer operations & store (tracking, invoices, admin, legal, FCM, Play/TestFlight)
-- **12** Discovery / retention + **upgrade shipped features** (AI, visual search, XP redemption, reviews, etc.)
-- **13** Premium UX & release polish (setup builder, a11y, remote flags, staging)
+- **12** Discovery / retention + **upgrade shipped features**
+- **13** Premium UX & release polish
+
+Prefer new work from branch **`Nidavellir`**. Keep Render deploy branch = **`Nidavellir`**.
 
 ## Approval Log
 
@@ -123,7 +128,8 @@ Backlog is tracked in **`TODO.md` Phases 10–13** (not started — plan before 
 - PDP All Reviews + author delete + hosted review avatar: **Complete**.
 - Visual search + For you Home rail: **Complete**.
 - Anime `tag` facet + Render on **`Nidavellir`**: **Complete**.
-- Phase 10 reliability & security: Partial — idempotent checkout + payment reconcile/30m expiry **Complete**; other Phase 10 items still open (see `TODO.md`).
+- Idempotent checkout + payment reconcile + register/Buy now/Payment summary UX: **Complete** (merged via PR #22).
+- Phase 10 reliability & security: **Partial** — money-path hardening above **Complete**; tests/CI/inventory/account deletion/monitoring still open (see `TODO.md`).
 - Phase 11 customer ops & store: Not started (see `TODO.md`).
 - Phase 12 discovery / upgrades: Not started (see `TODO.md`).
 - Phase 13 premium UX & release polish: Not started (see `TODO.md`).

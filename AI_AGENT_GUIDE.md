@@ -84,8 +84,10 @@ Checklist when flipping live:
 13. **Visual search (v1):** `features.visualSearch` → Search/Home camera → `POST /api/v1/products/visual-search` (multipart `image`, not persisted). Vision uses `OPENAI_*` (+ optional `OPENAI_VISION_MODEL`). No key → empty + `vision_unavailable` (never invent SKUs). Native rebuild after Info.plist camera/library copy changes.
 14. **For you Home rail (v1):** `features.personalizedHome` → `GET /api/v1/products/for-you?recentIds=` (optional JWT + wishlist/orders). Guests/no signals → bestsellers. Does not replace Deals/Bestsellers/Also like.
 15. **Anime facet:** use `tag: 'anime'` / `?tag=anime` for Home/Categories/drawer — never `q=anime` alone (name search misses tag-only hits) and never a fifth product category enum.
-16. **Render:** `render.yaml` `branch: Nidavellir` must match the Render dashboard deploy branch.
+16. **Render:** `render.yaml` `branch: Nidavellir` must match the Render dashboard deploy branch. Default remote HEAD is **`Nidavellir`** (not `main`). Prefer new feature branches off `Nidavellir` after PR #22.
 17. **Checkout money paths:** send `Idempotency-Key` on `POST /orders`; never invent paid without Razorpay capture / verified confirm / webhook. Unpaid `pending_payment` expires after `PENDING_PAYMENT_EXPIRE_MINUTES` (30) via reconciler + Order Details.
+18. **Register:** never fail the HTTP response solely because verify-email Resend failed — return tokens + `emailVerification.sent: false`.
+19. **Buy now / Payment step:** Buy now adds to cart without success toast; Payment summary scrolls product cards only when count **>3**; Razorpay user-cancel → clear cancel message.
 
 ---
 

@@ -12,9 +12,10 @@ brew install node@22 npm
 xcode-select --install      # iOS
 sudo gem install cocoapods  # iOS
 
-# 2. Clone + install
+# 2. Clone + install (default branch is Nidavellir)
 git clone <your-repo-url> Nidavellir
 cd Nidavellir
+git checkout Nidavellir
 npm install
 npm run setup
 cd apps/mobile/ios && pod install && cd ../../../
