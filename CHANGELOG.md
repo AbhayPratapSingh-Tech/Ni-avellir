@@ -4,6 +4,12 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Atomic inventory
+
+- Reserve stock at `POST /orders` with conditional `findOneAndUpdate` (prevents last-unit oversell under concurrent checkouts).
+- Paid path no longer decrements stock again; unpaid cancel / `payment_expired` releases held stock once.
+- Helpers: `apps/api/src/modules/orders/inventory.ts`.
+
 ### Docs sync after `todo` → `Nidavellir` (PR #22)
 
 - Status docs (`TODO`, `PROJECT_PROGRESS`, `README`, `ROADMAP`, `PROJECT_INSIGHTS`, `AI_AGENT_GUIDE`) aligned with merged production branch **`Nidavellir`**.

@@ -125,6 +125,7 @@ Mobile defaults to **`api`** via `apps/mobile/src/config/appConfig.ts` (set `'mo
 5h. **Render deploy:** Blueprint + dashboard branch **`Nidavellir`**. Keep them aligned or auto-sync builds the wrong git ref.
 5i. **Idempotent checkout + reconcile:** `Idempotency-Key` on `POST /orders`; intent reuse; atomic paid + `runeXpAwarded`. In-process reconciler + Order Details: Razorpay capture → paid; unpaid after `PENDING_PAYMENT_EXPIRE_MINUTES` (30) → `payment_expired`. Webhook `payment.failed` ≠ order cancel — expiry cleans abandoned orders.
 5j. **Register + checkout UX:** `POST /auth/register` must not 500 when Resend rejects the verify email — return `emailVerification: { sent: false, reason: 'send_failed' }`. PDP Buy now: await cart add, **no** success toast; Payment step: summary above methods, scroll product cards only if **>3**; Razorpay cancel → “You have cancelled the Payment”.
+5k. **Atomic inventory:** `reserveStock` at order create; `releaseStock` on unpaid cancel/expire only; never decrement again on Razorpay paid (`finalizePaidOrder`). Catalog `stock` drops while payment is pending.
 6. Rune XP is **flat per order** (100 / 500 bundle), not per-SKU sum. Product `sku` / `runeXp` fields remain for display / backfill (`npm run seed:sku --workspace apps/api`).
 
 **Backend path**

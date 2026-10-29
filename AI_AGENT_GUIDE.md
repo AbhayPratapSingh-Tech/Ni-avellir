@@ -88,6 +88,7 @@ Checklist when flipping live:
 17. **Checkout money paths:** send `Idempotency-Key` on `POST /orders`; never invent paid without Razorpay capture / verified confirm / webhook. Unpaid `pending_payment` expires after `PENDING_PAYMENT_EXPIRE_MINUTES` (30) via reconciler + Order Details.
 18. **Register:** never fail the HTTP response solely because verify-email Resend failed — return tokens + `emailVerification.sent: false`.
 19. **Buy now / Payment step:** Buy now adds to cart without success toast; Payment summary scrolls product cards only when count **>3**; Razorpay user-cancel → clear cancel message.
+20. **Atomic inventory:** reserve via `orders/inventory.ts` at `POST /orders`; release only when claiming `pending_payment` → cancelled (user cancel or `payment_expired`); never decrement stock again on `/confirm` / webhook paid.
 
 ---
 

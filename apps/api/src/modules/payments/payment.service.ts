@@ -2,8 +2,8 @@ import { nanoid } from 'nanoid';
 import { PaymentProviderCode } from '@nidavellir/shared/contracts';
 import { AppError } from '../../common/errors/app-error.js';
 import { logger } from '../../common/logger/logger.js';
+import { releaseStock } from '../orders/inventory.js';
 import { Order } from '../orders/order.model.js';
-import { Product } from '../products/product.model.js';
 import { Payment } from './payment.model.js';
 import { PaymentWebhookEvent } from './payment-webhook-event.model.js';
 import { awardOrderRuneXp, computeOrderRuneXp } from '../orders/rune-xp.js';
@@ -282,20 +282,33 @@ export class PaymentService {
       return { action: 'waiting' };
     }
 
-    order.status = 'cancelled';
-    order.cancelReason = 'payment_expired';
-    await order.save();
+    const claimed = await Order.findOneAndUpdate(
+      { _id: order._id, status: 'pending_payment' },
+      { $set: { status: 'cancelled', cancelReason: 'payment_expired' } },
+      { new: true },
+    );
+    if (!claimed) {
+      return { action: 'noop' };
+    }
+
+    await releaseStock(
+      claimed.items.map((item) => ({
+        productId: String(item.productId),
+        quantity: item.quantity,
+      })),
+    );
+
     if (payment && payment.status !== 'paid') {
       payment.status = 'failed';
       await payment.save();
     }
     logger.info(
       {
-        orderId: String(order._id),
-        orderNumber: order.orderNumber,
+        orderId: String(claimed._id),
+        orderNumber: claimed.orderNumber,
         expireMinutes: this.pendingExpireMinutes,
       },
-      'Expired unpaid pending_payment order',
+      'Expired unpaid pending_payment order and released stock',
     );
     return { action: 'expired' };
   }
@@ -429,11 +442,7 @@ export class PaymentService {
       return Number(current?.runeXpAwarded ?? 0);
     }
 
-    await Promise.all(
-      claimed.items.map((item) =>
-        Product.updateOne({ _id: item.productId }, { $inc: { stock: -item.quantity } }),
-      ),
-    );
+    // Stock was already reserved at POST /orders — do not decrement again.
 
     if (xp > 0 && claimed.userId) {
       await awardOrderRuneXp(
