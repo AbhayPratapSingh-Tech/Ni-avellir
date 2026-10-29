@@ -53,9 +53,11 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [x] **All Reviews** — teaser + `ProductReviews`; write modal; author Remove; hosted avatar; outline Add to cart.
 - [x] **Anime facet** — `GET /products?tag=anime` (not name search / not a fifth category enum).
 - [x] **Idempotent checkout + payment reconcile** — `Idempotency-Key`, intent reuse, 30m unpaid expiry, Order Details reconcile (see Phase 10 checked items).
+- [x] **Atomic inventory** — reserve at order create; release on unpaid cancel/expire; no oversell on concurrent last-unit checkout.
 - [x] **Checkout Payment summary (step 2)** — product image rows above payment methods; only product cards scroll when **>3**; page/methods do not scroll for ≤3.
 - [x] **Buy now UX** — awaits add-to-cart with **no** “Struck the cart” toast; item remains in cart if checkout abandoned. Add to cart keeps the toast.
 - [x] **Razorpay cancel copy** — native cancel shows “You have cancelled the Payment” (title stays Payment failed); not `undefined (BAD_REQUEST_ERROR)`.
+- [x] **Privacy Policy + Contact + Raise a query** — in-app Privacy Policy; Contact → `Contact Nidavellir`; Support → 3 tabs (`Support Tickets` / `Support Commerce` / `Support Account App`) + local query list + Mark Resolved. Entry points: drawer, Profile, Login/Signup Need Help, Returns, Order Details, FAQ.
 
 > Upgrades for these shipped features are listed under **Upgrade shipped features** below — do not treat v1 as unfinished.
 >
@@ -71,11 +73,11 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] **CI** — GitHub Actions: lint, typecheck, tests, and production builds on every PR.
 - [x] **Payment / order reconciliation** — **Done.** In-process timer (`PAYMENT_RECONCILE_INTERVAL_MS`, default 5 min) while the dyno is awake + auto-check on `GET /orders/:id` (Order Details). For each `pending_payment`: if Razorpay shows captured → finalize via existing paid path; if still unpaid after **`PENDING_PAYMENT_EXPIRE_MINUTES` (default 30)** → cancel with `cancelReason: payment_expired` and mark Payment `failed`. Does **not** invent paid state without provider capture / verified `/confirm` / webhook. Razorpay `payment.failed` already marks Payment failed; expiry cleans abandoned **Orders**. Demo mode cannot fetch Razorpay — expiry is age-based only. Files: `payment.service.ts` (`reconcileOrderById` / `reconcileStalePending`), `payment-reconciler.ts`, `razorpay.provider.ts` (`findCapturedPayment`), `server.ts`.
 - [x] **Idempotent checkout** — **Done.** Client sends `Idempotency-Key` (CheckoutScreen ref + `productRepository.createOrder`); `POST /orders` replays the same order (200 + `replayed: true`) on retry/double-tap. Unique sparse `order.idempotencyKey`. `POST /payments/intents` reuses an open Payment for the order (no second Razorpay order). Confirm/webhook use atomic Payment `paid` claim + Order `pending_payment` → `paid` with `runeXpAwarded` so XP/stock finalize once. Mobile also guards `submitting || paying` on place order.
-- [ ] **Atomic inventory** — reserve stock on checkout; release on expiry/failure; `findOneAndUpdate` stock check so last unit cannot oversell. (Today stock decrements only on paid/COD; expiry does not need restore yet.)
-- [x] **Unpaid order expiry** — **Done as part of reconciliation** (30 min default). Stock release on expiry still N/A until atomic inventory reservation lands.
+- [x] **Atomic inventory** — **Done.** `reserveStock` at `POST /orders` (`findOneAndUpdate` with `stock >= qty` then `$inc: -qty`) for COD + Razorpay pending. Concurrent last-unit checkouts: one wins, other **422**. On paid: no second decrement. On unpaid cancel / `payment_expired`: `releaseStock` once after atomic `pending_payment` → `cancelled`. Helpers: `orders/inventory.ts`.
+- [x] **Unpaid order expiry** — **Done as part of reconciliation** (30 min default) + **releases reserved stock** on expire.
 - [ ] **Authz + rate limits audit** — OTP/login per phone + IP (SMS-bombing); refresh-token rotation / revoke / logout-other-devices; authorization on every user-owned resource.
-- [ ] **Account deletion** — in-app request + confirmation (Play/App Store requirement) + documented retention for legal order records.
-- [ ] **Data export / privacy controls** — user request for account data; document what is collected, retained, deleted (IP, avatars, visual-search policy).
+<!-- - [ ] **Account deletion** — in-app request + confirmation (Play/App Store requirement) + documented retention for legal order records. -->
+- [x] **Privacy controls (in-app policy)** — **Done as Privacy Policy screen** (collection / retention / deletion for IP, avatars, visual search, sessions, payments). Contact + Raise a query forms post to Google Sheets (not a GDPR data-export API).
 - [ ] **Crash / error reporting** — Sentry or Firebase Crashlytics on mobile; structured API error tracking + latency metrics + alerts (failed payments / webhooks).
 - [ ] **Mongo backups** — Atlas M0 has no automated backups; scheduled `mongodump` + restore drill; document recovery for users/orders/catalog.
 - [ ] **Offline / timeout / duplicate-checkout** — regression tests for flaky network, app kill mid-pay, retry UX.
@@ -91,12 +93,12 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] **Shipment tracking** — manual timeline first (confirmed → processing → packed → shipped → out for delivery → delivered); carrier + tracking link later.
 - [ ] **Invoice / PDF** — GST-ready tax invoice from trusted server order data (not client totals); Order Details download.
 - [ ] **Refund status UI** — refund initiated → processed (pairs with existing cancel/return/exchange).
-- [ ] **Support tickets** — order-linked Help & Support form (case number, status, attachments, response history); reuse FAQ RAG where useful.
+- [ ] **Support tickets (server-backed)** — **Sheets + local case/status v1 done** (`RaiseQuery` / `supportQueryStore`). Still open: API-backed tickets, attachments, staff reply history, FAQ RAG.
 - [ ] **Admin / CMS web** — protected admin for products, stock, orders, returns, coupons, Home banners, Drop Zone pool, bundle tags (replaces seed-only ops).
 - [ ] **Custom Resend domain** — DNS auth so verify/order mail reaches any address (today limited by `onboarding@resend.dev`).
 - [ ] **Push notifications (FCM / APNs)** — device tokens + backend fan-out; user preferences (order vs marketing); token lifecycle. (In-app Notifications API already exists.)
 - [ ] **Smart push** — interest / cart / drop aware — needs FCM first.
-- [ ] **Legal screens + public URLs** — Privacy Policy, Terms of Service, Refund/Return Policy (store rejection without these).
+- [ ] **Legal screens + public URLs** — **Privacy Policy in-app done** (`PrivacyPolicy`). Still open: Terms of Service, public web URLs, Refund/Return Policy page (Returns screen exists; store may still want a dedicated policy URL).
 - [ ] **Consent copy** — camera / mic / photo upload; note that visual-search photos are not stored.
 - [ ] **HTTPS / store deploy (remaining)**
   - Paid always-on host if Free cold starts are unacceptable.
@@ -181,5 +183,6 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - **Variants** before scaling apparel; **admin CMS** before relying on seed for day-to-day ops.
 - Payment webhook + client `/confirm` are complementary: reconcile from trusted provider data; every money transition must be safe to retry.
 - **Idempotent checkout / reconcile (shipped):** always send a fresh `Idempotency-Key` per checkout attempt (CheckoutScreen regenerates after success). Replays return the same order — do not treat 200+`replayed` as a new purchase. Tune `PENDING_PAYMENT_EXPIRE_MINUTES` / `PAYMENT_RECONCILE_INTERVAL_MS` in API env. Reconciler only runs while Render dyno is awake; Order Details `GET /orders/:id` also reconciles that order.
+- **Atomic inventory (shipped):** stock is held at order create. Do not `$inc` stock again in `finalizePaidOrder`. Always release via cancel/expire claim on `pending_payment` only (never double-release).
 - Prefer Phase **10 → 11 → 12 → 13** unless the immediate goal is a college demo (then tests + one standout like setup builder + signed release may be enough).
 - **Docs / branch:** after PR #22, `origin/todo` and `origin/Nidavellir` share the payment + register/checkout UX commits. Next work: branch from **`Nidavellir`**, keep `TODO.md` / `PROJECT_PROGRESS.md` updated when shipping.

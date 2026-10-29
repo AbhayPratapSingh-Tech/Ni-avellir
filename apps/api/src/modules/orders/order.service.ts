@@ -3,6 +3,7 @@ import { AppError } from '../../common/errors/app-error.js';
 import { notificationService } from '../notifications/notification.service.js';
 import { Product } from '../products/product.model.js';
 import { serviceabilityService } from '../serviceability/serviceability.service.js';
+import { releaseStock, reserveStock } from './inventory.js';
 import { sendOrderStatusEmail } from './order-email.js';
 import { Order } from './order.model.js';
 import { awardOrderRuneXp } from './rune-xp.js';
@@ -42,6 +43,31 @@ type LeanOrderProduct = {
   imageUrl: string;
 };
 
+async function notifyCancelled(order: {
+  userId?: unknown;
+  orderNumber: string;
+  customer: { email: string };
+  total: number;
+}) {
+  if (order.userId) {
+    await notificationService.notifyOrderEvent(
+      String(order.userId),
+      'cancelled',
+      order.orderNumber,
+    );
+  }
+  try {
+    await sendOrderStatusEmail({
+      to: order.customer.email,
+      orderNumber: order.orderNumber,
+      status: 'cancelled',
+      total: order.total,
+    });
+  } catch {
+    // ignore
+  }
+}
+
 export class OrderService {
   async create(input: CreateOrderInput, userId?: string, idempotencyKey?: string) {
     const key = (idempotencyKey ?? input.idempotencyKey)?.trim() || undefined;
@@ -69,9 +95,6 @@ export class OrderService {
       if (!product) {
         throw new AppError(`Product not found: ${item.productId}`, 404);
       }
-      if (product.stock < item.quantity) {
-        throw new AppError(`Insufficient stock for ${product.name}`, 422);
-      }
       return {
         productId: String(product._id),
         name: product.name,
@@ -81,6 +104,15 @@ export class OrderService {
         lineTotal: product.price * item.quantity,
       };
     });
+
+    // Atomic hold before create (COD sale or Razorpay pending). Idempotent replay skips this.
+    await reserveStock(
+      items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        name: item.name,
+      })),
+    );
 
     const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
     const discount = input.discount ?? 0;
@@ -121,6 +153,10 @@ export class OrderService {
       order = await Order.create(payload);
     } catch (error) {
       if (key && isDuplicateKeyError(error)) {
+        // Concurrent create with same key — this request's reserve is extra; release it.
+        await releaseStock(
+          items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
+        );
         const existing = await Order.findOne({ idempotencyKey: key });
         if (existing) {
           return {
@@ -130,6 +166,9 @@ export class OrderService {
           };
         }
       }
+      await releaseStock(
+        items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
+      );
       throw error;
     }
 
@@ -149,11 +188,6 @@ export class OrderService {
 
     let awardedXp = 0;
     if (isCod) {
-      await Promise.all(
-        items.map((item) =>
-          Product.updateOne({ _id: item.productId }, { $inc: { stock: -item.quantity } }),
-        ),
-      );
       awardedXp = await awardOrderRuneXp(
         userId,
         items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
@@ -201,22 +235,32 @@ export class OrderService {
     if (['cancelled', 'delivered', 'shipped'].includes(order.status)) {
       throw new AppError('Order cannot be cancelled', 422);
     }
+
+    // Unpaid hold: claim pending → cancelled then release reserved stock once.
+    if (order.status === 'pending_payment') {
+      const claimed = await Order.findOneAndUpdate(
+        { _id: id, status: 'pending_payment' },
+        { $set: { status: 'cancelled', cancelReason: reason ?? 'user_cancelled' } },
+        { new: true },
+      );
+      if (!claimed) {
+        throw new AppError('Order cannot be cancelled', 422);
+      }
+      await releaseStock(
+        claimed.items.map((item) => ({
+          productId: String(item.productId),
+          quantity: item.quantity,
+        })),
+      );
+      await notifyCancelled(claimed);
+      return claimed;
+    }
+
+    // Paid / confirmed (etc.): cancel without restoring stock (refunds out of scope).
     order.status = 'cancelled';
     order.cancelReason = reason;
     await order.save();
-    if (order.userId) {
-      await notificationService.notifyOrderEvent(String(order.userId), 'cancelled', order.orderNumber);
-    }
-    try {
-      await sendOrderStatusEmail({
-        to: order.customer.email,
-        orderNumber: order.orderNumber,
-        status: 'cancelled',
-        total: order.total,
-      });
-    } catch {
-      // ignore
-    }
+    await notifyCancelled(order);
     return order;
   }
 

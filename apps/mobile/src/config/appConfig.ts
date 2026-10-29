@@ -45,6 +45,17 @@ export const appConfig = {
   /** Currency formatting defaults. */
   currency: 'INR',
 
+  /**
+   * Google Apps Script Web App URLs (Deploy → Web app, Anyone).
+   * Contact tab: "Contact Nidavellir".
+   * Support tabs: "Support Tickets" + "Support Commerce" + "Support Account App".
+   * Leave empty until you paste your deployed URLs — forms will toast a config message.
+   */
+  contactFormWebhookUrl:
+    'https://script.google.com/macros/s/AKfycbzmcU-UVsQwypWl1JS8Tct16Z7ynSD6O5sQxQR3q-6h5rP-7RHHk5SAuGuM_19QcODJWg/exec',
+  supportFormWebhookUrl:
+    'https://script.google.com/macros/s/AKfycbwLLk0WPQ36lcXdB9wJg0Wl7mYmMBklHjjAeT5mnPl-1pizmPMqMlGsSgZBeL7x-UxomQ/exec',
+
   /** Feature flags. */
   features: {
     forgeStudio: true,

@@ -77,6 +77,47 @@ Nidavellir is intended to become a real premium gaming merchandise marketplace, 
 - Performance checks for product lists and animation-heavy screens.
 - Native iOS and Android projects treated as real source code, not generated throwaway output.
 
+## Craft patterns — skills worth knowing
+
+Patterns that solid commerce / API projects get right. Knowing *why* these exist is more valuable than memorizing our file names. When we ship another one, **add it here** (short: problem → approach → where). Do not decorate these with branch/PR/git status — the pattern is the point.
+
+### Atomic inventory (reserve / release)
+
+- **Problem:** Two checkouts racing the last unit can both “succeed” if stock is read then written separately (oversell).
+- **Approach:** Hold stock with a conditional update (`stock >= qty` then `$inc: -qty`) at order create; release only when an unpaid order is cancelled or expired; never decrement again on paid finalize.
+- **Where:** `apps/api/src/modules/orders/inventory.ts`, order create + unpaid cancel / `payment_expired`.
+- **Live check:** concurrent last-unit → one `201` / one `422`; cancel restores catalog stock.
+
+### Idempotent checkout
+
+- **Problem:** Double-tap / retry on place-order creates duplicate orders or duplicate Razorpay intents.
+- **Approach:** Client `Idempotency-Key` on `POST /orders`; server replays the same order; payment intents reuse an open Payment row; paid claim is atomic (`runeXpAwarded` once).
+- **Where:** order create + payments intents/confirm/webhook; mobile Checkout key + submit guard.
+
+### Payment reconciliation + unpaid expiry
+
+- **Problem:** Client dies after pay, or abandons `pending_payment` forever — money and inventory drift.
+- **Approach:** Reconcile against provider capture; expire unpaid after a TTL and release held stock. Never invent “paid” without capture / verified confirm / webhook.
+- **Where:** `payment.service.ts` reconcile paths, `payment-reconciler.ts`, Order Details auto-check.
+
+### Critical money paths (no silent fake paid)
+
+- **Problem:** Mock fallbacks that invent paid orders in live API mode corrupt trust and ops.
+- **Approach:** Repository `critical: true` for create order / payment confirm when `dataSource === 'api'`; branch Razorpay UI on `intent.demoMode`.
+- **Where:** `productRepository`, `appConfig`, Checkout.
+
+### Side-effect resilience (register vs email)
+
+- **Problem:** Signup fails with 500 because a verify-email send failed after the user was already created.
+- **Approach:** Persist the primary action first; return success with a soft flag if a non-critical side effect fails (`emailVerification.sent: false`).
+- **Where:** `POST /auth/register`.
+
+### Webhook idempotency
+
+- **Problem:** Payment providers retry webhooks; naive handlers double-apply paid / stock / XP.
+- **Approach:** Record processed event ids; claim payment/order state atomically before side effects.
+- **Where:** Razorpay webhook + `PaymentWebhookEvent`.
+
 ## Architecture Reminders
 
 - Cart and checkout require careful guest/auth merge rules.
@@ -125,6 +166,8 @@ Mobile defaults to **`api`** via `apps/mobile/src/config/appConfig.ts` (set `'mo
 5h. **Render deploy:** Blueprint + dashboard branch **`Nidavellir`**. Keep them aligned or auto-sync builds the wrong git ref.
 5i. **Idempotent checkout + reconcile:** `Idempotency-Key` on `POST /orders`; intent reuse; atomic paid + `runeXpAwarded`. In-process reconciler + Order Details: Razorpay capture → paid; unpaid after `PENDING_PAYMENT_EXPIRE_MINUTES` (30) → `payment_expired`. Webhook `payment.failed` ≠ order cancel — expiry cleans abandoned orders.
 5j. **Register + checkout UX:** `POST /auth/register` must not 500 when Resend rejects the verify email — return `emailVerification: { sent: false, reason: 'send_failed' }`. PDP Buy now: await cart add, **no** success toast; Payment step: summary above methods, scroll product cards only if **>3**; Razorpay cancel → “You have cancelled the Payment”.
+5k. **Atomic inventory:** `reserveStock` at order create; `releaseStock` on unpaid cancel/expire only; never decrement again on Razorpay paid (`finalizePaidOrder`). Catalog `stock` drops while payment is pending.
+5l. **Privacy / Contact / Support (Sheets v1):** in-app Privacy Policy; Contact → tab `Contact Nidavellir`; Raise a query → 3-tab Support workbook (`Support Tickets` core + `Support Commerce` + `Support Account App` extras keyed by `CaseNumber`). URLs in `appConfig` (`contactFormWebhookUrl`, `supportFormWebhookUrl`). Mobile keeps query cards / Pending→Resolved in AsyncStorage; Mark Resolved POSTs `action: resolve`. Comments column = typed text only. Apps Script: `apps/api/docs/support-nidavellir-apps-script.js` (Deploy Me + Anyone; POST returns 302 echo — RN uses `redirect: 'manual'`).
 6. Rune XP is **flat per order** (100 / 500 bundle), not per-SKU sum. Product `sku` / `runeXp` fields remain for display / backfill (`npm run seed:sku --workspace apps/api`).
 
 **Backend path**

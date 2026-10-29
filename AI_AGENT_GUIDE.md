@@ -2,7 +2,7 @@
 
 **Read this before adding or changing app features.** Keep mock demo, live API, payments, navigation, and docs aligned so the college demo stays stable and the live switch stays one config flip away.
 
-Related: `PROJECT_INSIGHTS.md`, `ARCHITECTURE.md`, `apps/mobile/src/config/appConfig.ts`.
+Related: `PROJECT_INSIGHTS.md` (incl. **Craft patterns**), `ARCHITECTURE.md`, `apps/mobile/src/config/appConfig.ts`.
 
 ---
 
@@ -88,6 +88,8 @@ Checklist when flipping live:
 17. **Checkout money paths:** send `Idempotency-Key` on `POST /orders`; never invent paid without Razorpay capture / verified confirm / webhook. Unpaid `pending_payment` expires after `PENDING_PAYMENT_EXPIRE_MINUTES` (30) via reconciler + Order Details.
 18. **Register:** never fail the HTTP response solely because verify-email Resend failed — return tokens + `emailVerification.sent: false`.
 19. **Buy now / Payment step:** Buy now adds to cart without success toast; Payment summary scrolls product cards only when count **>3**; Razorpay user-cancel → clear cancel message.
+20. **Atomic inventory:** reserve via `orders/inventory.ts` at `POST /orders`; release only when claiming `pending_payment` → cancelled (user cancel or `payment_expired`); never decrement stock again on `/confirm` / webhook paid.
+21. **Privacy / Contact / Support:** `PrivacyPolicy`, `Contact`, `Support` (query list), `RaiseQuery` (form), `SupportQueryDetail` (Mark Resolved) on Shop + Auth stacks. Local list via `supportQueryStore`; Sheets via Apps Script (`postToAppsScript` — treat 302 + GET echo as success). Contact tab: `Contact Nidavellir`. Support tabs: `Support Tickets` + `Support Commerce` + `Support Account App` (join on `CaseNumber`). URLs: `contactFormWebhookUrl` / `supportFormWebhookUrl`. Script reference: `apps/api/docs/support-nidavellir-apps-script.js`. Login/Signup Need Help → `RaiseQuery` `{ category: 'Account / Login' }`.
 
 ---
 
@@ -140,6 +142,7 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 
 - [ ] Meaningful behavior → update `PROJECT_INSIGHTS.md` and/or this guide.
 - [ ] Phase / TODO changes → `PROJECT_PROGRESS.md`, `TODO.md`, `CHANGELOG.md` when the user expects tracking.
+- [ ] **Craft patterns** — if the change is a production-grade technique good projects usually implement (atomicity, idempotency, reconcile, critical money paths, side-effect resilience, etc.), add a short entry under **Craft patterns — skills worth knowing** in `PROJECT_INSIGHTS.md`. Describe problem → approach → where. Do not add git/branch/PR badges for these entries; keep them as standing craft notes.
 
 ---
 
@@ -186,6 +189,10 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 | Heimdall open vault tool | `apps/api/src/modules/ai/ai.tools.ts` (`openCharacterVault`) |
 | Header brand logo | `assets/brand/logo.png` + `components/ui/BrandMark.tsx` |
 | Payments API | `apps/api/src/modules/payments/*` |
+| Privacy / Contact / Support | `features/info/PrivacyPolicyScreen.tsx`, `ContactScreen.tsx`, `SupportScreen.tsx`, `RaiseQueryScreen.tsx`, `SupportQueryDetailScreen.tsx` |
+| Support categories / validation | `features/info/supportCategories.ts`, `formValidation.ts`, `DatePickerField.tsx` |
+| Sheets form submit | `services/support/submitContactMessage.ts`, `submitSupportQuery.ts`, `postToAppsScript.ts`, `supportQueryStore.ts` + `appConfig.*FormWebhookUrl` |
+| Support Apps Script (3 tabs) | `apps/api/docs/support-nidavellir-apps-script.js` |
 
 ---
 

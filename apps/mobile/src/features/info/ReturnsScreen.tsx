@@ -1,6 +1,11 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing } from '../../theme/tokens';
 import { Screen } from '../../components/ui/Screen';
+import type { AuthStackParamList, RootStackParamList } from '../../app/navigation/types';
+
+type Navigation = NativeStackNavigationProp<RootStackParamList & AuthStackParamList>;
 
 const POINTS = [
   {
@@ -13,11 +18,13 @@ const POINTS = [
   },
   {
     title: 'How to start',
-    body: 'Open Orders, pick the item, and write Support with your order number. We reply with a pickup slot.',
+    body: 'Open Orders, pick the item, or Raise a query with your order number. We reply with a pickup slot.',
   },
 ];
 
 export function ReturnsScreen() {
+  const navigation = useNavigation<Navigation>();
+
   return (
     <Screen edges={[]} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -27,6 +34,13 @@ export function ReturnsScreen() {
             <Text style={styles.body}>{item.body}</Text>
           </View>
         ))}
+
+        <Pressable
+          style={styles.cta}
+          onPress={() => navigation.navigate('RaiseQuery', { category: 'Return Related' })}
+        >
+          <Text style={styles.ctaText}>Raise a return query</Text>
+        </Pressable>
       </ScrollView>
     </Screen>
   );
@@ -50,6 +64,18 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     paddingBottom: spacing.xl,
+  },
+  cta: {
+    alignItems: 'center',
+    backgroundColor: colors.text,
+    borderRadius: 12,
+    marginTop: spacing.sm,
+    paddingVertical: 14,
+  },
+  ctaText: {
+    color: colors.onAccent,
+    fontSize: 16,
+    fontWeight: '800',
   },
   screen: {
     backgroundColor: colors.background,
