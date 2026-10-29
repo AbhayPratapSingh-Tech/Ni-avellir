@@ -783,8 +783,12 @@ export function CheckoutScreen() {
       <ScrollView
         ref={scrollRef}
         style={styles.body}
-        contentContainerStyle={styles.bodyContent}
+        contentContainerStyle={[
+          styles.bodyContent,
+          step === 'Payment' && styles.bodyContentPayment,
+        ]}
         keyboardShouldPersistTaps="handled"
+        scrollEnabled={step !== 'Payment'}
       >
         {step === 'Address' ? (
           <View>
@@ -972,25 +976,108 @@ export function CheckoutScreen() {
         ) : null}
 
         {step === 'Payment' ? (
-          <View>
-            <Text style={styles.sectionTitle}>Payment method</Text>
-            {PAYMENT_METHODS.filter(
-              (m) => m.id !== 'cash_on_delivery' || serviceability?.codAvailable !== false,
-            ).map((m) => (
-              <Pressable
-                key={m.id}
-                style={[styles.payCard, payment === m.id && styles.payCardActive]}
-                onPress={() => setPayment(m.id)}
-              >
-                <View style={[styles.radio, payment === m.id && styles.radioActive]}>
-                  {payment === m.id ? <View style={styles.radioInner} /> : null}
+          <View style={styles.paymentStep}>
+            <View style={styles.paymentSummaryBlock}>
+              <Text style={styles.sectionTitle}>Payment summary</Text>
+              <Text style={styles.reviewTitle}>Items ({cart.itemCount})</Text>
+              {cart.items.length > 3 ? (
+                <ScrollView
+                  style={styles.paymentSummaryList}
+                  contentContainerStyle={styles.reviewItemsContent}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator
+                  scrollEnabled
+                >
+                  {cart.items.map((item) => {
+                    const image =
+                      getProductImages(item.product)[0] || item.product.imageUrl;
+                    return (
+                      <View key={item.product.id} style={styles.reviewItemCard}>
+                        {image ? (
+                          <Image source={{ uri: image }} style={styles.reviewItemImage} />
+                        ) : (
+                          <View style={[styles.reviewItemImage, styles.reviewItemImageEmpty]} />
+                        )}
+                        <View style={styles.reviewItemInfo}>
+                          <Text style={styles.reviewItemName} numberOfLines={2}>
+                            {item.product.name}
+                          </Text>
+                          <Text style={styles.reviewItemQty}>Qty {item.quantity}</Text>
+                          <Text style={styles.reviewItemPrice}>
+                            {formatInr(item.lineTotal)}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              ) : (
+                <View style={styles.reviewItemsContent}>
+                  {cart.items.map((item) => {
+                    const image =
+                      getProductImages(item.product)[0] || item.product.imageUrl;
+                    return (
+                      <View key={item.product.id} style={styles.reviewItemCard}>
+                        {image ? (
+                          <Image source={{ uri: image }} style={styles.reviewItemImage} />
+                        ) : (
+                          <View style={[styles.reviewItemImage, styles.reviewItemImageEmpty]} />
+                        )}
+                        <View style={styles.reviewItemInfo}>
+                          <Text style={styles.reviewItemName} numberOfLines={2}>
+                            {item.product.name}
+                          </Text>
+                          <Text style={styles.reviewItemQty}>Qty {item.quantity}</Text>
+                          <Text style={styles.reviewItemPrice}>
+                            {formatInr(item.lineTotal)}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
                 </View>
-                <View style={styles.payInfo}>
-                  <Text style={styles.payLabel}>{m.label}</Text>
-                  <Text style={styles.payDesc}>{m.desc}</Text>
-                </View>
-              </Pressable>
-            ))}
+              )}
+              <View style={styles.reviewLine}>
+                <Text style={styles.reviewMeta}>Subtotal</Text>
+                <Text style={styles.reviewMetaValue}>
+                  ₹{cart.subtotal.toLocaleString('en-IN')}
+                </Text>
+              </View>
+              <View style={styles.reviewLine}>
+                <Text style={styles.reviewMeta}>Shipping</Text>
+                <Text style={styles.reviewMetaValue}>
+                  {cart.shipping === 0 ? 'Free' : `₹${cart.shipping}`}
+                </Text>
+              </View>
+              <View style={styles.reviewLine}>
+                <Text style={styles.reviewTotal}>Total</Text>
+                <Text style={styles.reviewTotalValue}>
+                  ₹{cart.total.toLocaleString('en-IN')}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.paymentMethodsBlock}>
+              <View style={styles.divider} />
+              <Text style={styles.sectionTitle}>Payment method</Text>
+              {PAYMENT_METHODS.filter(
+                (m) => m.id !== 'cash_on_delivery' || serviceability?.codAvailable !== false,
+              ).map((m) => (
+                <Pressable
+                  key={m.id}
+                  style={[styles.payCard, payment === m.id && styles.payCardActive]}
+                  onPress={() => setPayment(m.id)}
+                >
+                  <View style={[styles.radio, payment === m.id && styles.radioActive]}>
+                    {payment === m.id ? <View style={styles.radioInner} /> : null}
+                  </View>
+                  <View style={styles.payInfo}>
+                    <Text style={styles.payLabel}>{m.label}</Text>
+                    <Text style={styles.payDesc}>{m.desc}</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
           </View>
         ) : null}
 
@@ -1139,6 +1226,19 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
+  },
+  bodyContentPayment: {
+    flexGrow: 1,
+  },
+  paymentStep: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  paymentSummaryBlock: {
+    flexShrink: 1,
+  },
+  paymentMethodsBlock: {
+    flexShrink: 0,
   },
   btnDisabled: {
     opacity: 0.4,
@@ -1320,6 +1420,10 @@ const styles = StyleSheet.create({
   // ~2 cards (72 image + padding + gap) before scroll
   reviewItemsList: {
     maxHeight: 188,
+  },
+  /** Cap ~3 product rows on Payment step; extra items scroll inside. */
+  paymentSummaryList: {
+    maxHeight: 280,
   },
   reviewLine: {
     flexDirection: 'row',

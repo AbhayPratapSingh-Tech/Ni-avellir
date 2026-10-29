@@ -4,6 +4,11 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Register + Buy now fixes
+
+- `POST /auth/register` still returns 201 with tokens if verify-email (Resend) fails after user create; `emailVerification: { sent: false, reason: 'send_failed' }`.
+- PDP **Buy now** awaits add-to-cart without the “Struck the cart” toast (Add to cart keeps the toast); abandoned checkout still leaves the item in cart.
+
 ### Idempotent checkout + payment reconciliation
 
 - `POST /orders` accepts `Idempotency-Key` (header or body); unique sparse `idempotencyKey`; retries return the same order (`replayed: true`).
