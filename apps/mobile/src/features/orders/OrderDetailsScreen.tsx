@@ -259,9 +259,24 @@ export function OrderDetailsScreen() {
           </>
         ) : null}
 
+        <Text style={styles.sectionTitle}>Need help?</Text>
+        <View style={styles.card}>
+          <Pressable
+            style={styles.supportLink}
+            onPress={() =>
+              navigation.navigate('RaiseQuery', {
+                orderId: order.orderNumber || order.id,
+                category: 'Order Related',
+              })
+            }
+          >
+            <Text style={styles.supportLinkText}>Contact support about this order</Text>
+          </Pressable>
+        </View>
+
         {(canCancel || canReturnOrExchange) && (
           <>
-            <Text style={styles.sectionTitle}>Need help?</Text>
+            <Text style={styles.sectionTitle}>Order actions</Text>
             <View style={styles.card}>
               <TextInput
                 style={styles.reasonInput}
@@ -424,6 +439,14 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   statusText: { color: colors.text, fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  supportLink: {
+    paddingVertical: 4,
+  },
+  supportLinkText: {
+    color: colors.accent,
+    fontSize: 15,
+    fontWeight: '800',
+  },
   summaryLabel: { color: colors.textMuted },
   summaryRow: {
     flexDirection: 'row',

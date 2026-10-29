@@ -31,6 +31,7 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 - **Register resilience** — Resend verify-email failure does not 500 signup (`send_failed`).
 - **Checkout UX** — Payment step summary (scroll products only if >3); Buy now silent cart add; Razorpay cancel message.
 - **Atomic inventory** — reserve at order create; release on unpaid cancel/expire; no double-decrement on paid.
+- **Privacy / Contact / Raise a query** — Privacy Policy; Contact sheet; Support 3-tab Sheets (Tickets / Commerce / Account App) + local query cards + Mark Resolved; Need Help from Login/Signup/Profile/Order Details/Returns/FAQ.
 
 ### Phase 1: Architecture
 - Full architecture plan (monorepo, bare React Native CLI, backend, shared contracts).
@@ -105,7 +106,7 @@ Core app + hosted API on **`Nidavellir`** (PR #22 merged `todo`) are **demo-read
 
 Remaining backlog: **`TODO.md` Phases 10–13** (plan before implementing):
 
-- **10** (partial) — still open: tests, CI, atomic inventory, account deletion, monitoring, backups, …
+- **10** (partial) — still open: tests, CI, account deletion, monitoring, backups, … (money-path craft: idempotency / reconcile / atomic inventory — see `PROJECT_INSIGHTS.md` Craft patterns)
 - **11** Customer operations & store (tracking, invoices, admin, legal, FCM, Play/TestFlight)
 - **12** Discovery / retention + **upgrade shipped features**
 - **13** Premium UX & release polish
@@ -131,7 +132,8 @@ Prefer new work from branch **`Nidavellir`**. Keep Render deploy branch = **`Nid
 - Anime `tag` facet + Render on **`Nidavellir`**: **Complete**.
 - Idempotent checkout + payment reconcile + register/Buy now/Payment summary UX: **Complete** (merged via PR #22).
 - Atomic inventory (reserve / release / no oversell): **Complete**.
-- Phase 10 reliability & security: **Partial** — money-path + inventory hardening **Complete**; tests/CI/account deletion/monitoring still open (see `TODO.md`).
-- Phase 11 customer ops & store: Not started (see `TODO.md`).
+- Privacy Policy + Contact + Raise a query (3-tab Sheets + local status): **Complete**.
+- Phase 10 reliability & security: **Partial** — money-path + inventory hardening **Complete**; privacy policy in-app **Complete**; tests/CI/account deletion/monitoring still open (see `TODO.md`).
+- Phase 11 customer ops & store: **Partial** — Sheets support intake **Complete**; tracking/invoices/admin/FCM/store builds still open (see `TODO.md`).
 - Phase 12 discovery / upgrades: Not started (see `TODO.md`).
 - Phase 13 premium UX & release polish: Not started (see `TODO.md`).

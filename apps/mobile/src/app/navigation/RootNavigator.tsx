@@ -22,6 +22,9 @@ import { FaqScreen } from '../../features/info/FaqScreen';
 import { ReturnsScreen } from '../../features/info/ReturnsScreen';
 import { ContactScreen } from '../../features/info/ContactScreen';
 import { SupportScreen } from '../../features/info/SupportScreen';
+import { RaiseQueryScreen } from '../../features/info/RaiseQueryScreen';
+import { SupportQueryDetailScreen } from '../../features/info/SupportQueryDetailScreen';
+import { PrivacyPolicyScreen } from '../../features/info/PrivacyPolicyScreen';
 import { WishlistScreen } from '../../features/wishlist/WishlistScreen';
 import { OnboardingScreen } from '../../features/auth/OnboardingScreen';
 import { LoginScreen } from '../../features/auth/LoginScreen';
@@ -179,6 +182,41 @@ function AuthNavigator({ initialRouteName }: { initialRouteName: keyof AuthStack
         component={AuthSuccessScreen}
         options={{ headerShown: false, gestureEnabled: false }}
       />
+      <AuthStack.Screen
+        name="Faq"
+        component={FaqScreen}
+        options={{ headerShown: true, title: 'FAQs' }}
+      />
+      <AuthStack.Screen
+        name="Returns"
+        component={ReturnsScreen}
+        options={{ headerShown: true, title: 'Return & exchange' }}
+      />
+      <AuthStack.Screen
+        name="Contact"
+        component={ContactScreen}
+        options={{ headerShown: true, title: 'Contact' }}
+      />
+      <AuthStack.Screen
+        name="Support"
+        component={SupportScreen}
+        options={{ headerShown: true, title: 'Help & queries' }}
+      />
+      <AuthStack.Screen
+        name="RaiseQuery"
+        component={RaiseQueryScreen}
+        options={{ headerShown: true, title: 'Raise a query' }}
+      />
+      <AuthStack.Screen
+        name="SupportQueryDetail"
+        component={SupportQueryDetailScreen}
+        options={{ headerShown: true, title: 'Query details' }}
+      />
+      <AuthStack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
+        options={{ headerShown: true, title: 'Privacy Policy' }}
+      />
     </AuthStack.Navigator>
   );
 }
@@ -263,8 +301,27 @@ function ShopNavigator() {
         component={ReturnsScreen}
         options={{ title: 'Return & exchange' }}
       />
-      <RootStack.Screen name="Contact" component={ContactScreen} options={{ title: 'Support' }} />
-      <RootStack.Screen name="Support" component={SupportScreen} options={{ title: 'Support' }} />
+      <RootStack.Screen name="Contact" component={ContactScreen} options={{ title: 'Contact' }} />
+      <RootStack.Screen
+        name="Support"
+        component={SupportScreen}
+        options={{ title: 'Help & queries' }}
+      />
+      <RootStack.Screen
+        name="RaiseQuery"
+        component={RaiseQueryScreen}
+        options={{ title: 'Raise a query' }}
+      />
+      <RootStack.Screen
+        name="SupportQueryDetail"
+        component={SupportQueryDetailScreen}
+        options={{ title: 'Query details' }}
+      />
+      <RootStack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
+        options={{ title: 'Privacy Policy' }}
+      />
     </RootStack.Navigator>
   );
 }

@@ -4,11 +4,25 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Privacy, Contact, Raise a query → Google Sheets
+
+- In-app **Privacy Policy** (`PrivacyPolicy`) documents collection, retention, deletion (IP, avatars, visual search, sessions, payments).
+- **Contact** page: company card + message form → `appConfig.contactFormWebhookUrl` (sheet tab `Contact Nidavellir`).
+- **Help & queries:** `Support` lists local query cards; `RaiseQuery` (Bhima-style categories + calendar date fields) POSTs to Apps Script; `SupportQueryDetail` + **Mark Resolved** syncs Sheet Status. List/status live in AsyncStorage (`supportQueryStore`); CaseNumber is shared with Sheets.
+- **Support spreadsheet (3 tabs):** `Support Tickets` (core row: Timestamp…Comments, Status, CaseNumber, Source) + `Support Commerce` (order/payment/delivery/return/refund extras by CaseNumber) + `Support Account App` (login/device/coupon extras). Comments = user text only (extras never stuffed into Comments). Script: `apps/api/docs/support-nidavellir-apps-script.js`. Deploy: Execute as Me, Anyone; paste `/exec` into `supportFormWebhookUrl`.
+- Entry points: drawer, Profile (Need Help / Contact / Privacy), Login & Signup Need Help → `RaiseQuery` (`Account / Login`), Returns, Order Details, FAQ. Auth + Shop stacks both register help screens.
+
+### Docs — Craft patterns section
+
+- `PROJECT_INSIGHTS.md`: standing **Craft patterns — skills worth knowing** (atomic inventory, idempotent checkout, reconcile, critical money paths, register email resilience, webhook idempotency). Future production-craft work appends here; no git/PR badges on entries.
+- `AI_AGENT_GUIDE.md`: checklist F reminds agents to add matching craft entries.
+
 ### Atomic inventory
 
 - Reserve stock at `POST /orders` with conditional `findOneAndUpdate` (prevents last-unit oversell under concurrent checkouts).
 - Paid path no longer decrements stock again; unpaid cancel / `payment_expired` releases held stock once.
 - Helpers: `apps/api/src/modules/orders/inventory.ts`.
+- Catalogued under Craft patterns in `PROJECT_INSIGHTS.md` (live concurrent smoke: hold / one-winner / cancel restore / idempotent replay).
 
 ### Docs sync after `todo` → `Nidavellir` (PR #22)
 

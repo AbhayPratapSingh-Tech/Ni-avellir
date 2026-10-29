@@ -245,6 +245,14 @@ export function SignupScreen() {
             Already have an account? <Text style={styles.linkStrong}>Login</Text>
           </Text>
         </Pressable>
+
+        <Pressable
+          onPress={() => navigation.navigate('RaiseQuery', { category: 'Account / Login' })}
+          style={styles.helpWrap}
+          hitSlop={8}
+        >
+          <Text style={styles.helpLink}>Need Help?</Text>
+        </Pressable>
       </ScrollView>
     </Screen>
   );
@@ -307,6 +315,16 @@ const styles = StyleSheet.create({
   linkStrong: {
     color: colors.text,
     fontWeight: '800',
+  },
+  helpLink: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  helpWrap: {
+    marginTop: spacing.md,
+    paddingBottom: spacing.md,
   },
   linkWrap: {
     marginTop: spacing.lg,

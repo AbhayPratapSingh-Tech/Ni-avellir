@@ -8,6 +8,9 @@ export type MainTabParamList = {
   Account: undefined;
 };
 
+/** Shared help screens (registered on both Auth + Shop stacks). */
+export type RaiseQueryParams = { orderId?: string; category?: string } | undefined;
+
 export type AuthStackParamList = {
   Onboarding: undefined;
   Login: undefined;
@@ -32,6 +35,14 @@ export type AuthStackParamList = {
     runeXp?: number;
     emailVerified?: boolean;
   };
+  /** Reachable from Login / Signup Need Help without entering the shop. */
+  Faq: undefined;
+  Returns: undefined;
+  Contact: undefined;
+  Support: undefined;
+  RaiseQuery: RaiseQueryParams;
+  SupportQueryDetail: { queryId: string };
+  PrivacyPolicy: undefined;
 };
 
 export type RootStackParamList = {
@@ -67,4 +78,7 @@ export type RootStackParamList = {
   Returns: undefined;
   Contact: undefined;
   Support: undefined;
+  RaiseQuery: RaiseQueryParams;
+  SupportQueryDetail: { queryId: string };
+  PrivacyPolicy: undefined;
 };

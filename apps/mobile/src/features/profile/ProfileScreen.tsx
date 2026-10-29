@@ -26,7 +26,9 @@ const MENU: Array<{ key: string; label: string; icon: AppIconName }> = [
   { key: 'password', label: 'Change password', icon: 'key' },
   { key: 'sessions', label: 'Devices & sessions', icon: 'phone' },
   { key: 'verify', label: 'Verify email', icon: 'mail' },
-  { key: 'support', label: 'Support', icon: 'chat' },
+  { key: 'needHelp', label: 'Help & queries', icon: 'chat' },
+  { key: 'contact', label: 'Contact', icon: 'mail' },
+  { key: 'privacy', label: 'Privacy Policy', icon: 'lock' },
 ];
 
 function isDisplayableAvatar(uri?: string) {
@@ -218,8 +220,16 @@ export function ProfileScreen() {
                   navigation.navigate('VerifyEmail');
                   return;
                 }
-                if (item.key === 'support') {
+                if (item.key === 'needHelp') {
                   navigation.navigate('Support');
+                  return;
+                }
+                if (item.key === 'contact') {
+                  navigation.navigate('Contact');
+                  return;
+                }
+                if (item.key === 'privacy') {
+                  navigation.navigate('PrivacyPolicy');
                 }
               }}
             >
