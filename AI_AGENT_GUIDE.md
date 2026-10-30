@@ -142,7 +142,7 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 
 - [ ] Meaningful behavior → update `PROJECT_INSIGHTS.md` and/or this guide.
 - [ ] Phase / TODO changes → `PROJECT_PROGRESS.md`, `TODO.md`, `CHANGELOG.md` when the user expects tracking.
-- [ ] **Craft patterns** — if the change is a production-grade technique good projects usually implement (atomicity, idempotency, reconcile, critical money paths, side-effect resilience, etc.), add a short entry under **Craft patterns — skills worth knowing** in `PROJECT_INSIGHTS.md`. Describe problem → approach → where. Do not add git/branch/PR badges for these entries; keep them as standing craft notes.
+- [ ] **Craft patterns** — if the change is a production-grade technique good projects usually implement (atomicity, idempotency, reconcile, critical money paths, side-effect resilience, CI quality gates, etc.), add a short entry under **Craft patterns — skills worth knowing** in `PROJECT_INSIGHTS.md`. Describe problem → approach → where. Do not add git/branch/PR badges for these entries; keep them as standing craft notes.
 
 ---
 

@@ -32,6 +32,7 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 - **Checkout UX** — Payment step summary (scroll products only if >3); Buy now silent cart add; Razorpay cancel message.
 - **Atomic inventory** — reserve at order create; release on unpaid cancel/expire; no double-decrement on paid.
 - **Privacy / Contact / Raise a query** — Privacy Policy; Contact sheet; Support 3-tab Sheets (Tickets / Commerce / Account App) + local query cards + Mark Resolved; Need Help from Login/Signup/Profile/Order Details/Returns/FAQ.
+- **CI quality gates** — GitHub Actions on every PR and on push to `Nidavellir`: lint, typecheck, workspace tests, production build (`.github/workflows/ci.yml`). Jest suite still a placeholder.
 
 ### Phase 1: Architecture
 - Full architecture plan (monorepo, bare React Native CLI, backend, shared contracts).
@@ -102,12 +103,12 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 
 ## Next Step
 
-Core app + hosted API on **`Nidavellir`** (PR #22 merged `todo`) are **demo-ready**: vault, All Reviews, visual search, For you, Anime tag, idempotent checkout, payment reconcile/30m expiry, resilient register, Buy now + Payment summary UX.
+Core app + hosted API on **`Nidavellir`** (PR #22 merged `todo`) are **demo-ready**: vault, All Reviews, visual search, For you, Anime tag, idempotent checkout, payment reconcile/30m expiry, resilient register, Buy now + Payment summary UX. CI runs lint, typecheck, tests, and production build on every pull request (PR #26).
 
 Remaining backlog: **`TODO.md` Engineering portfolio roadmap (E1–E5) + Phases 10–13** (plan before implementing):
 
-- **E1–E5** — production-craft scorecard (~2 done / ~10 partial / ~13 open). Next bet: server discount + order state machine + XP ledger + concurrency tests (see `TODO.md`).
-- **10** (partial) — still open: tests, CI, authz audit, monitoring, backups, … (money-path craft: idempotency / reconcile / atomic inventory — see `PROJECT_INSIGHTS.md` Craft patterns)
+- **E1–E5** — production-craft scorecard (~3 done / ~10 partial / ~12 open). Next bet: server discount + order state machine + XP ledger + concurrency tests (CI is in place; the test step is still a no-op). See `TODO.md`.
+- **10** (partial) — still open: Jest/Supertest, authz audit, monitoring, backups, … (CI gates shipped; money-path craft: idempotency / reconcile / atomic inventory — see `PROJECT_INSIGHTS.md` Craft patterns)
 - **11** Customer operations & store (tracking, invoices, admin, legal, FCM, Play/TestFlight)
 - **12** Discovery / retention + **upgrade shipped features**
 - **13** Premium UX & release polish
@@ -134,8 +135,8 @@ Prefer new work from branch **`Nidavellir`**. Keep Render deploy branch = **`Nid
 - Idempotent checkout + payment reconcile + register/Buy now/Payment summary UX: **Complete** (merged via PR #22).
 - Atomic inventory (reserve / release / no oversell): **Complete**.
 - Privacy Policy + Contact + Raise a query (3-tab Sheets + local status): **Complete**.
-- Engineering portfolio roadmap (E1–E5): **Partial** — atomic inventory + idempotent pay/webhooks **Complete**; server discount / state machine / XP ledger / CI / outbox / eval **Open** (see `TODO.md` scorecard).
-- Phase 10 reliability & security: **Partial** — money-path + inventory hardening **Complete**; privacy policy in-app **Complete**; tests/CI/account deletion/monitoring still open (see `TODO.md`).
+- Engineering portfolio roadmap (E1–E5): **Partial** — atomic inventory + idempotent pay/webhooks + CI quality gates **Complete**; server discount / state machine / XP ledger / Jest / outbox / eval **Open** (see `TODO.md` scorecard).
+- Phase 10 reliability & security: **Partial** — money-path + inventory hardening **Complete**; privacy policy in-app **Complete**; CI gates **Complete** (PR #26); Jest/account deletion/monitoring still open (see `TODO.md`).
 - Phase 11 customer ops & store: **Partial** — Sheets support intake **Complete**; tracking/invoices/admin/FCM/store builds still open (see `TODO.md`).
 - Phase 12 discovery / upgrades: Not started (see `TODO.md`).
 - Phase 13 premium UX & release polish: Not started (see `TODO.md`).

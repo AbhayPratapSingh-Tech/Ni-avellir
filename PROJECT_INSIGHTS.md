@@ -30,7 +30,7 @@ Nidavellir is intended to become a real premium gaming merchandise marketplace, 
 - Secure mobile token storage: `react-native-keychain`.
 - Media: Cloudinary.
 - Push notifications: **planned** FCM (Android) + APNs (iOS) via backend; **today** in-app Notifications inbox only (`/api/v1/notifications`). See `TODO.md`.
-- CI/CD: GitHub Actions plus Fastlane for native builds.
+- CI: GitHub Actions (`.github/workflows/ci.yml`) on every pull request and on push to `Nidavellir` — lint, typecheck, workspace tests, production build. Fastlane native release builds are still planned.
 - Monorepo tooling: Turborepo.
 - Documentation: Swagger/OpenAPI plus repository markdown docs.
 
@@ -118,6 +118,13 @@ Patterns that solid commerce / API projects get right. Knowing *why* these exist
 - **Approach:** Record processed event ids; claim payment/order state atomically before side effects.
 - **Where:** Razorpay webhook + `PaymentWebhookEvent`.
 
+### CI quality gates
+
+- **Problem:** A pull request can merge broken TypeScript, lint, or a production compile if those checks only run on one laptop.
+- **Approach:** One GitHub Actions job (`ubuntu-latest`) runs `npm ci`, lint, typecheck, workspace tests, and `npm run build` on every pull request and on every push to `Nidavellir`. Node comes from `.nvmrc`. ESLint uses `@typescript-eslint/parser` so `.ts` / `.tsx` parse. The job does not build an Android APK or iOS app.
+- **Where:** `.github/workflows/ci.yml`, root `package.json` `lint` script, `.eslintrc.cjs`.
+- **Live check:** Actions run **CI / check** goes green on the pull request and again on the merge push. Workspace `test` scripts still exit 0 with no Jest suite — that gate is the workflow, not proof of cart or payment behavior. Require the `check` status in branch protection so a pending or red run blocks merge.
+
 ## Architecture Reminders
 
 - Cart and checkout require careful guest/auth merge rules.
@@ -144,7 +151,7 @@ Patterns that solid commerce / API projects get right. Knowing *why* these exist
 
 ## Current Status
 
-Phases 1–9 + live API features are complete for the college/demo ship. **Live default:** mobile `dataSource: 'api'` → Render Free + Atlas (`ni-avellir.onrender.com`). Git + Render deploy branch **`Nidavellir`** (PR #22 merged latest `todo`). Resend verify email live (`EMAIL_DEMO_MODE=false`); register returns tokens even if verify-email send fails. Also shipped: Character Vault v1, All Reviews, visual search, For you, Anime `tag` facet, Drop Zone, bundles, AI assistant, store locator, idempotent checkout + 30m payment reconcile, Checkout Payment summary / Buy now / Razorpay cancel UX. Optional next: custom email domain, FCM, automated tests, store builds, licensed vault GLBs. Tracking: `PROJECT_PROGRESS.md` and `TODO.md`.
+Phases 1–9 + live API features are complete for the college/demo ship. **Live default:** mobile `dataSource: 'api'` → Render Free + Atlas (`ni-avellir.onrender.com`). Git + Render deploy branch **`Nidavellir`** (PR #22 merged latest `todo`). Resend verify email live (`EMAIL_DEMO_MODE=false`); register returns tokens even if verify-email send fails. Also shipped: Character Vault v1, All Reviews, visual search, For you, Anime `tag` facet, Drop Zone, bundles, AI assistant, store locator, idempotent checkout + 30m payment reconcile, Checkout Payment summary / Buy now / Razorpay cancel UX, GitHub Actions CI (lint / typecheck / test / build). Optional next: Jest/Supertest, custom email domain, FCM, store builds, licensed vault GLBs. Tracking: `PROJECT_PROGRESS.md` and `TODO.md`.
 
 ## Live Database + API (how to go beyond mock)
 
@@ -168,6 +175,7 @@ Mobile defaults to **`api`** via `apps/mobile/src/config/appConfig.ts` (set `'mo
 5j. **Register + checkout UX:** `POST /auth/register` must not 500 when Resend rejects the verify email — return `emailVerification: { sent: false, reason: 'send_failed' }`. PDP Buy now: await cart add, **no** success toast; Payment step: summary above methods, scroll product cards only if **>3**; Razorpay cancel → “You have cancelled the Payment”.
 5k. **Atomic inventory:** `reserveStock` at order create; `releaseStock` on unpaid cancel/expire only; never decrement again on Razorpay paid (`finalizePaidOrder`). Catalog `stock` drops while payment is pending.
 5l. **Privacy / Contact / Support (Sheets v1):** in-app Privacy Policy; Contact → tab `Contact Nidavellir`; Raise a query → 3-tab Support workbook (`Support Tickets` core + `Support Commerce` + `Support Account App` extras keyed by `CaseNumber`). URLs in `appConfig` (`contactFormWebhookUrl`, `supportFormWebhookUrl`). Mobile keeps query cards / Pending→Resolved in AsyncStorage; Mark Resolved POSTs `action: resolve`. Comments column = typed text only. Apps Script: `apps/api/docs/support-nidavellir-apps-script.js` (Deploy Me + Anyone; POST returns 302 echo — RN uses `redirect: 'manual'`).
+5m. **CI quality gates:** `.github/workflows/ci.yml` on every PR and on push to `Nidavellir` (`npm ci`, lint, typecheck, `npm run test --workspaces`, `npm run build`). Node `.nvmrc` 20.20.2. Jest is not in that job yet — workspace `test` scripts print and exit 0. Native release builds stay out of this workflow.
 6. Rune XP is **flat per order** (100 / 500 bundle), not per-SKU sum. Product `sku` / `runeXp` fields remain for display / backfill (`npm run seed:sku --workspace apps/api`).
 
 **Backend path**

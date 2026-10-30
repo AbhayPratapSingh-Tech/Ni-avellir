@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### CI quality gates
+
+- GitHub Actions workflow `.github/workflows/ci.yml` runs on every pull request and on push to `Nidavellir`: `npm ci`, lint, typecheck, workspace tests, and production build (`ubuntu-latest`, Node from `.nvmrc`).
+- Root `lint` script. ESLint parses TypeScript/JSX via `@typescript-eslint/parser` (value+type aliases such as `ProductType` stay allowed; React Native `__DEV__` is a known global).
+- Workspace `test` scripts are still placeholders that exit 0. Jest/Supertest/RNTL remain open. Native APK/IPA builds are not part of this job.
+- Catalogued under Craft patterns in `PROJECT_INSIGHTS.md`.
+
 ### Privacy, Contact, Raise a query → Google Sheets
 
 - In-app **Privacy Policy** (`PrivacyPolicy`) documents collection, retention, deletion (IP, avatars, visual search, sessions, payments).
@@ -14,7 +21,7 @@ All notable changes to this project will be documented here.
 
 ### Docs — Craft patterns section
 
-- `PROJECT_INSIGHTS.md`: standing **Craft patterns — skills worth knowing** (atomic inventory, idempotent checkout, reconcile, critical money paths, register email resilience, webhook idempotency). Future production-craft work appends here; no git/PR badges on entries.
+- `PROJECT_INSIGHTS.md`: standing **Craft patterns — skills worth knowing** (atomic inventory, idempotent checkout, reconcile, critical money paths, register email resilience, webhook idempotency, CI quality gates). Future production-craft work appends here; no git/PR badges on entries.
 - `AI_AGENT_GUIDE.md`: checklist F reminds agents to add matching craft entries.
 
 ### Atomic inventory
