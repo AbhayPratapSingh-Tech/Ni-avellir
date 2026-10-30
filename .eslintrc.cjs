@@ -21,9 +21,24 @@ module.exports = {
   overrides: [
     {
       files: ['**/*.{ts,tsx}'],
+      parser: '@typescript-eslint/parser',
+      plugins: ['@typescript-eslint'],
       parserOptions: {
         ecmaVersion: 2022,
         sourceType: 'module',
+        ecmaFeatures: { jsx: true },
+      },
+      rules: {
+        'no-unused-vars': 'off',
+        'no-redeclare': 'off',
+        '@typescript-eslint/no-unused-vars': 'warn',
+      },
+    },
+    {
+      files: ['apps/mobile/**/*.{ts,tsx}'],
+      env: { browser: true },
+      globals: {
+        __DEV__: 'readonly',
       },
     },
   ],

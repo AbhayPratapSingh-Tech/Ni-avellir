@@ -23,10 +23,13 @@
     "android:release": "npm run android:release --workspace apps/mobile",
     "gradlew-android": "npm run gradlew-android --workspace apps/mobile",
     "ios": "npm run ios --workspace apps/mobile",
+    "lint": "npm run lint --workspaces",
     "test": "npm run typecheck --workspaces",
     "typecheck": "npm run typecheck --workspaces"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.72.1",
+    "@typescript-eslint/parser": "^8.72.1",
     "eslint": "^8.57.0",
     "prettier": "^3.3.2",
     "turbo": "^1.13.3",

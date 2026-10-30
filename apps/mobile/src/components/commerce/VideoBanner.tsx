@@ -214,7 +214,6 @@ function InlinePlayer({ videoId }: { videoId: string }) {
     forcePlay();
     const timers = [500, 1200, 2200].map((ms) => setTimeout(forcePlay, ms));
     return () => timers.forEach(clearTimeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-kick on focus/pause
   }, [focused, paused]);
 
   useEffect(() => {
@@ -225,7 +224,6 @@ function InlinePlayer({ videoId }: { videoId: string }) {
     };
     const sub = AppState.addEventListener('change', onAppState);
     return () => sub.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focused, paused]);
 
   if (!WebView) {
