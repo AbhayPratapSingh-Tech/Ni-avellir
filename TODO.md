@@ -77,12 +77,12 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 |-------|------|---------|------|-------|
 | **E1** Transaction correctness | 2 | 2 | 1 | Inventory + idempotent pay shipped; pricing/XP/state machine gaps |
 | **E2** Security & data integrity | 0 | 4 | 1 | Ownership + OTP limits exist; need tests + coupon atomics |
-| **E3** Reliability engineering | 0 | 2 | 3 | Reconciler + pino exist; outbox / CI / backups open |
+| **E3** Reliability engineering | 1 | 2 | 2 | CI gates shipped; reconciler + pino partial; outbox / Jest / backups open |
 | **E4** Scale & mobile quality | 0 | 1 | 4 | Local `appConfig` flags only |
 | **E5** Advanced product engineering | 0 | 1 | 4 | AI tools v1; no eval / admin / setup builder |
-| **Total** | **~2** | **~10** | **~13** | “Done” = production-shaped + documented; partial still counts as backlog |
+| **Total** | **~3** | **~10** | **~12** | “Done” = production-shaped + documented; partial still counts as backlog |
 
-**Strongest next bet (portfolio):** close **E1** (server discount + order state machine + XP ledger) → concurrent/idempotency **tests** → then **E3** CI + request IDs. Product wow (setup builder / AI eval) after foundations.
+**Strongest next bet (portfolio):** close **E1** (server discount + order state machine + XP ledger) → concurrent/idempotency **tests** (CI already runs the suite; today it is a no-op) → then **E3** request IDs. Product wow (setup builder / AI eval) after foundations.
 
 ---
 
@@ -112,7 +112,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] **Payment reconciliation + refund recovery** — **Partial today:** in-process reconciler + Order Details reconcile + 30m expiry. **Open:** refund/return saga (idempotent Razorpay refunds, loyalty reversal retry, incomplete-step recovery).
 - [ ] **Structured logs, request IDs, error monitoring** — **Partial today:** `pino` / `pino-http`. **Open:** correlation / request IDs across API + jobs; Sentry (or similar) on API + mobile; payment/webhook error alerts.
 - [ ] **Database backup restoration drills** — Atlas M0 has no auto backups; scheduled `mongodump`, restore into a scratch DB, document RPO/RTO (same as Phase 10 Mongo backups).
-- [ ] **API integration tests + CI/CD quality gates** — no Jest/Supertest/RNTL suite or Actions gates yet (Phase 10 Automated tests + CI).
+- [x] **CI/CD quality gates** — **Done.** GitHub Actions `.github/workflows/ci.yml` on every PR and on push to `Nidavellir`: `npm ci`, lint, typecheck, workspace tests, production `tsc` build (`ubuntu-latest`, Node from `.nvmrc`). ESLint parses TypeScript. *Still open:* Jest/Supertest/RNTL (workspace `test` scripts exit 0); branch protection requiring status **check**; Fastlane / native release builds.
 
 ---
 
@@ -149,10 +149,10 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 ## Phase 10 — Reliability & security
 
 > Prefer this phase before real money / store users. Do not implement until asked.  
-> Cross-link: **E2** authz/rate limits, **E3** outbox/logs/CI/backups, **E1** money-path tests.
+> Cross-link: **E2** authz/rate limits, **E3** outbox/logs/backups (CI gates shipped), **E1** money-path tests.
 
 - [ ] **Automated tests** — Jest + Supertest for cart totals, coupons, webhook HMAC, order/payment paths, Rune XP award, **concurrent inventory**, **idempotent replay**, **authz denial**; RNTL for login → cart → checkout. (= **E3** tests + **E1/E2** proof)
-- [ ] **CI** — GitHub Actions: lint, typecheck, tests, and production builds on every PR. (= **E3** CI/CD)
+- [x] **CI** — **Done.** GitHub Actions `.github/workflows/ci.yml`: lint, typecheck, workspace tests, and production builds on every PR and on push to `Nidavellir` (job `check`, `ubuntu-latest`, Node `.nvmrc`). Root `npm run lint`. ESLint uses `@typescript-eslint/parser`. *Still open:* real Jest/Supertest/RNTL (the test step is a placeholder that exits 0); require status check `check` in branch protection; Android/iOS release builds stay out of this job. (= **E3** CI/CD)
 - [x] **Payment / order reconciliation** — **Done.** In-process timer (`PAYMENT_RECONCILE_INTERVAL_MS`, default 5 min) while the dyno is awake + auto-check on `GET /orders/:id` (Order Details). For each `pending_payment`: if Razorpay shows captured → finalize via existing paid path; if still unpaid after **`PENDING_PAYMENT_EXPIRE_MINUTES` (default 30)** → cancel with `cancelReason: payment_expired` and mark Payment `failed`. Does **not** invent paid state without provider capture / verified `/confirm` / webhook. Razorpay `payment.failed` already marks Payment failed; expiry cleans abandoned **Orders**. Demo mode cannot fetch Razorpay — expiry is age-based only. Files: `payment.service.ts` (`reconcileOrderById` / `reconcileStalePending`), `payment-reconciler.ts`, `razorpay.provider.ts` (`findCapturedPayment`), `server.ts`.
 - [x] **Idempotent checkout** — **Done.** Client sends `Idempotency-Key` (CheckoutScreen ref + `productRepository.createOrder`); `POST /orders` replays the same order (200 + `replayed: true`) on retry/double-tap. Unique sparse `order.idempotencyKey`. `POST /payments/intents` reuses an open Payment for the order (no second Razorpay order). Confirm/webhook use atomic Payment `paid` claim + Order `pending_payment` → `paid` with `runeXpAwarded` so XP/stock finalize once. Mobile also guards `submitting || paying` on place order.
 - [x] **Atomic inventory** — **Done.** `reserveStock` at `POST /orders` (`findOneAndUpdate` with `stock >= qty` then `$inc: -qty`) for COD + Razorpay pending. Concurrent last-unit checkouts: one wins, other **422**. On paid: no second decrement. On unpaid cancel / `payment_expired`: `releaseStock` once after atomic `pending_payment` → `cancelled`. Helpers: `orders/inventory.ts`.
@@ -272,6 +272,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - Payment webhook + client `/confirm` are complementary: reconcile from trusted provider data; every money transition must be safe to retry.
 - **Idempotent checkout / reconcile (shipped):** always send a fresh `Idempotency-Key` per checkout attempt (CheckoutScreen regenerates after success). Replays return the same order — do not treat 200+`replayed` as a new purchase. Tune `PENDING_PAYMENT_EXPIRE_MINUTES` / `PAYMENT_RECONCILE_INTERVAL_MS` in API env. Reconciler only runs while Render dyno is awake; Order Details `GET /orders/:id` also reconciles that order.
 - **Atomic inventory (shipped):** stock is held at order create. Do not `$inc` stock again in `finalizePaidOrder`. Always release via cancel/expire claim on `pending_payment` only (never double-release).
+- **CI (shipped):** `.github/workflows/ci.yml` runs on every PR and on push to `Nidavellir` (`npm ci`, `npm run lint`, `npm run typecheck`, `npm run test --workspaces`, `npm run build`). Node is `.nvmrc` (20.20.2). Workspace `test` scripts still echo and exit 0 until Jest lands. Require status check `check` under branch protection so a PR cannot merge while CI is pending or red. Do not put `gradlew-android` in this job.
 - Prefer **Engineering roadmap E1 → E2 → E3**, then product Phase **11 → 12 → 13**, unless the immediate goal is a college demo (then concurrency tests + one standout like setup builder + signed release may be enough).
 - **Portfolio proof:** for each E-item you ship, keep (1) code, (2) automated failure/concurrency test, (3) short evidence, (4) craft note in `PROJECT_INSIGHTS.md` — checklist alone is weak.
 - **Caveat:** Razorpay capture and inventory are not one Mongo transaction — design for independent failure (already partly handled via reserve → pay → reconcile/expire).
