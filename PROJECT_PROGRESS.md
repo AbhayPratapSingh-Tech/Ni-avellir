@@ -104,9 +104,10 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 
 Core app + hosted API on **`Nidavellir`** (PR #22 merged `todo`) are **demo-ready**: vault, All Reviews, visual search, For you, Anime tag, idempotent checkout, payment reconcile/30m expiry, resilient register, Buy now + Payment summary UX.
 
-Remaining backlog: **`TODO.md` Phases 10–13** (plan before implementing):
+Remaining backlog: **`TODO.md` Engineering portfolio roadmap (E1–E5) + Phases 10–13** (plan before implementing):
 
-- **10** (partial) — still open: tests, CI, account deletion, monitoring, backups, … (money-path craft: idempotency / reconcile / atomic inventory — see `PROJECT_INSIGHTS.md` Craft patterns)
+- **E1–E5** — production-craft scorecard (~2 done / ~10 partial / ~13 open). Next bet: server discount + order state machine + XP ledger + concurrency tests (see `TODO.md`).
+- **10** (partial) — still open: tests, CI, authz audit, monitoring, backups, … (money-path craft: idempotency / reconcile / atomic inventory — see `PROJECT_INSIGHTS.md` Craft patterns)
 - **11** Customer operations & store (tracking, invoices, admin, legal, FCM, Play/TestFlight)
 - **12** Discovery / retention + **upgrade shipped features**
 - **13** Premium UX & release polish
@@ -133,6 +134,7 @@ Prefer new work from branch **`Nidavellir`**. Keep Render deploy branch = **`Nid
 - Idempotent checkout + payment reconcile + register/Buy now/Payment summary UX: **Complete** (merged via PR #22).
 - Atomic inventory (reserve / release / no oversell): **Complete**.
 - Privacy Policy + Contact + Raise a query (3-tab Sheets + local status): **Complete**.
+- Engineering portfolio roadmap (E1–E5): **Partial** — atomic inventory + idempotent pay/webhooks **Complete**; server discount / state machine / XP ledger / CI / outbox / eval **Open** (see `TODO.md` scorecard).
 - Phase 10 reliability & security: **Partial** — money-path + inventory hardening **Complete**; privacy policy in-app **Complete**; tests/CI/account deletion/monitoring still open (see `TODO.md`).
 - Phase 11 customer ops & store: **Partial** — Sheets support intake **Complete**; tracking/invoices/admin/FCM/store builds still open (see `TODO.md`).
 - Phase 12 discovery / upgrades: Not started (see `TODO.md`).
