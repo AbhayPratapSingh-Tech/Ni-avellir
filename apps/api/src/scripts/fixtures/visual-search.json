@@ -1,0 +1,16 @@
+{
+  "positives": [
+    { "slug": "kengan-ohma-tee", "franchise": "Kengan Ashura" },
+    { "slug": "kengan-raian-hoodie", "franchise": "Kengan Ashura" },
+    { "slug": "kengan-cover-poster", "franchise": "Kengan Ashura" },
+    { "slug": "kengan-part2-poster", "franchise": "Kengan Ashura" },
+    { "slug": "kengan-agito-stand", "franchise": "Kengan Ashura" },
+    { "slug": "kengan-gaolang-deskmat", "franchise": "Kengan Ashura" },
+    { "slug": "kengan-cosmo-keychain", "franchise": "Kengan Ashura" },
+    { "slug": "kengan-wakatsuki-mug", "franchise": "Kengan Ashura" }
+  ],
+  "negatives": [
+    { "id": "blank" },
+    { "id": "solid" }
+  ]
+}

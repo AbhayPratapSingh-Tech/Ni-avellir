@@ -2,7 +2,7 @@
 
 Premium gaming merchandise marketplace — a full-stack mobile commerce app.
 
-**Status: Live API on Render + mobile wired.** Default `dataSource: 'api'` → `https://ni-avellir.onrender.com/api/v1`. Production git branch **`Nidavellir`** (PR #22 includes `todo` hardening). Resend verify email live; register still succeeds if verify-mail send fails. Character Vault, All Reviews, visual search, For you, Anime facet, idempotent checkout + reconcile shipped. GitHub Actions CI (lint, typecheck, tests, production build) runs on every pull request. Local API via `npm run dev:api`. Mock via `appConfig.dataSource: 'mock'`. Render deploy branch: **`Nidavellir`**.
+**Status: Live API on Render + mobile wired.** Default `dataSource: 'api'` → `https://ni-avellir.onrender.com/api/v1`. Production git branch **`Nidavellir`** (PR #22 includes `todo` hardening). Resend verify email live; register still succeeds if verify-mail send fails. Character Vault, All Reviews, visual search, For you, Anime facet, idempotent checkout + reconcile shipped. GitHub Actions CI (lint, typecheck, tests, production build) runs on every pull request. OTP, password-reset, and verify-email sends are 5 per minute per IP (typed 429 when blocked); AI chat is not rate limited. Local API via `npm run dev:api`. Mock via `appConfig.dataSource: 'mock'`. Render deploy branch: **`Nidavellir`**.
 
 ## What's Included
 

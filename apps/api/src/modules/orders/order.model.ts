@@ -106,6 +106,7 @@ const orderSchema = new Schema<OrderDocument>(
 );
 
 orderSchema.index({ 'customer.email': 1 });
+orderSchema.index({ userId: 1, createdAt: -1 });
 orderSchema.index(
   { idempotencyKey: 1 },
   { unique: true, sparse: true, partialFilterExpression: { idempotencyKey: { $type: 'string' } } },

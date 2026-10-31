@@ -413,7 +413,8 @@ Important indexes:
 - `products.status`, `products.categoryIds`, `products.brandId`.
 - `products.name` text or future external search index.
 - `productVariants.sku` unique.
-- `orders.userId + createdAt`.
+- `orders.userId + createdAt` (order history, newest first).
+- `products.stock + reviewCount` (best sellers). Name search stays a case-insensitive regex scan until a search engine exists.
 - `reviews.productId + createdAt`.
 - `reviews.userId + productId` unique if one-review policy is approved.
 - `coupons.code` unique.

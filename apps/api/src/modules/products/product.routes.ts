@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import multer from 'multer';
 import type { Env } from '../../config/env.js';
 import { asyncHandler } from '../../common/middleware/async-handler.js';
+import { visualSearchIpLimit } from '../../common/middleware/ip-rate-limit.js';
 import { optionalAuth } from '../../common/middleware/require-auth.js';
 import { ProductController } from './product.controller.js';
 import { ProductService } from './product.service.js';
@@ -24,14 +24,6 @@ export function createProductRouter(env?: Env) {
   const service = new ProductService();
   const controller = new ProductController(service, env);
 
-  const visualLimiter = rateLimit({
-    windowMs: 60 * 1000,
-    max: 10,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: { message: 'Too many visual searches. Try again in a minute.' } },
-  });
-
   router.get('/', asyncHandler(controller.list));
   router.get('/bundles', asyncHandler(controller.listBundles));
   router.get('/featured', asyncHandler(controller.getFeatured));
@@ -46,7 +38,7 @@ export function createProductRouter(env?: Env) {
     router.get('/for-you', optionalAuth(env), asyncHandler(controller.getForYou));
     router.post(
       '/visual-search',
-      visualLimiter,
+      visualSearchIpLimit,
       visualUpload.single('image'),
       asyncHandler(controller.visualSearch),
     );

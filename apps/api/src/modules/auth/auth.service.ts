@@ -24,6 +24,8 @@ import { User } from './user.model.js';
 
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_TTL_MS = 10 * 60 * 1000;
+/** Same phone or email cannot receive another code for this purpose inside this window. */
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
 const BCRYPT_ROUNDS = 10;
 
 function normalizePhone(phone: string) {
@@ -36,6 +38,18 @@ function hashToken(token: string) {
 
 function generateOtpCode() {
   return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+async function assertResendCooldown(filter: { phone?: string; email?: string; purpose: OtpPurpose }) {
+  const latest = await OtpChallenge.findOne(filter).sort({ createdAt: -1 }).select('createdAt').lean();
+  if (!latest?.createdAt) return;
+  if (Date.now() - new Date(latest.createdAt).getTime() < OTP_RESEND_COOLDOWN_MS) {
+    throw new AppError(
+      'OTP limit per minute reached. Try again in a minute.',
+      429,
+      'otp_limit_per_minute_reached',
+    );
+  }
 }
 
 export type SessionDeviceMeta = {
@@ -199,6 +213,7 @@ export class AuthService {
       throw new AppError('Invalid phone number', 422);
     }
     const purpose = input.purpose ?? 'login';
+    await assertResendCooldown({ phone, purpose });
     const code = generateOtpCode();
     const codeHash = await bcrypt.hash(code, BCRYPT_ROUNDS);
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
@@ -375,6 +390,7 @@ export class AuthService {
     if (!user) {
       return { sent: true };
     }
+    await assertResendCooldown({ email: normalized, purpose: 'reset_password' });
     const code = generateOtpCode();
     const codeHash = await bcrypt.hash(code, BCRYPT_ROUNDS);
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
@@ -479,6 +495,7 @@ export class AuthService {
     if (!user) throw new AppError('User not found', 404);
     if (user.emailVerified) return { alreadyVerified: true as const };
 
+    await assertResendCooldown({ email: user.email, purpose: 'verify_email' });
     const code = generateOtpCode();
     const token = crypto.randomBytes(24).toString('hex');
     const codeHash = await bcrypt.hash(code, BCRYPT_ROUNDS);

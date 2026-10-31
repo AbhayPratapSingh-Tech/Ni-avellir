@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { Env } from '../../config/env.js';
 import { asyncHandler } from '../../common/middleware/async-handler.js';
+import { checkoutIpLimit } from '../../common/middleware/ip-rate-limit.js';
 import { createRequireAuth, optionalAuth } from '../../common/middleware/require-auth.js';
 import { createPaymentStack } from '../payments/payment.factory.js';
 import { OrderController } from './order.controller.js';
@@ -15,7 +16,7 @@ export function createOrderRouter(env: Env) {
   const requireAuth = createRequireAuth(env);
 
   // Create may still attach a Bearer when present (logged-in checkout).
-  router.post('/', authOptional, asyncHandler(controller.create));
+  router.post('/', checkoutIpLimit, authOptional, asyncHandler(controller.create));
 
   // List / detail / cancel / return / exchange always require a real user.
   router.get('/', requireAuth, asyncHandler(controller.list));

@@ -26,13 +26,16 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 - **UI polish** — SVG `AppIcon`, `CachedImage` error placeholder, Home YouTube `VideoBanner` autoplay retries, PDP confidence 2×2 + specs/reviews above carousels.
 - **Character Vault v1** — Home teaser under Drop Zone → `CharacterVault` (react-native-filament orbit). Roster: Goku/Vegeta + Kid Levi (idle clip 8). Visit CTA → PLP `{name}'s Vault`. Animator gated by `enableIdleAnimation`; Heimdall `openCharacterVault` (`goku` / `vegeta` / `kid-levi`); flag `features.characterVault`. Merged to **`Nidavellir`** (via `todo` / `reviews`; originally `char_valut`).
 - **All Reviews** — `ProductReviews` screen, review title + hosted avatar, `DELETE /reviews/:id` for the author, Render `tsc` param cast.
-- **Visual search + For you** — `POST /products/visual-search` (vision → catalog), Home For you rail via `GET /products/for-you`; flags `visualSearch` / `personalizedHome`.
+- **Visual search + For you** — `POST /products/visual-search` (vision → catalog), Home For you rail via `GET /products/for-you`; flags `visualSearch` / `personalizedHome`. Live Render chat model is text-only (`llama-3.3-70b-versatile`); camera search uses `OPENAI_VISION_MODEL`.
 - **Idempotent checkout + reconcile** — `Idempotency-Key`, intent reuse, in-process + Order Details reconcile, 30m `payment_expired`.
 - **Register resilience** — Resend verify-email failure does not 500 signup (`send_failed`).
 - **Checkout UX** — Payment step summary (scroll products only if >3); Buy now silent cart add; Razorpay cancel message.
 - **Atomic inventory** — reserve at order create; release on unpaid cancel/expire; no double-decrement on paid.
 - **Privacy / Contact / Raise a query** — Privacy Policy; Contact sheet; Support 3-tab Sheets (Tickets / Commerce / Account App) + local query cards + Mark Resolved; Need Help from Login/Signup/Profile/Order Details/Returns/FAQ.
 - **CI quality gates** — GitHub Actions on every PR and on push to `Nidavellir`: lint, typecheck, workspace tests, production build (`.github/workflows/ci.yml`). Jest suite still a placeholder.
+- **Abuse limits** — OTP/reset/verify-email send **5/min/IP** and a 60s per-phone/email cooldown. Login, auth, coupons, checkout, and visual search return `429` with `error.type`. AI chat is not limited. Razorpay webhook stays unlimited.
+- **Query indexes** — orders `{ userId, createdAt }`; products `{ stock, reviewCount }` for best sellers. Local `npm run explain:queries --workspace apps/api` (refuses Atlas). Name search stays a regex scan.
+- **Visual search evaluation** — local `npm run eval:visual-search --workspace apps/api` (refuses Atlas). Parse / no-key / fake-SKU checks fail closed. Photo hit rate is printed, not a CI gate. Baseline numbers need a seeded local Mongo.
 
 ### Phase 1: Architecture
 - Full architecture plan (monorepo, bare React Native CLI, backend, shared contracts).
@@ -135,8 +138,8 @@ Prefer new work from branch **`Nidavellir`**. Keep Render deploy branch = **`Nid
 - Idempotent checkout + payment reconcile + register/Buy now/Payment summary UX: **Complete** (merged via PR #22).
 - Atomic inventory (reserve / release / no oversell): **Complete**.
 - Privacy Policy + Contact + Raise a query (3-tab Sheets + local status): **Complete**.
-- Engineering portfolio roadmap (E1–E5): **Partial** — atomic inventory + idempotent pay/webhooks + CI quality gates **Complete**; server discount / state machine / XP ledger / Jest / outbox / eval **Open** (see `TODO.md` scorecard).
-- Phase 10 reliability & security: **Partial** — money-path + inventory hardening **Complete**; privacy policy in-app **Complete**; CI gates **Complete** (PR #26); Jest/account deletion/monitoring still open (see `TODO.md`).
+- Engineering portfolio roadmap (E1–E5): **Partial** — atomic inventory + idempotent pay/webhooks + CI quality gates + abuse limits + query indexes **Complete**; server discount / state machine / XP ledger / Jest / outbox / RAG eval and visual-search photo baseline **Open** (see `TODO.md` scorecard).
+- Phase 10 reliability & security: **Partial** — money-path + inventory hardening **Complete**; privacy policy in-app **Complete**; CI gates **Complete** (PR #26); rate limits **Complete** (authz still open); Jest/account deletion/monitoring still open (see `TODO.md`).
 - Phase 11 customer ops & store: **Partial** — Sheets support intake **Complete**; tracking/invoices/admin/FCM/store builds still open (see `TODO.md`).
 - Phase 12 discovery / upgrades: Not started (see `TODO.md`).
 - Phase 13 premium UX & release polish: Not started (see `TODO.md`).

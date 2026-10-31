@@ -11,6 +11,17 @@ All notable changes to this project will be documented here.
 - Workspace `test` scripts are still placeholders that exit 0. Jest/Supertest/RNTL remain open. Native APK/IPA builds are not part of this job.
 - Catalogued under Craft patterns in `PROJECT_INSIGHTS.md`.
 
+### Visual search evaluation
+
+- `npm run eval:visual-search --workspace apps/api` scores seeded Kengan photos against catalog slugs and checks that a missing key or a fake SKU cannot invent a product. Hit rate is printed. Local Mongo only (refuses Atlas). Not a CI gate. Prompt and name search are unchanged.
+- Live Render chat stays on `llama-3.3-70b-versatile`. Camera search uses `OPENAI_VISION_MODEL` (`meta-llama/llama-4-scout-17b-16e-instruct`) because that chat model cannot see images.
+
+### Abuse limits and query indexes
+
+- OTP, password-reset, and verify-email sends: **5/minute/IP**, plus a 60-second cooldown per phone or email before a new code replaces the old one. Login, register/verify, coupons, checkout, and visual search keep their own IP buckets. A blocked call is `429` with `{ error: { type, message } }` (for example `otp_limit_per_minute_reached`). AI chat is not rate limited. The Razorpay webhook stays unlimited.
+- Orders index `{ userId, createdAt }`; products `{ stock, reviewCount }` for best sellers. `npm run explain:queries --workspace apps/api` prints local `executionStats` and refuses an Atlas URI. Name search stays a regex scan.
+- Catalogued under Craft patterns in `PROJECT_INSIGHTS.md`.
+
 ### Privacy, Contact, Raise a query → Google Sheets
 
 - In-app **Privacy Policy** (`PrivacyPolicy`) documents collection, retention, deletion (IP, avatars, visual search, sessions, payments).
@@ -21,7 +32,7 @@ All notable changes to this project will be documented here.
 
 ### Docs — Craft patterns section
 
-- `PROJECT_INSIGHTS.md`: standing **Craft patterns — skills worth knowing** (atomic inventory, idempotent checkout, reconcile, critical money paths, register email resilience, webhook idempotency, CI quality gates). Future production-craft work appends here; no git/PR badges on entries.
+- `PROJECT_INSIGHTS.md`: standing **Craft patterns — skills worth knowing** (atomic inventory, idempotent checkout, reconcile, critical money paths, register email resilience, webhook idempotency, CI quality gates, abuse limits, query indexes, visual search evaluation). Future production-craft work appends here; no git/PR badges on entries.
 - `AI_AGENT_GUIDE.md`: checklist F reminds agents to add matching craft entries.
 
 ### Atomic inventory

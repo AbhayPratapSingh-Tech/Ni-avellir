@@ -6,12 +6,13 @@ export type VisualSearchHints = {
   category?: string;
 };
 
-const VISION_PROMPT = `You help shoppers find anime merch (collectibles, apparel, desk gear, limited drops) in an Indian INR catalog.
+export const VISUAL_SEARCH_PROMPT = `You help shoppers find anime merch (collectibles, apparel, desk gear, limited drops) in an Indian INR catalog.
 Look at the image and return ONLY compact JSON (no markdown):
 {"search":"2-5 catalog keywords","franchise":"optional franchise name or empty string","category":"optional one of collectibles|apparel|desk-gear|limited-drops or empty string"}
 Focus on product type and franchise cues. Never invent SKUs or prices.`;
 
-function parseHints(raw: string): VisualSearchHints | null {
+/** Pull catalog hints out of a model reply. Exported so the eval script can check it without calling the model. */
+export function parseHints(raw: string): VisualSearchHints | null {
   const trimmed = raw.trim();
   const start = trimmed.indexOf('{');
   const end = trimmed.lastIndexOf('}');
@@ -62,7 +63,7 @@ export async function extractVisualSearchHints(
         temperature: 0.2,
         max_tokens: 200,
         messages: [
-          { role: 'system', content: VISION_PROMPT },
+          { role: 'system', content: VISUAL_SEARCH_PROMPT },
           {
             role: 'user',
             content: [

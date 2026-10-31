@@ -12,6 +12,8 @@
     "seed:ops": "tsx src/scripts/seed-ops.ts",
     "seed:sku": "tsx src/scripts/backfill-sku-xp.ts",
     "test:email": "tsx src/scripts/test-email.ts",
+    "explain:queries": "tsx src/scripts/explain-queries.ts",
+    "eval:visual-search": "tsx src/scripts/eval-visual-search.ts",
     "start": "node dist/server.js",
     "test": "echo \"No API tests yet\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"
