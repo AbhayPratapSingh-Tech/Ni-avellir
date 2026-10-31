@@ -76,13 +76,13 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 | Phase | Done | Partial | Open | Notes |
 |-------|------|---------|------|-------|
 | **E1** Transaction correctness | 2 | 2 | 1 | Inventory + idempotent pay shipped; pricing/XP/state machine gaps |
-| **E2** Security & data integrity | 0 | 4 | 1 | Ownership + OTP limits exist; need tests + coupon atomics |
-| **E3** Reliability engineering | 0 | 2 | 3 | Reconciler + pino exist; outbox / CI / backups open |
+| **E2** Security & data integrity | 2 | 2 | 1 | Rate limits + order-history and best-seller indexes shipped; authz tests and coupon atomics open |
+| **E3** Reliability engineering | 1 | 2 | 2 | CI gates shipped; reconciler + pino partial; outbox / Jest / backups open |
 | **E4** Scale & mobile quality | 0 | 1 | 4 | Local `appConfig` flags only |
-| **E5** Advanced product engineering | 0 | 1 | 4 | AI tools v1; no eval / admin / setup builder |
-| **Total** | **~2** | **~10** | **~13** | “Done” = production-shaped + documented; partial still counts as backlog |
+| **E5** Advanced product engineering | 0 | 1 | 4 | AI tools v1; visual-search scorecard shipped, photo baseline open; no RAG eval / admin / setup builder |
+| **Total** | **~5** | **~8** | **~12** | “Done” = production-shaped + documented; partial still counts as backlog |
 
-**Strongest next bet (portfolio):** close **E1** (server discount + order state machine + XP ledger) → concurrent/idempotency **tests** → then **E3** CI + request IDs. Product wow (setup builder / AI eval) after foundations.
+**Strongest next bet (portfolio):** close **E1** (server discount + order state machine + XP ledger) → concurrent/idempotency **tests** (CI already runs the suite; today it is a no-op) → then **E3** request IDs. Product wow (setup builder / AI eval) after foundations.
 
 ---
 
@@ -99,9 +99,9 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 ### E2 — Security and data integrity
 
 - [ ] **Resource-level authorization tests** — **Partial today:** orders/list/detail/cancel/return check JWT `userId`; AI order tools documented as ownership-aware. **Open:** automated “user A cannot read/cancel user B” suites for orders, addresses, sessions, wishlist, payments.
-- [ ] **Rate limiting + OTP abuse protection** — **Partial today:** `express-rate-limit` on OTP/auth + visual search. **Open:** audit coverage (login, reset, AI, coupon validate, checkout), per-phone + per-IP cooldowns, document limits.
+- [x] **Rate limiting + OTP abuse protection** — **Done.** In-memory IP limits in `ip-rate-limit.ts`: OTP/reset/verify-email send **5/min** (`error.type`: `otp_limit_per_minute_reached`); login 10/15 min; register + OTP verify + reset confirm 30/15 min; coupon validate and apply-coupon share 20/min; `POST /orders` and `POST /payments/intents` share 10/min; visual search 10/min. Each 429 includes `error.type` and a “limit reached” message. AI chat is not limited. Per phone/email **60s** cooldown before a new code replaces the old one (`auth.service.ts`). Five guesses per challenge unchanged. Razorpay webhook is not limited. *Still open:* Redis (or another shared store) if more than one API instance; automated 429 tests.
 - [ ] **Coupon concurrency + duplicate-redemption prevention** — validate path checks `usedCount` but no atomic claim; order create can take a raw `discount`. Need conditional `$inc` / reservation at checkout + unique redemption records per user/order.
-- [ ] **Database indexes + query profiling** — **Partial today:** indexes on `userId`, idempotency, carts, OTP TTL, payments. **Open:** compound indexes for order history / search; `explain()` baselines; seed large dataset + latency targets.
+- [x] **Database indexes + query profiling** — **Done for this pass.** Orders `{ userId: 1, createdAt: -1 }`; products `{ stock: 1, reviewCount: -1 }` for best sellers. `npm run explain:queries --workspace apps/api` prints local `executionStats` for order history, category list, name regex search, and best sellers, and refuses Atlas. *Still open:* name search is a collection scan until a real search engine; do not seed a huge fake catalog into Atlas. Targets: order history and category list should use an index as those collections grow. Not a CI gate.
 - [ ] **Safe session revocation + token handling** — **Partial today:** refresh revoke + Devices UI. **Open:** revoke-other / logout-all polish, rotation guarantees, authz tests on session endpoints (ties Phase 12 Sessions upgrade).
 
 ---
@@ -112,7 +112,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] **Payment reconciliation + refund recovery** — **Partial today:** in-process reconciler + Order Details reconcile + 30m expiry. **Open:** refund/return saga (idempotent Razorpay refunds, loyalty reversal retry, incomplete-step recovery).
 - [ ] **Structured logs, request IDs, error monitoring** — **Partial today:** `pino` / `pino-http`. **Open:** correlation / request IDs across API + jobs; Sentry (or similar) on API + mobile; payment/webhook error alerts.
 - [ ] **Database backup restoration drills** — Atlas M0 has no auto backups; scheduled `mongodump`, restore into a scratch DB, document RPO/RTO (same as Phase 10 Mongo backups).
-- [ ] **API integration tests + CI/CD quality gates** — no Jest/Supertest/RNTL suite or Actions gates yet (Phase 10 Automated tests + CI).
+- [x] **CI/CD quality gates** — **Done.** GitHub Actions `.github/workflows/ci.yml` on every PR and on push to `Nidavellir`: `npm ci`, lint, typecheck, workspace tests, production `tsc` build (`ubuntu-latest`, Node from `.nvmrc`). ESLint parses TypeScript. *Still open:* Jest/Supertest/RNTL (workspace `test` scripts exit 0); branch protection requiring status **check**; Fastlane / native release builds.
 
 ---
 
@@ -129,7 +129,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 ### E5 — Advanced product engineering
 
 - [ ] **RAG evaluation + AI tool security** — **Partial today:** tools + knowledge search + order ownership notes (`AI_BACKEND_CONTRACT.md`). **Open:** eval set (groundedness, tool choice, latency/cost); prompt-injection / data-leak tests; harden tool arg validation (Phase 12 AI upgrade).
-- [ ] **Visual search evaluation** — labeled image→SKU fixtures; regression when vision model/prompt changes; never invent SKUs (Phase 12 visual search upgrade).
+- [ ] **Visual search evaluation** — **Harness shipped, baseline not recorded.** `npm run eval:visual-search --workspace apps/api` checks hint parsing, a missing key (`vision_unavailable`, empty list), and that a fake SKU in the model JSON never becomes a product. Eight seeded Kengan photos plus two blank images print whether the expected slug is in the top 20. A miss does not fail the run; a slug that is not in the database does. Local Mongo only (refuses Atlas). Not a CI gate. *Still open:* run it once on a seeded local DB and keep that hit rate when `OPENAI_VISION_MODEL` or the prompt changes. Phase 12 filters / related matches stay separate.
 - [ ] **Gaming Setup Builder + compatibility rules** — Phase 13 standout product piece (loadout, budget, cart).
 - [ ] **Product discovery analytics** — zero-result search, click/ATC/checkout funnel (Phase 12 product analytics / search improvements).
 - [ ] **Admin audit logs + operational dashboards** — who changed stock/price/coupon/order; pairs with Phase 11 Admin CMS (don’t build dashboards without authz + audit).
@@ -149,15 +149,15 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 ## Phase 10 — Reliability & security
 
 > Prefer this phase before real money / store users. Do not implement until asked.  
-> Cross-link: **E2** authz/rate limits, **E3** outbox/logs/CI/backups, **E1** money-path tests.
+> Cross-link: **E2** authz/rate limits, **E3** outbox/logs/backups (CI gates shipped), **E1** money-path tests.
 
 - [ ] **Automated tests** — Jest + Supertest for cart totals, coupons, webhook HMAC, order/payment paths, Rune XP award, **concurrent inventory**, **idempotent replay**, **authz denial**; RNTL for login → cart → checkout. (= **E3** tests + **E1/E2** proof)
-- [ ] **CI** — GitHub Actions: lint, typecheck, tests, and production builds on every PR. (= **E3** CI/CD)
+- [x] **CI** — **Done.** GitHub Actions `.github/workflows/ci.yml`: lint, typecheck, workspace tests, and production builds on every PR and on push to `Nidavellir` (job `check`, `ubuntu-latest`, Node `.nvmrc`). Root `npm run lint`. ESLint uses `@typescript-eslint/parser`. *Still open:* real Jest/Supertest/RNTL (the test step is a placeholder that exits 0); require status check `check` in branch protection; Android/iOS release builds stay out of this job. (= **E3** CI/CD)
 - [x] **Payment / order reconciliation** — **Done.** In-process timer (`PAYMENT_RECONCILE_INTERVAL_MS`, default 5 min) while the dyno is awake + auto-check on `GET /orders/:id` (Order Details). For each `pending_payment`: if Razorpay shows captured → finalize via existing paid path; if still unpaid after **`PENDING_PAYMENT_EXPIRE_MINUTES` (default 30)** → cancel with `cancelReason: payment_expired` and mark Payment `failed`. Does **not** invent paid state without provider capture / verified `/confirm` / webhook. Razorpay `payment.failed` already marks Payment failed; expiry cleans abandoned **Orders**. Demo mode cannot fetch Razorpay — expiry is age-based only. Files: `payment.service.ts` (`reconcileOrderById` / `reconcileStalePending`), `payment-reconciler.ts`, `razorpay.provider.ts` (`findCapturedPayment`), `server.ts`.
 - [x] **Idempotent checkout** — **Done.** Client sends `Idempotency-Key` (CheckoutScreen ref + `productRepository.createOrder`); `POST /orders` replays the same order (200 + `replayed: true`) on retry/double-tap. Unique sparse `order.idempotencyKey`. `POST /payments/intents` reuses an open Payment for the order (no second Razorpay order). Confirm/webhook use atomic Payment `paid` claim + Order `pending_payment` → `paid` with `runeXpAwarded` so XP/stock finalize once. Mobile also guards `submitting || paying` on place order.
 - [x] **Atomic inventory** — **Done.** `reserveStock` at `POST /orders` (`findOneAndUpdate` with `stock >= qty` then `$inc: -qty`) for COD + Razorpay pending. Concurrent last-unit checkouts: one wins, other **422**. On paid: no second decrement. On unpaid cancel / `payment_expired`: `releaseStock` once after atomic `pending_payment` → `cancelled`. Helpers: `orders/inventory.ts`.
 - [x] **Unpaid order expiry** — **Done as part of reconciliation** (30 min default) + **releases reserved stock** on expire.
-- [ ] **Authz + rate limits audit** — OTP/login per phone + IP (SMS-bombing); refresh-token rotation / revoke / logout-other-devices; authorization on every user-owned resource. (= **E2**)
+- [ ] **Authz + rate limits audit** — **Rate limits done** (see E2): OTP/reset/verify-email send **5/min/IP** plus a 60s per-phone/email cooldown; login, register, coupons, checkout, and visual search return `error.type` on 429. AI chat is not limited. **Still open:** refresh-token rotation / revoke / logout-other-devices; authorization on every user-owned resource. (= **E2**)
 <!-- - [ ] **Account deletion** — in-app request + confirmation (Play/App Store requirement) + documented retention for legal order records. -->
 - [x] **Privacy controls (in-app policy)** — **Done as Privacy Policy screen** (collection / retention / deletion for IP, avatars, visual search, sessions, payments). Contact + Raise a query forms post to Google Sheets (not a GDPR data-export API).
 - [ ] **Crash / error reporting** — Sentry or Firebase Crashlytics on mobile; structured API error tracking + latency metrics + alerts (failed payments / webhooks). (= **E3** monitoring + **E4** crash)
@@ -258,9 +258,9 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 ---
 
 ### Notes for implementers
-- Visual search v1: photos stay in memory on the API; set a vision-capable `OPENAI_VISION_MODEL` if `OPENAI_MODEL` is text-only (e.g. some Groq chat models). Smart pushes still need FCM.
+- Visual search v1: photos stay in memory on the API. Live Render chat model is `llama-3.3-70b-versatile` (text). `OPENAI_VISION_MODEL` must stay set (`meta-llama/llama-4-scout-17b-16e-instruct`) or camera search falls back to that text model and returns `vision_unavailable`. Score a prompt or model change with `npm run eval:visual-search --workspace apps/api` against seeded local Mongo (the script refuses Atlas). The eight Kengan fixtures are already on the live catalog. Smart pushes still need FCM.
 - Anime chip uses `tag=anime` (seed already tags anime franchises). Do not add a fifth product `category` for anime — that would steal items from apparel/collectibles.
-- AI assistant: set `AI_ENABLED` + optional `OPENAI_*` on Render; without a key the API uses stub intents + real commerce tools.
+- AI assistant: set `AI_ENABLED` + optional `OPENAI_*` on Render; without a key the API uses stub intents + real commerce tools. Do not point chat `OPENAI_MODEL` at the vision model — keep `llama-3.3-70b-versatile` for chat and `OPENAI_VISION_MODEL` for photos.
 - Pre-order and mystery boxes need inventory + pricing + cart rules before UI.
 - After bundle seed changes on Render, run seed against Atlas (or redeploy with seed job) so live API gets `bundleTag` products.
 - Drop Zone: do **not** re-seed daily — only re-seed when changing the `drop-zone-eligible` pool. Cart tab has no stack back chevron (avoids unhandled `GO_BACK`).
@@ -272,6 +272,9 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - Payment webhook + client `/confirm` are complementary: reconcile from trusted provider data; every money transition must be safe to retry.
 - **Idempotent checkout / reconcile (shipped):** always send a fresh `Idempotency-Key` per checkout attempt (CheckoutScreen regenerates after success). Replays return the same order — do not treat 200+`replayed` as a new purchase. Tune `PENDING_PAYMENT_EXPIRE_MINUTES` / `PAYMENT_RECONCILE_INTERVAL_MS` in API env. Reconciler only runs while Render dyno is awake; Order Details `GET /orders/:id` also reconciles that order.
 - **Atomic inventory (shipped):** stock is held at order create. Do not `$inc` stock again in `finalizePaidOrder`. Always release via cancel/expire claim on `pending_payment` only (never double-release).
+- **CI (shipped):** `.github/workflows/ci.yml` runs on every PR and on push to `Nidavellir` (`npm ci`, `npm run lint`, `npm run typecheck`, `npm run test --workspaces`, `npm run build`). Node is `.nvmrc` (20.20.2). Workspace `test` scripts still echo and exit 0 until Jest lands. Require status check `check` under branch protection so a PR cannot merge while CI is pending or red. Do not put `gradlew-android` in this job.
+- **Abuse limits (shipped):** OTP, password-reset, and verify-email sends are **5/min/IP** (`otp_limit_per_minute_reached`) plus a 60s cooldown per phone or email and purpose, enforced before `deleteMany`. Every blocked call returns `429` with `error.type` and a “limit reached” message. Do not add a limiter on AI chat or the Razorpay webhook. Checkout limit is shared by order create and payment intent (10/min/IP) so retries of an idempotent checkout still fit. Limits are in-memory on one dyno.
+- **Indexes (shipped):** order history uses `{ userId, createdAt }`. Best sellers use products `{ stock, reviewCount }`. Run `npm run explain:queries --workspace apps/api` against local Mongo only.
 - Prefer **Engineering roadmap E1 → E2 → E3**, then product Phase **11 → 12 → 13**, unless the immediate goal is a college demo (then concurrency tests + one standout like setup builder + signed release may be enough).
 - **Portfolio proof:** for each E-item you ship, keep (1) code, (2) automated failure/concurrency test, (3) short evidence, (4) craft note in `PROJECT_INSIGHTS.md` — checklist alone is weak.
 - **Caveat:** Razorpay capture and inventory are not one Mongo transaction — design for independent failure (already partly handled via reserve → pay → reconcile/expire).

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { Env } from '../../config/env.js';
 import { asyncHandler } from '../../common/middleware/async-handler.js';
+import { couponIpLimit } from '../../common/middleware/ip-rate-limit.js';
 import { createRequireAuth, optionalAuth } from '../../common/middleware/require-auth.js';
 import { CartController } from './cart.controller.js';
 import { CartService } from './cart.service.js';
@@ -20,7 +21,7 @@ export function createCartRouter(_env: Env) {
   router.patch('/items/:productId', asyncHandler(controller.updateItem));
   router.delete('/items/:productId', asyncHandler(controller.removeItem));
   router.delete('/', asyncHandler(controller.clearCart));
-  router.post('/apply-coupon', asyncHandler(controller.applyCoupon));
+  router.post('/apply-coupon', couponIpLimit, asyncHandler(controller.applyCoupon));
   router.post('/remove-coupon', asyncHandler(controller.removeCoupon));
   router.post('/merge', requireAuth, asyncHandler(controller.merge));
 

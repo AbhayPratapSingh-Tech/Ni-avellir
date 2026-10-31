@@ -6,6 +6,7 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
   if (error instanceof AppError) {
     response.status(error.statusCode).json({
       error: {
+        ...(error.type ? { type: error.type } : {}),
         message: error.message,
       },
     });

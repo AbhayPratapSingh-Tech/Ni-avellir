@@ -58,6 +58,9 @@ const productSchema = new Schema<ProductDocument>(
   { timestamps: true },
 );
 
+// Best sellers filter stock > 0 and sort reviewCount. No prior index covered that, so it scanned.
+productSchema.index({ stock: 1, reviewCount: -1 });
+
 export const Product: Model<ProductDocument> = model<ProductDocument>(
   'Product',
   productSchema,
