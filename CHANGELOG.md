@@ -4,6 +4,16 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Rune rewards and refund reversal
+
+- Account → **Rune rewards**. 100 XP buys a one-use ₹50 coupon (orders of ₹499+), 250 XP buys one free-shipping credit, 1000 XP shows the rest of the Drop Zone pool for 7 days. Each spend is one `REDEEM` ledger row. The same idempotency key does not spend twice. Checkout ignores a larger client discount on that coupon, and the code cannot be used again.
+- Cancelling a paid order before it ships refunds Razorpay (demo payments do not call Razorpay), restores stock, and removes that order’s Rune XP once. Cash on delivery is cancelled before dispatch and the XP is removed. Asking for a return does not refund or reverse XP.
+
+### Seed guard and Rune XP ledger
+
+- `npm run seed` and `npm run seed:ops` refuse an Atlas URI before deleting rows. Override only with `SEED_ALLOW_ATLAS=yes`.
+- Rune XP is 1 per ₹10 of merchandise (minimum 10, maximum 500, +25 for a bundle). Each order inserts one unique `ORDER_EARN` ledger row. Profile sums the ledger.
+
 ### CI quality gates
 
 - GitHub Actions workflow `.github/workflows/ci.yml` runs on every pull request and on push to `Nidavellir`: `npm ci`, lint, typecheck, workspace tests, and production build (`ubuntu-latest`, Node from `.nvmrc`).

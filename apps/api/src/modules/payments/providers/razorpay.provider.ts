@@ -126,6 +126,20 @@ export class RazorpayProvider implements PaymentProvider {
     }
   }
 
+  /**
+   * Full refund of a captured payment. Demo payments never call Razorpay.
+   * Throws the provider error when a live refund fails.
+   */
+  async refundPayment(providerPaymentId: string, amountMinor: number, paymentDemoMode: boolean) {
+    if (paymentDemoMode || this.demoMode || !this.client) {
+      return { id: `rfnd_demo_${nanoid(12)}` };
+    }
+    const refund = await this.client.payments.refund(providerPaymentId, {
+      amount: amountMinor,
+    });
+    return { id: String(refund.id) };
+  }
+
   get isDemoMode() {
     return this.demoMode;
   }

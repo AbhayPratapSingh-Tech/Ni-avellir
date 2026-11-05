@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { AppError } from '../../common/errors/app-error.js';
+import { User } from '../auth/user.model.js';
 import { Coupon } from '../coupons/coupon.model.js';
 import { CouponService } from '../coupons/coupon.service.js';
 import { Product } from '../products/product.model.js';
@@ -94,6 +95,7 @@ export class CartService {
     items: CartLineInput[],
     couponCode?: string,
     pincode?: string,
+    userId?: string,
   ): Promise<CartSession> {
     if (!items.length) {
       return {
@@ -148,10 +150,14 @@ export class CartService {
 
     const serviceability = await serviceabilityService.resolve(pincode);
     const afterDiscount = Math.max(0, subtotal - discount);
-    const shipping =
+    let shipping =
       afterDiscount >= serviceability.freeShippingThreshold || afterDiscount === 0
         ? 0
         : serviceability.shippingCharge;
+    if (shipping > 0 && userId) {
+      const holder = await User.findById(userId).select('freeShippingCredits').lean();
+      if (Number(holder?.freeShippingCredits ?? 0) > 0) shipping = 0;
+    }
     const tax = Math.round(afterDiscount * TAX_RATE);
     const total = afterDiscount + shipping + tax;
     const shippingBefore =
@@ -176,8 +182,8 @@ export class CartService {
     };
   }
 
-  async quote(items: CartLineInput[], pincode?: string) {
-    return this.computeQuote(items, undefined, pincode);
+  async quote(items: CartLineInput[], pincode?: string, userId?: string) {
+    return this.computeQuote(items, undefined, pincode, userId);
   }
 
   /** Drop cart lines that no longer resolve (deleted products / old mock ids). */
@@ -218,7 +224,7 @@ export class CartService {
 
   async getCart(userId?: string, guestSessionId?: string, pincode?: string) {
     const cart = await this.sanitizeCartItems(await this.findOrCreateCart(userId, guestSessionId));
-    const quote = await this.computeQuote(cart.items, cart.couponCode, pincode);
+    const quote = await this.computeQuote(cart.items, cart.couponCode, pincode, userId);
     return { cart: { items: cart.items, couponCode: cart.couponCode }, quote };
   }
 

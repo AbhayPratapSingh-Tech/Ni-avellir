@@ -138,6 +138,19 @@ Patterns that solid commerce / API projects get right. Knowing *why* these exist
 - **Targets:** order history and category list should show an index seek (not a collection scan) once those collections grow. Name search may scan. This is not a GitHub Actions gate — CI has no Mongo.
 - **Where:** `order.model.ts`, `product.model.ts`, `apps/api/src/scripts/explain-queries.ts`.
 
+### Seed wipe guard
+
+- **Problem:** `npm run seed` deletes the catalog, coupons, and stores before inserting demo rows. A development env file can point at Atlas, so a habit command can wipe the live shop.
+- **Approach:** Refuse a URI that looks like Atlas before connecting. `SEED_ALLOW_ATLAS=yes` is the only override, and it is not set in the env examples. `seed:ops` uses the same check. `seed:sku` does not delete rows.
+- **Where:** `apps/api/src/scripts/seed-guard.ts`, `seed.ts`, `seed-ops.ts`.
+
+### Rune XP ledger
+
+- **Problem:** A flat 100 XP ignored the order size, and a mutable counter plus a profile recompute from orders could not record a reversal without being overwritten.
+- **Approach:** 1 XP per ₹10 of goods (minimum 10, maximum 500, +25 for a bundle). Insert one `ORDER_EARN` row keyed by `order:{id}:ORDER_EARN`, then increment the cached balance. A second award hits the unique key and does not increment again. Profile sums the ledger and backfills older paid orders. A full refund before the parcel ships inserts one `ORDER_REVERSE` and restores stock. Spending XP inserts one `REDEEM` row (`redeem:{userId}:{reward}:{key}`) and then grants the perk. A repeat key does not spend again. If the perk cannot be saved, that row is voided and the balance comes back.
+- **Where:** `apps/api/src/modules/orders/rune-xp.ts`, `rune-xp-ledger.model.ts`, `modules/loyalty/*`. Awarded from COD create and Razorpay paid finalize. Refund from `POST /orders/:id/cancel` (and `refund.processed`). Catalogue: `GET /loyalty`, `POST /loyalty/redeem`.
+- **Checked:** temporary database, not Atlas. ₹1,499 cash order awards 149 and a second award does not. 100 XP mints one ₹50 coupon; the same key does not spend again; 250 XP is refused at a balance of 49. A ₹600 order ignores a client discount of 999, charges ₹50 off and free shipping (total ₹578), and a second use of that code is rejected without holding stock. Cash cancel restores stock and removes 149 once. A paid cancel refunds in demo mode, restores stock, and removes 54 once. Drop Zone is 4 products normally and 8 with early access.
+
 ### Visual search evaluation
 
 - **Problem:** A new vision model or prompt can stop a photo from finding the right product. A model reply must not be treated as a SKU that is not already in the catalog.
@@ -196,7 +209,7 @@ Mobile defaults to **`api`** via `apps/mobile/src/config/appConfig.ts` (set `'mo
 5l. **Privacy / Contact / Support (Sheets v1):** in-app Privacy Policy; Contact → tab `Contact Nidavellir`; Raise a query → 3-tab Support workbook (`Support Tickets` core + `Support Commerce` + `Support Account App` extras keyed by `CaseNumber`). URLs in `appConfig` (`contactFormWebhookUrl`, `supportFormWebhookUrl`). Mobile keeps query cards / Pending→Resolved in AsyncStorage; Mark Resolved POSTs `action: resolve`. Comments column = typed text only. Apps Script: `apps/api/docs/support-nidavellir-apps-script.js` (Deploy Me + Anyone; POST returns 302 echo — RN uses `redirect: 'manual'`).
 5m. **CI quality gates:** `.github/workflows/ci.yml` on every PR and on push to `Nidavellir` (`npm ci`, lint, typecheck, `npm run test --workspaces`, `npm run build`). Node `.nvmrc` 20.20.2. Jest is not in that job yet — workspace `test` scripts print and exit 0. Native release builds stay out of this workflow.
 5n. **Abuse limits + indexes:** OTP/reset/verify-email sends **5/minute/IP** plus a 60s per-phone/email cooldown. A blocked call returns `429` with `error.type` (example `otp_limit_per_minute_reached`). AI chat is not limited. Orders `{ userId, createdAt }`; products `{ stock, reviewCount }`. Name search stays a regex scan. Local only: `npm run explain:queries --workspace apps/api` (refuses Atlas).
-6. Rune XP is **flat per order** (100 / 500 bundle), not per-SKU sum. Product `sku` / `runeXp` fields remain for display / backfill (`npm run seed:sku --workspace apps/api`).
+6. Rune XP is **1 per ₹10** of goods (subtotal after coupon, not shipping), minimum 10, maximum 500, plus 25 for a bundle. The amount is stored once on the order and as a unique `RuneXpEntry`. Profile sums that ledger. Account → **Rune rewards** spends it: 100 XP → ₹50 coupon, 250 XP → one free-shipping credit, 1000 XP → 7 days of early Drop Zone (today’s four picks plus the rest of the eligible pool). Cancel before ship refunds a paid order and reverses that XP. A return request does not. Product `sku` / `runeXp` fields remain display-only (`npm run seed:sku --workspace apps/api`). `npm run seed` refuses Atlas unless `SEED_ALLOW_ATLAS=yes`.
 
 **Backend path**
 

@@ -10,7 +10,7 @@ export class ProductController {
     private readonly env?: Env,
   ) {}
 
-  list = async (request: Request, response: Response) => {
+  list = async (request: AuthenticatedRequest, response: Response) => {
     const query: {
       category?: string;
       search?: string;
@@ -50,7 +50,7 @@ export class ProductController {
       query.maxPrice = Number(request.query.maxPrice);
     }
 
-    const result = await this.service.list(query);
+    const result = await this.service.list(query, request.userId);
     response.json({ data: result });
   };
 

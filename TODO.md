@@ -17,7 +17,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 | B | Cart coupons UI + Order Details cancel/return/exchange | **Done** |
 | C | PDP reviews API, Notifications screen, Resend order emails | **Done** |
 
-**Run live locally:** `npm run dev:api` + `npm run dev`. Atlas URI in `apps/api/.env.development` (gitignored). Seed: `npm run seed --workspace apps/api`.
+**Run live locally:** `npm run dev:api` + `npm run dev`. Atlas URI in `apps/api/.env.development` (gitignored). Seed refuses Atlas unless `SEED_ALLOW_ATLAS=yes npm run seed --workspace apps/api`.
 
 **Run against hosted API:** mobile already uses `https://ni-avellir.onrender.com/api/v1` — only Metro + device (`npm run dev` / `android`). No laptop API required.
 
@@ -25,7 +25,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 
 **Email (Render live):** `EMAIL_DEMO_MODE=false` + real `RESEND_API_KEY` + `EMAIL_FROM=Niðavellir <onboarding@resend.dev>` — verify / reset / order mail send via Resend. Free onboarding sender only delivers to the Resend account email until a domain is verified. Branded HTML in `integrations/email/email.factory.ts`. Smoke: `npm run test:email --workspace apps/api -- you@example.com`. Local default remains `EMAIL_DEMO_MODE=true` (console only).
 
-**Rune XP:** **100** per completed order; **500** if the order includes **2+ products** with the same `bundleTag`. Confirmation screen shows awarded XP.
+**Rune XP:** 1 point per ₹10 of goods (subtotal after coupon, shipping excluded), minimum 10, maximum 500, plus 25 when the order is a bundle. Saved once on the order and in a unique ledger row. Confirmation screen shows awarded XP. Account → Rune rewards spends it. A full refund before ship removes that order’s XP.
 
 **Sessions:** login/register/OTP send `deviceId` / `deviceLabel` / `os`; API stores client IP (`trust proxy`). Devices & sessions UI shows label + OS + IP.
 
@@ -46,7 +46,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [x] **AI Merch Assistant** — `POST /api/v1/ai/chat` + mobile hub/mic; stub without LLM key.
 - [x] **Drop Zone** — daily rotation via `drop-zone-eligible` + Asia/Kolkata date hash (no daily re-seed).
 - [x] **Bundle products** — `bundleTag` / `isBundleMain` + `GET /products/bundles`; PDP complete-the-bundle; Home banner slider.
-- [x] **Rune XP (loyalty)** — 100 / 500; Profile tiers; confirmation award.
+- [x] **Rune XP (loyalty)** — 1 per ₹10 of goods (min 10, max 500, +25 bundle); Profile tiers; confirmation award.
 - [x] **Devices & sessions** — device / OS / IP.
 - [x] **Email verify (Resend)** — branded templates; Account `emailVerified`. **Register resilience:** verify-email send failure after user create still returns **201** + tokens (`emailVerification: { sent: false, reason: 'send_failed' }`) — does not 500 signup.
 - [x] SVG `AppIcon`, `CachedImage` fallback, Home `VideoBanner` retries, PDP confidence 2×2 + specs/reviews above carousels.
@@ -75,14 +75,14 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 
 | Phase | Done | Partial | Open | Notes |
 |-------|------|---------|------|-------|
-| **E1** Transaction correctness | 2 | 2 | 1 | Inventory + idempotent pay shipped; pricing/XP/state machine gaps |
+| **E1** Transaction correctness | 3 | 1 | 1 | Inventory, idempotent pay, and XP ledger shipped; server discount and state machine open |
 | **E2** Security & data integrity | 2 | 2 | 1 | Rate limits + order-history and best-seller indexes shipped; authz tests and coupon atomics open |
 | **E3** Reliability engineering | 1 | 2 | 2 | CI gates shipped; reconciler + pino partial; outbox / Jest / backups open |
 | **E4** Scale & mobile quality | 0 | 1 | 4 | Local `appConfig` flags only |
 | **E5** Advanced product engineering | 0 | 1 | 4 | AI tools v1; visual-search scorecard shipped, photo baseline open; no RAG eval / admin / setup builder |
-| **Total** | **~5** | **~8** | **~12** | “Done” = production-shaped + documented; partial still counts as backlog |
+| **Total** | **~6** | **~7** | **~12** | “Done” = production-shaped + documented; partial still counts as backlog |
 
-**Strongest next bet (portfolio):** close **E1** (server discount + order state machine + XP ledger) → concurrent/idempotency **tests** (CI already runs the suite; today it is a no-op) → then **E3** request IDs. Product wow (setup builder / AI eval) after foundations.
+**Strongest next bet (portfolio):** close **E1** (server discount + order state machine) → concurrent/idempotency **tests** (CI already runs the suite; today it is a no-op) → then **E3** request IDs. Product wow (setup builder / AI eval) after foundations.
 
 ---
 
@@ -90,9 +90,9 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 
 - [x] **Atomic inventory reservation + expiry** — `reserveStock` / `releaseStock` (`orders/inventory.ts`); unpaid cancel + `payment_expired` release; no second decrement on paid. *Still open:* concurrent load proof test (e.g. 100 req / 10 units) + short craft write-up in `PROJECT_INSIGHTS.md`.
 - [x] **Idempotent checkout + payment webhooks** — `Idempotency-Key`, unique sparse index, intent reuse, HMAC webhook + `/confirm` atomic claim, `runeXpAwarded` once. *Still open:* automated replay tests (order + webhook).
-- [ ] **Server-authoritative checkout (close the gap)** — **Partial today:** line prices/shipping/tax from server (`Product` + serviceability); order lines snapshot `price` / `lineTotal`. **Gap:** `POST /orders` still accepts client `discount` (`order.service.ts`) — must recompute from coupon code server-side only; reject client totals/prices.
+- [ ] **Server-authoritative checkout (close the gap)** — **Partial today:** line prices/shipping/tax from server (`Product` + serviceability); order lines snapshot `price` / `lineTotal`. A personal Rune coupon is priced on the server (₹50) and claimed once. **Gap:** public coupons still accept the client `discount`. Reject client totals for every coupon.  
 - [ ] **Order state machine** — statuses exist (`pending_payment` → `paid`/`confirmed` / `cancelled` / return fields) but transitions are ad hoc. Add explicit allowed-transition map + enforce on cancel / pay / ship / return / refund; reject illegal updates under concurrency.
-- [ ] **Immutable Rune XP ledger** — **Partial today:** mutable `user.runeXp` + `order.runeXpAwarded` + profile recompute from orders. Replace/augment with ledger entries (`ORDER_EARN`, refund reversal, admin adjust) unique on business ref; derive balance from ledger.
+- [x] **Immutable Rune XP ledger** — **Done.** `RuneXpEntry` rows (`ORDER_EARN`, `ORDER_REVERSE`, `REDEEM`, `ADMIN_ADJUST`) unique on `businessRef`. Earn is 1 XP per ₹10 of goods (min 10, max 500, +25 bundle). Profile sums the ledger. A full refund before ship calls `reverseOrderRuneXp` once. Redeem spends XP on ₹50 off (100), free shipping (250), or 7 days of early Drop Zone (1000). *Still open:* partial item refunds; approving a return does not refund money.
 
 ---
 
@@ -100,7 +100,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 
 - [ ] **Resource-level authorization tests** — **Partial today:** orders/list/detail/cancel/return check JWT `userId`; AI order tools documented as ownership-aware. **Open:** automated “user A cannot read/cancel user B” suites for orders, addresses, sessions, wishlist, payments.
 - [x] **Rate limiting + OTP abuse protection** — **Done.** In-memory IP limits in `ip-rate-limit.ts`: OTP/reset/verify-email send **5/min** (`error.type`: `otp_limit_per_minute_reached`); login 10/15 min; register + OTP verify + reset confirm 30/15 min; coupon validate and apply-coupon share 20/min; `POST /orders` and `POST /payments/intents` share 10/min; visual search 10/min. Each 429 includes `error.type` and a “limit reached” message. AI chat is not limited. Per phone/email **60s** cooldown before a new code replaces the old one (`auth.service.ts`). Five guesses per challenge unchanged. Razorpay webhook is not limited. *Still open:* Redis (or another shared store) if more than one API instance; automated 429 tests.
-- [ ] **Coupon concurrency + duplicate-redemption prevention** — validate path checks `usedCount` but no atomic claim; order create can take a raw `discount`. Need conditional `$inc` / reservation at checkout + unique redemption records per user/order.
+- [ ] **Coupon concurrency + duplicate-redemption prevention** — **Partial:** a Rune reward coupon increments `usedCount` only while `usedCount < usageLimit`. A second order with that code is rejected and does not keep the stock hold. **Open:** public coupons (`FORGE10`, `WELCOME100`) still trust the client discount and are not claimed atomically.
 - [x] **Database indexes + query profiling** — **Done for this pass.** Orders `{ userId: 1, createdAt: -1 }`; products `{ stock: 1, reviewCount: -1 }` for best sellers. `npm run explain:queries --workspace apps/api` prints local `executionStats` for order history, category list, name regex search, and best sellers, and refuses Atlas. *Still open:* name search is a collection scan until a real search engine; do not seed a huge fake catalog into Atlas. Targets: order history and category list should use an index as those collections grow. Not a CI gate.
 - [ ] **Safe session revocation + token handling** — **Partial today:** refresh revoke + Devices UI. **Open:** revoke-other / logout-all polish, rotation guarantees, authz tests on session endpoints (ties Phase 12 Sessions upgrade).
 
@@ -109,7 +109,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 ### E3 — Reliability engineering
 
 - [ ] **Transactional outbox + background job retries** — emails / notifications / XP side-effects today are best-effort inline. Add outbox (or DB job queue) so order success isn’t blocked by Resend; at-least-once + idempotent consumers. (No Kafka required.)
-- [ ] **Payment reconciliation + refund recovery** — **Partial today:** in-process reconciler + Order Details reconcile + 30m expiry. **Open:** refund/return saga (idempotent Razorpay refunds, loyalty reversal retry, incomplete-step recovery).
+- [ ] **Payment reconciliation + refund recovery** — **Partial today:** in-process reconciler + Order Details reconcile + 30m expiry. Cancel of a paid order before ship refunds Razorpay (demo payments skip the live API), restores stock, and reverses XP once. **Open:** return approval → refund, partial refunds, loyalty reversal retry if the process dies after Razorpay accepts the refund.
 - [ ] **Structured logs, request IDs, error monitoring** — **Partial today:** `pino` / `pino-http`. **Open:** correlation / request IDs across API + jobs; Sentry (or similar) on API + mobile; payment/webhook error alerts.
 - [ ] **Database backup restoration drills** — Atlas M0 has no auto backups; scheduled `mongodump`, restore into a scratch DB, document RPO/RTO (same as Phase 10 Mongo backups).
 - [x] **CI/CD quality gates** — **Done.** GitHub Actions `.github/workflows/ci.yml` on every PR and on push to `Nidavellir`: `npm ci`, lint, typecheck, workspace tests, production `tsc` build (`ubuntu-latest`, Node from `.nvmrc`). ESLint parses TypeScript. *Still open:* Jest/Supertest/RNTL (workspace `test` scripts exit 0); branch protection requiring status **check**; Fastlane / native release builds.
@@ -163,11 +163,11 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] **Crash / error reporting** — Sentry or Firebase Crashlytics on mobile; structured API error tracking + latency metrics + alerts (failed payments / webhooks). (= **E3** monitoring + **E4** crash)
 - [ ] **Mongo backups** — Atlas M0 has no automated backups; scheduled `mongodump` + restore drill; document recovery for users/orders/catalog. (= **E3** backup drills)
 - [ ] **Offline / timeout / duplicate-checkout** — regression tests for flaky network, app kill mid-pay, retry UX. (= **E4** offline + money-path UX)
-- [ ] **Seed safety guard** — block `npm run seed` from wiping production Atlas by accident.
+- [x] **Seed safety guard** — **Done.** `npm run seed` and `npm run seed:ops` refuse a URI containing `mongodb.net`, `mongodb+srv`, or `atlas` before any delete. Deliberate wipe: `SEED_ALLOW_ATLAS=yes`. `seed:sku` does not delete the catalog.
 - [ ] **Secrets hygiene / env separation** — distinct dev / staging / prod keys; never real Razorpay Live from a test build.
-- [ ] **Server-authoritative discount** — stop trusting client `discount` on `POST /orders`; bind coupon redemption atomically (= **E1** pricing gap + **E2** coupons).
+- [ ] **Server-authoritative discount** — **Partial:** Rune reward coupons are priced and claimed on the server. **Open:** public coupons still trust the client `discount` (= **E1** pricing gap + **E2** coupons).
 - [ ] **Order status transition guard** — central allowed-transition map (= **E1** state machine).
-- [ ] **Rune XP ledger collection** — immutable earn/reverse entries; unique business refs (= **E1** ledger + Phase 12 Rune XP upgrade).
+- [x] **Rune XP ledger collection** — **Done** (see E1). Unique earn/reverse/redeem refs. Full refund before ship reverses XP. Catalogue is the Phase 12 upgrade.
 - [ ] **Request ID / correlation logging** — propagate across checkout → payment → webhook/reconcile (= **E3** observability).
 - [ ] **Transactional outbox (email / notify)** — order commit then reliable side-effects (= **E3** outbox).
 
@@ -179,7 +179,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 
 - [ ] **Shipment tracking** — manual timeline first (confirmed → processing → packed → shipped → out for delivery → delivered); carrier + tracking link later.
 - [ ] **Invoice / PDF** — GST-ready tax invoice from trusted server order data (not client totals); Order Details download.
-- [ ] **Refund status UI** — refund initiated → processed (pairs with existing cancel/return/exchange).
+- [ ] **Refund status UI** — **Partial:** Order Details timeline shows **Refunded** after a paid cancel. **Open:** initiated → processed steps, and a return that becomes a refund.
 - [ ] **Support tickets (server-backed)** — **Sheets + local case/status v1 done** (`RaiseQuery` / `supportQueryStore`). Still open: API-backed tickets, attachments, staff reply history, FAQ RAG.
 - [ ] **Admin / CMS web** — protected admin for products, stock, orders, returns, coupons, Home banners, Drop Zone pool, bundle tags (replaces seed-only ops).
 - [ ] **Custom Resend domain** — DNS auth so verify/order mail reaches any address (today limited by `onboarding@resend.dev`).
@@ -227,7 +227,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] **AI Merch Assistant (upgrade)** — budget / franchise / “setup under ₹X” intents; product cards with live price/stock/PDP links; confirm before cart mutations; tool-level authz (never leak other users’ data); rate / cost / timeout limits + safe fallbacks.
 - [ ] **Visual search (upgrade)** — optional budget/category/franchise/availability filters; related matches when no exact hit; never invent SKUs; track view/purchase conversion.
 - [ ] **For you (upgrade)** — stronger signals / feedback loop (optional); keep guests → bestsellers fallback.
-- [ ] **Rune XP (upgrade)** — auditable server ledger (= **E1**); no double-award per order; redemption catalogue / tier perks (free shipping, early Drop Zone, exclusive coupons); define economics before redeem.
+- [x] **Rune XP (upgrade)** — **Done for this pass.** Ledger (1 XP per ₹10) plus a catalogue: ₹50 off for 100 XP (order ≥ ₹499, one use, 90 days), free shipping for 250 XP, early Drop Zone for 1000 XP (7 days; today’s picks plus the rest of the eligible pool). Account → **Rune rewards**. Full refund before ship removes that order’s XP. *Still open:* partial refunds; a return request does not refund or reverse XP; tier labels still grant nothing by themselves.
 - [ ] **All Reviews (upgrade)** — verified-purchase badge; helpful votes; customer photo reviews; report / moderation (“How they get along” / customer images).
 - [ ] **Character Vault (upgrade)** — licensed idle-loop GLBs; CDN assets; more champions; keep New Arch off until Voice/Razorpay/Reanimated spike passes.
 - [ ] **Bundles / Drop Zone / banners (upgrade)** — server CMS for creatives + eligible pool (no app release / re-seed for art changes).
@@ -279,3 +279,143 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - **Portfolio proof:** for each E-item you ship, keep (1) code, (2) automated failure/concurrency test, (3) short evidence, (4) craft note in `PROJECT_INSIGHTS.md` — checklist alone is weak.
 - **Caveat:** Razorpay capture and inventory are not one Mongo transaction — design for independent failure (already partly handled via reserve → pay → reconcile/expire).
 - **Docs / branch:** after PR #22, prefer branch from **`Nidavellir`**, keep `TODO.md` / `PROJECT_PROGRESS.md` updated when shipping.
+
+
+
+<!-- environment setup  -->
+
+
+
+You already have one live API. UAT is a second copy of that API with its own database and keys. The shop code does not switch environments by itself.
+
+Today the phone talks to `https://ni-avellir.onrender.com/api/v1` from `appConfig.ts`. Render deploys branch `Nidavellir`. The API reads variables from the Render dashboard. Locally it reads `apps/api/.env.development` only. The files `.env.staging.example` and `.env.production.example` are templates. Nothing loads them automatically.
+
+Keep the current Render service as **Production**. Add a second one for **UAT**. Do not point both at the same Atlas database. `npm run seed` deletes products, and there is no guard yet that blocks a wipe of the live shop.
+
+**1. Staging database**
+
+In Atlas, create a separate database, for example `nidavellir_staging`. Give it its own user and connection string. Leave the current database for production.
+
+**2. Staging API on Render**
+
+New Web Service, same GitHub repo.
+
+- Name: something like `nidavellir-api-staging`
+- Branch: `todo` if UAT should show work before it is merged, or `Nidavellir` if UAT should match production code
+- Build: `NPM_CONFIG_PRODUCTION=false npm install && npm run build:api`
+- Start: `npm run start:api`
+- Health check: `/health`
+
+You will get a new URL, such as `https://nidavellir-api-staging.onrender.com`. The current `ni-avellir.onrender.com` stays production.
+
+**3. Staging env vars**
+
+Copy the production values, then change these:
+
+| Variable | UAT | Production (what you have now) |
+|---|---|---|
+| `NODE_ENV` | `staging` | `production` |
+| `MONGODB_URI` | staging database only | current Atlas database |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | new random secrets | leave the existing ones |
+| `API_BASE_URL` | the new staging host | `https://ni-avellir.onrender.com` |
+| `RAZORPAY_KEY_ID` / `SECRET` | Razorpay **Test** keys (`rzp_test_...`) | Test keys until you charge real money |
+| `RAZORPAY_WEBHOOK_SECRET` | secret from a **second** webhook | secret from the current webhook |
+| `SMS_DEMO_MODE` | `true` | `false` only when you want real SMS |
+| `EMAIL_DEMO_MODE` | `true` is fine | `false` with the real Resend key |
+
+Use different JWT secrets so a staging login token cannot call production.
+
+In Razorpay Test mode, add a webhook whose URL is `https://<staging-host>/api/v1/payments/razorpay/webhook`. Do not reuse the production webhook secret. Do not put Razorpay **Live** keys (`rzp_live_...`) on UAT, or on a test build of the app.
+
+**4. Put catalog data on staging only**
+
+From your laptop, with the staging URI, not the production one:
+
+```bash
+MONGODB_URI='mongodb+srv://...nidavellir_staging' npm run seed --workspace apps/api
+```
+
+Check `https://<staging-host>/health`, then `https://<staging-host>/api/v1/products?limit=1`.
+
+**5. Point a test build of the app at UAT**
+
+In `apps/mobile/src/config/appConfig.ts`, for a UAT build only:
+
+- `dataSource: 'api'`
+- `allowMockFallback: false`
+- `apiBaseUrl: 'https://<staging-host>/api/v1'`
+
+The store build keeps `https://ni-avellir.onrender.com/api/v1`. There is one config file today, so change that URL for the build you are making, then change it back before a production build. Separate staging and production app configs are still an open TODO.
+
+**What not to share**
+
+- One Atlas database for both
+- One JWT secret for both
+- Razorpay Live keys on UAT
+- `npm run seed` against the production URIYou already have one live API. UAT is a second copy of that API with its own database and keys. The shop code does not switch environments by itself.
+
+Today the phone talks to `https://ni-avellir.onrender.com/api/v1` from `appConfig.ts`. Render deploys branch `Nidavellir`. The API reads variables from the Render dashboard. Locally it reads `apps/api/.env.development` only. The files `.env.staging.example` and `.env.production.example` are templates. Nothing loads them automatically.
+
+Keep the current Render service as **Production**. Add a second one for **UAT**. Do not point both at the same Atlas database. `npm run seed` deletes products, and there is no guard yet that blocks a wipe of the live shop.
+
+**1. Staging database**
+
+In Atlas, create a separate database, for example `nidavellir_staging`. Give it its own user and connection string. Leave the current database for production.
+
+**2. Staging API on Render**
+
+New Web Service, same GitHub repo.
+
+- Name: something like `nidavellir-api-staging`
+- Branch: `todo` if UAT should show work before it is merged, or `Nidavellir` if UAT should match production code
+- Build: `NPM_CONFIG_PRODUCTION=false npm install && npm run build:api`
+- Start: `npm run start:api`
+- Health check: `/health`
+
+You will get a new URL, such as `https://nidavellir-api-staging.onrender.com`. The current `ni-avellir.onrender.com` stays production.
+
+**3. Staging env vars**
+
+Copy the production values, then change these:
+
+| Variable | UAT | Production (what you have now) |
+|---|---|---|
+| `NODE_ENV` | `staging` | `production` |
+| `MONGODB_URI` | staging database only | current Atlas database |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | new random secrets | leave the existing ones |
+| `API_BASE_URL` | the new staging host | `https://ni-avellir.onrender.com` |
+| `RAZORPAY_KEY_ID` / `SECRET` | Razorpay **Test** keys (`rzp_test_...`) | Test keys until you charge real money |
+| `RAZORPAY_WEBHOOK_SECRET` | secret from a **second** webhook | secret from the current webhook |
+| `SMS_DEMO_MODE` | `true` | `false` only when you want real SMS |
+| `EMAIL_DEMO_MODE` | `true` is fine | `false` with the real Resend key |
+
+Use different JWT secrets so a staging login token cannot call production.
+
+In Razorpay Test mode, add a webhook whose URL is `https://<staging-host>/api/v1/payments/razorpay/webhook`. Do not reuse the production webhook secret. Do not put Razorpay **Live** keys (`rzp_live_...`) on UAT, or on a test build of the app.
+
+**4. Put catalog data on staging only**
+
+From your laptop, with the staging URI, not the production one:
+
+```bash
+MONGODB_URI='mongodb+srv://...nidavellir_staging' npm run seed --workspace apps/api
+```
+
+Check `https://<staging-host>/health`, then `https://<staging-host>/api/v1/products?limit=1`.
+
+**5. Point a test build of the app at UAT**
+
+In `apps/mobile/src/config/appConfig.ts`, for a UAT build only:
+
+- `dataSource: 'api'`
+- `allowMockFallback: false`
+- `apiBaseUrl: 'https://<staging-host>/api/v1'`
+
+The store build keeps `https://ni-avellir.onrender.com/api/v1`. There is one config file today, so change that URL for the build you are making, then change it back before a production build. Separate staging and production app configs are still an open TODO.
+
+**What not to share**
+
+- One Atlas database for both
+- One JWT secret for both
+- Razorpay Live keys on UAT
+- `npm run seed` against the production URI

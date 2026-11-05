@@ -39,7 +39,7 @@ export async function reserveStock(items: InventoryLine[]): Promise<void> {
   }
 }
 
-/** Return held stock (call only after pending_payment → cancelled claim succeeds). */
+/** Return held stock once, after a status claim: unpaid cancel/expiry, or a full refund before ship. */
 export async function releaseStock(items: InventoryLine[]): Promise<void> {
   await Promise.all(
     items.map((item) => {

@@ -53,8 +53,15 @@ export class OrderController {
   cancel = async (request: OrderRequest, response: Response) => {
     const id = request.params.id as string;
     const { reason } = request.body as { reason?: string };
-    const order = await this.service.cancel(id, request.userId, reason);
-    response.json({ data: { order } });
+    const result = await this.service.cancel(
+      id,
+      request.userId,
+      reason,
+      this.paymentService
+        ? (orderId) => this.paymentService!.refundPaidOrder(orderId)
+        : undefined,
+    );
+    response.json({ data: { order: result.order, reversedXp: result.reversedXp } });
   };
 
   requestReturn = async (request: OrderRequest, response: Response) => {

@@ -245,7 +245,7 @@ Nidavellir/
 | **Email abstraction + branded HTML** | `integrations/email/email.factory.ts` |
 | **Resend provider** | `integrations/email/providers/resend.provider.ts` |
 | **Email smoke test** | `scripts/test-email.ts` (`npm run test:email --workspace apps/api`) |
-| **Rune XP (100 / 500 bundle)** | `modules/orders/rune-xp.ts` |
+| **Rune XP (1 per ₹10, ledger, redeem)** | `modules/orders/rune-xp.ts`, `modules/loyalty/*` |
 | **Error handler** | `common/middleware/error-handler.ts` |
 | **App errors** | `common/errors/app-error.ts` |
 | **Logger** | `common/logger/logger.ts` |
@@ -323,5 +323,5 @@ npx tsc --noEmit -p apps/api/tsconfig.json
 - Guest may browse + cart; checkout / wishlist need login.
 - The shop uses a **light esports** theme (mist background, ink type, cobalt accent), not a dark neon look. Onboarding slides stay dark/full-bleed.
 - Tabs: **Forge**, **Categories**, **Cart**, **Account**.
-- Talking points: live Resend verify email, Rune XP (100 / 500 bundle), anime bundles, Razorpay Test, Devices & sessions, Home video banner.
+- Talking points: live Resend verify email, Rune XP (1 per ₹10, redeemable), anime bundles, Razorpay Test, Devices & sessions, Home video banner.
 - Full commerce flow: Onboarding → Login → Home → Products → Product Detail → Cart → Checkout → Order Confirmation → Orders / Edit Profile.

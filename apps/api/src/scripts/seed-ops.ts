@@ -8,9 +8,11 @@ import { loadEnv } from '../config/env.js';
 import { Coupon } from '../modules/coupons/coupon.model.js';
 import { Store } from '../modules/stores/stores.model.js';
 import { logger } from '../common/logger/logger.js';
+import { assertSeedAllowed } from './seed-guard.js';
 
 async function seedOps() {
   const { mongodbUri } = loadEnv();
+  assertSeedAllowed(mongodbUri);
   await mongoose.connect(mongodbUri);
   logger.info(
     { mongo: mongodbUri.replace(/\/\/.*@/, '//***@') },

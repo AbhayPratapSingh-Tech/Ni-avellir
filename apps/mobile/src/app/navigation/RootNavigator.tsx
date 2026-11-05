@@ -17,6 +17,7 @@ import { OrderConfirmationScreen } from '../../features/orders/OrderConfirmation
 import { OrdersScreen } from '../../features/orders/OrdersScreen';
 import { OrderDetailsScreen } from '../../features/orders/OrderDetailsScreen';
 import { EditProfileScreen } from '../../features/profile/EditProfileScreen';
+import { RuneRewardsScreen } from '../../features/profile/RuneRewardsScreen';
 import { AddressesScreen } from '../../features/addresses/AddressesScreen';
 import { FaqScreen } from '../../features/info/FaqScreen';
 import { ReturnsScreen } from '../../features/info/ReturnsScreen';
@@ -273,6 +274,11 @@ function ShopNavigator() {
         name="EditProfile"
         component={EditProfileScreen}
         options={{ title: 'Edit profile' }}
+      />
+      <RootStack.Screen
+        name="RuneRewards"
+        component={RuneRewardsScreen}
+        options={{ title: 'Rune rewards' }}
       />
       <RootStack.Screen
         name="ChangePassword"

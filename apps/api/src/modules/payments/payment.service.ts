@@ -3,10 +3,11 @@ import { PaymentProviderCode } from '@nidavellir/shared/contracts';
 import { AppError } from '../../common/errors/app-error.js';
 import { logger } from '../../common/logger/logger.js';
 import { releaseStock } from '../orders/inventory.js';
+import { applyFullRefund } from '../orders/order.service.js';
 import { Order } from '../orders/order.model.js';
 import { Payment } from './payment.model.js';
 import { PaymentWebhookEvent } from './payment-webhook-event.model.js';
-import { awardOrderRuneXp, computeOrderRuneXp } from '../orders/rune-xp.js';
+import { awardOrderRuneXp, goodsTotalOf, orderIsBundle, runeXpForGoods } from '../orders/rune-xp.js';
 import type {
   CreatePaymentIntentInput,
   CreatePaymentIntentResult,
@@ -21,12 +22,27 @@ type RazorpayPaymentEntity = {
   status?: string;
 };
 
+type RazorpayRefundEntity = {
+  id?: string;
+  payment_id?: string;
+  amount?: number;
+};
+
 type RazorpayWebhookPayload = {
   event: string;
   payload?: {
     payment?: { entity?: RazorpayPaymentEntity };
+    refund?: { entity?: RazorpayRefundEntity };
   };
 };
+
+function providerErrorMessage(error: unknown) {
+  if (error && typeof error === 'object' && 'error' in error) {
+    const inner = (error as { error?: { description?: string } }).error;
+    if (inner?.description) return inner.description;
+  }
+  return error instanceof Error ? error.message : '';
+}
 
 export type ReconcileAction = 'noop' | 'paid' | 'expired' | 'waiting' | 'failed_marked';
 
@@ -331,6 +347,45 @@ export class PaymentService {
     return summary;
   }
 
+  /** Refund a captured Razorpay (or demo) payment. Does not change the order. */
+  async refundPaidOrder(orderId: string): Promise<{ providerRefundId: string; amount: number }> {
+    const paid = await Payment.findOne({ orderId, status: 'paid' });
+    if (!paid) {
+      const done = await Payment.findOne({ orderId, status: 'refunded' });
+      if (done) {
+        return {
+          providerRefundId: String(done.providerPaymentId ?? 'already_refunded'),
+          amount: done.amountMinor / 100,
+        };
+      }
+      throw new AppError('Paid payment not found for this order', 409);
+    }
+    if (!paid.providerPaymentId) {
+      throw new AppError('Paid payment not found for this order', 409);
+    }
+
+    let providerRefundId: string;
+    try {
+      const refund = await this.razorpay.refundPayment(
+        paid.providerPaymentId,
+        paid.amountMinor,
+        paid.demoMode,
+      );
+      providerRefundId = refund.id;
+    } catch (error) {
+      const message = providerErrorMessage(error);
+      if (/fully refunded|already been refunded/i.test(message)) {
+        providerRefundId = paid.providerPaymentId;
+      } else {
+        logger.warn({ err: error, orderId }, 'Razorpay refund failed');
+        throw new AppError('Refund could not be completed. The order is unchanged.', 502);
+      }
+    }
+
+    await Payment.updateOne({ _id: paid._id, status: 'paid' }, { $set: { status: 'refunded' } });
+    return { providerRefundId, amount: paid.amountMinor / 100 };
+  }
+
   private async processRazorpayWebhookEvent(payload: RazorpayWebhookPayload) {
     const paymentEntity = payload.payload?.payment?.entity;
     const providerIntentId = paymentEntity?.order_id;
@@ -352,6 +407,36 @@ export class PaymentService {
         status: 'processed' as const,
         providerIntentId,
         providerPaymentId,
+      };
+    }
+
+    if (payload.event === 'refund.processed') {
+      const refundEntity = payload.payload?.refund?.entity;
+      const paymentId = refundEntity?.payment_id ?? paymentEntity?.id;
+      if (!paymentId) return { status: 'ignored' as const };
+      const payment = await Payment.findOne({ providerPaymentId: paymentId });
+      if (!payment) return { status: 'ignored' as const };
+      if (payment.status === 'paid') {
+        payment.status = 'refunded';
+        await payment.save();
+      }
+      const settled = await applyFullRefund({
+        orderId: payment.orderId,
+        providerRefundId: refundEntity?.id,
+        amount: Number(refundEntity?.amount ?? payment.amountMinor) / 100,
+        nextStatus: 'refunded',
+        reason: 'razorpay_refund',
+      });
+      if (settled.skipped) {
+        logger.info(
+          { orderId: payment.orderId },
+          'Refund webhook ignored; order is not refundable before ship',
+        );
+      }
+      return {
+        status: 'processed' as const,
+        providerIntentId: payment.providerIntentId,
+        providerPaymentId: paymentId,
       };
     }
 
@@ -427,9 +512,12 @@ export class PaymentService {
   }
 
   private async finalizePaidOrder(order: InstanceType<typeof Order>) {
-    const xp = await computeOrderRuneXp(
-      order.items.map((item) => ({ productId: String(item.productId), quantity: item.quantity })),
-    );
+    const lines = order.items.map((item) => ({
+      productId: String(item.productId),
+      quantity: item.quantity,
+    }));
+    const goodsTotal = goodsTotalOf(order.subtotal, order.discount ?? 0);
+    const xp = runeXpForGoods(goodsTotal, await orderIsBundle(lines));
 
     const claimed = await Order.findOneAndUpdate(
       { _id: order._id, status: 'pending_payment' },
@@ -445,13 +533,12 @@ export class PaymentService {
     // Stock was already reserved at POST /orders — do not decrement again.
 
     if (xp > 0 && claimed.userId) {
-      await awardOrderRuneXp(
-        String(claimed.userId),
-        claimed.items.map((item) => ({
-          productId: String(item.productId),
-          quantity: item.quantity,
-        })),
-      );
+      await awardOrderRuneXp({
+        userId: String(claimed.userId),
+        orderId: String(claimed._id),
+        goodsTotal,
+        items: lines,
+      });
     }
 
     return xp;

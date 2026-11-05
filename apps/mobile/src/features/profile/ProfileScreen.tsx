@@ -21,6 +21,7 @@ const MENU: Array<{ key: string; label: string; icon: AppIconName }> = [
   { key: 'assistant', label: 'Heimdall', icon: 'chat' },
   { key: 'edit', label: 'Edit profile', icon: 'edit' },
   { key: 'orders', label: 'My Orders', icon: 'package' },
+  { key: 'rewards', label: 'Rune rewards', icon: 'hammer' },
   { key: 'addresses', label: 'Addresses', icon: 'mapPin' },
   { key: 'notifications', label: 'Notifications', icon: 'bell' },
   { key: 'password', label: 'Change password', icon: 'key' },
@@ -186,6 +187,13 @@ export function ProfileScreen() {
                 }
                 if (item.key === 'orders') {
                   navigation.navigate('Orders');
+                  return;
+                }
+                if (item.key === 'rewards') {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'rewards', returnTab: 'Account' })) {
+                    return;
+                  }
+                  navigation.navigate('RuneRewards');
                   return;
                 }
                 if (item.key === 'addresses') {

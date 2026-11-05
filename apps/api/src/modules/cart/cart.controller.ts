@@ -19,7 +19,7 @@ export class CartController {
   quote = async (request: CartRequest, response: Response) => {
     const { items } = request.body as { items?: Array<{ productId: string; quantity: number }> };
     const pincode = request.query.pincode as string | undefined;
-    const quote = await this.service.quote(items ?? [], pincode);
+    const quote = await this.service.quote(items ?? [], pincode, request.userId);
     response.json({ data: { quote } });
   };
 

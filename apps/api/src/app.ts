@@ -25,6 +25,7 @@ import { createNotificationRouter } from './modules/notifications/notification.r
 import { createServiceabilityRouter } from './modules/serviceability/serviceability.routes.js';
 import { createStoresRouter } from './modules/stores/stores.routes.js';
 import { createAiRouter } from './modules/ai/ai.routes.js';
+import { createLoyaltyRouter } from './modules/loyalty/loyalty.routes.js';
 
 export function createApp(env: Env) {
   const app = express();
@@ -66,6 +67,7 @@ export function createApp(env: Env) {
   app.use('/api/v1/serviceability', createServiceabilityRouter());
   app.use('/api/v1/stores', createStoresRouter());
   app.use('/api/v1/ai', createAiRouter(env));
+  app.use('/api/v1/loyalty', createLoyaltyRouter(env));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -10,6 +10,10 @@ export interface UserDocument {
   role: 'customer' | 'admin';
   avatarUrl?: string;
   runeXp: number;
+  /** One credit waives shipping on the next order that would otherwise charge it. */
+  freeShippingCredits: number;
+  /** While this is in the future, Drop Zone includes the rest of the eligible pool. */
+  dropZoneEarlyUntil?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,6 +29,8 @@ const userSchema = new Schema<UserDocument>(
     role: { type: String, enum: ['customer', 'admin'], default: 'customer' },
     avatarUrl: { type: String },
     runeXp: { type: Number, default: 0, min: 0 },
+    freeShippingCredits: { type: Number, default: 0, min: 0 },
+    dropZoneEarlyUntil: { type: Date },
   },
   { timestamps: true },
 );

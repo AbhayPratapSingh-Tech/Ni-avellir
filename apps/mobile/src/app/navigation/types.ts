@@ -69,6 +69,7 @@ export type RootStackParamList = {
   Wishlist: undefined;
   StoreLocator: undefined;
   EditProfile: undefined;
+  RuneRewards: undefined;
   ChangePassword: undefined;
   Sessions: undefined;
   VerifyEmail: undefined;

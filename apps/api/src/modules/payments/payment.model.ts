@@ -8,7 +8,7 @@ export interface PaymentDocument {
   providerPaymentId?: string;
   amountMinor: number;
   currency: string;
-  status: 'created' | 'paid' | 'failed';
+  status: 'created' | 'paid' | 'failed' | 'refunded';
   demoMode: boolean;
   raw?: Record<string, unknown>;
   createdAt: Date;
@@ -24,7 +24,7 @@ const paymentSchema = new Schema<PaymentDocument>(
     providerPaymentId: { type: String },
     amountMinor: { type: Number, required: true },
     currency: { type: String, required: true },
-    status: { type: String, enum: ['created', 'paid', 'failed'], default: 'created' },
+    status: { type: String, enum: ['created', 'paid', 'failed', 'refunded'], default: 'created' },
     demoMode: { type: Boolean, default: false },
     raw: { type: Schema.Types.Mixed },
   },
