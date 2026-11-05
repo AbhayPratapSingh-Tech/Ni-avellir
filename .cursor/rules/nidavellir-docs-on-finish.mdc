@@ -1,0 +1,23 @@
+---
+description: Update Nidavellir markdown when a feature or task finishes
+alwaysApply: true
+---
+
+# Docs at the end of a change
+
+When a feature, fix, or task is finished and it changes behavior, an API, payments, Rune XP, navigation, or a TODO/phase row, update the matching docs in that same turn. Do not wait for a separate "update the md files" request.
+
+| What changed | Update |
+|---|---|
+| Shopper-visible behavior | `CHANGELOG.md` Unreleased. `README.md` if the feature list changed |
+| How the live app works | `PROJECT_INSIGHTS.md`. `AI_AGENT_GUIDE.md` if the next agent would do the wrong thing |
+| A TODO row or phase | `TODO.md` and `PROJECT_PROGRESS.md` |
+| A new screen or API module | `DEVELOPER_GUIDE.md` table |
+| Production-grade technique | Craft patterns in `PROJECT_INSIGHTS.md` (problem, approach, where; no git/PR badges) |
+
+Skip docs when the product did not change: a question, commit-message lines, a typo, a rename, a reverted experiment, or the user said not to touch the docs.
+
+```md
+<!-- ❌ leave CHANGELOG saying cancel does not reverse XP after the refund path shipped -->
+<!-- ✅ Unreleased note plus the TODO checkbox in the same turn the code lands -->
+```

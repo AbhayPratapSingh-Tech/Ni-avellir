@@ -16,7 +16,7 @@ Before implementing features or refactors, follow **`AI_AGENT_GUIDE.md`** at the
 5. Orders/payments in API mode must use repository `critical` paths (no silent fake paid orders).
 6. New screens → `navigation/types.ts` + `RootNavigator.tsx` + entry points.
 7. Forms → shared validation patterns (`lib/addressValidation.ts` for addresses).
-8. Update `PROJECT_INSIGHTS.md` / `AI_AGENT_GUIDE.md` when live-switch or payment behavior changes.
+8. When the change is finished, update the matching markdown in that same turn (`.cursor/rules/nidavellir-docs-on-finish.mdc`). Live-switch and payment behavior always include `PROJECT_INSIGHTS.md` and `AI_AGENT_GUIDE.md`.
 
 ## Live flip reminder
 

@@ -4,6 +4,10 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Docs stay current when a task finishes
+
+- A finished feature, fix, or task that changes behavior, an API, payments, Rune XP, navigation, or a TODO row updates the matching markdown in that same turn (`CHANGELOG.md`, `PROJECT_INSIGHTS.md`, `AI_AGENT_GUIDE.md`, `TODO.md`, `PROJECT_PROGRESS.md`, `README.md`, `DEVELOPER_GUIDE.md` as applicable). Questions, commit lines, typos, renames, and reverted experiments do not. Rule: `.cursor/rules/nidavellir-docs-on-finish.mdc`.
+
 ### Rune rewards and refund reversal
 
 - Account → **Rune rewards**. 100 XP buys a one-use ₹50 coupon (orders of ₹499+), 250 XP buys one free-shipping credit, 1000 XP shows the rest of the Drop Zone pool for 7 days. Each spend is one `REDEEM` ledger row. The same idempotency key does not spend twice. Checkout ignores a larger client discount on that coupon, and the code cannot be used again.

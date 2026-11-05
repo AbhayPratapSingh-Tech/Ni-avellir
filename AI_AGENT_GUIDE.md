@@ -141,9 +141,14 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 
 ### F. Docs agents must keep current
 
-- [ ] Meaningful behavior → update `PROJECT_INSIGHTS.md` and/or this guide.
-- [ ] Phase / TODO changes → `PROJECT_PROGRESS.md`, `TODO.md`, `CHANGELOG.md` when the user expects tracking.
+Do this in the same turn the work finishes. Do not wait to be asked. Rule: `.cursor/rules/nidavellir-docs-on-finish.mdc`.
+
+- [ ] Finished feature, fix, or task that changes behavior, an API, payments, Rune XP, navigation, or a TODO/phase row → update the matching docs below.
+- [ ] Meaningful behavior → `PROJECT_INSIGHTS.md` and/or this guide. Shopper-visible behavior also → `CHANGELOG.md` Unreleased, and `README.md` if the feature list changed.
+- [ ] Phase / TODO changes → `PROJECT_PROGRESS.md`, `TODO.md`, and `CHANGELOG.md`.
+- [ ] New screen or API module → `DEVELOPER_GUIDE.md` table.
 - [ ] **Craft patterns** — if the change is a production-grade technique good projects usually implement (atomicity, idempotency, reconcile, critical money paths, side-effect resilience, CI quality gates, abuse limits, query indexes, visual search evaluation, seed wipe guard, Rune XP ledger, etc.), add a short entry under **Craft patterns — skills worth knowing** in `PROJECT_INSIGHTS.md`. Describe problem → approach → where. Do not add git/branch/PR badges for these entries; keep them as standing craft notes.
+- [ ] Skip when the product did not change (question, commit lines, typo, rename, reverted experiment) or the user said not to touch the docs.
 
 ---
 
