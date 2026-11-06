@@ -4,6 +4,10 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### UAT branch is protected like production
+
+- Do not push `uat` or `Nidavellir` directly. Land changes with a pull request from a working branch. CI also runs when a commit reaches `uat` (`.github/workflows/ci.yml`). The agent rule is `.cursor/rules/nidavellir-protected-branches.mdc`. GitHub will still accept a direct push until the repo owner (`AbhayPratapSingh-Tech`) turns on a ruleset for both branch names; the login on this machine is not an admin of the repo.
+
 ### Docs stay current when a task finishes
 
 - A finished feature, fix, or task that changes behavior, an API, payments, Rune XP, navigation, or a TODO row updates the matching markdown in that same turn (`CHANGELOG.md`, `PROJECT_INSIGHTS.md`, `AI_AGENT_GUIDE.md`, `TODO.md`, `PROJECT_PROGRESS.md`, `README.md`, `DEVELOPER_GUIDE.md` as applicable). Questions, commit lines, typos, renames, and reverted experiments do not. Rule: `.cursor/rules/nidavellir-docs-on-finish.mdc`.

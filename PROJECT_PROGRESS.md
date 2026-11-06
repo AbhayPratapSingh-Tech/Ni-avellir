@@ -32,7 +32,7 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 - **Checkout UX** — Payment step summary (scroll products only if >3); Buy now silent cart add; Razorpay cancel message.
 - **Atomic inventory** — reserve at order create; release on unpaid cancel/expire; no double-decrement on paid.
 - **Privacy / Contact / Raise a query** — Privacy Policy; Contact sheet; Support 3-tab Sheets (Tickets / Commerce / Account App) + local query cards + Mark Resolved; Need Help from Login/Signup/Profile/Order Details/Returns/FAQ.
-- **CI quality gates** — GitHub Actions on every PR and on push to `Nidavellir`: lint, typecheck, workspace tests, production build (`.github/workflows/ci.yml`). Jest suite still a placeholder.
+- **CI quality gates** — GitHub Actions on every PR and on push to `Nidavellir` or `uat`: lint, typecheck, workspace tests, production build (`.github/workflows/ci.yml`). Do not push those branches directly. Jest suite still a placeholder.
 - **Abuse limits** — OTP/reset/verify-email send **5/min/IP** and a 60s per-phone/email cooldown. Login, auth, coupons, checkout, and visual search return `429` with `error.type`. AI chat is not limited. Razorpay webhook stays unlimited.
 - **Query indexes** — orders `{ userId, createdAt }`; products `{ stock, reviewCount }` for best sellers. Local `npm run explain:queries --workspace apps/api` (refuses Atlas). Name search stays a regex scan.
 - **Visual search evaluation** — local `npm run eval:visual-search --workspace apps/api` (refuses Atlas). Parse / no-key / fake-SKU checks fail closed. Photo hit rate is printed, not a CI gate. Baseline numbers need a seeded local Mongo.

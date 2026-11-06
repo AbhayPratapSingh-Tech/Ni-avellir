@@ -17,6 +17,7 @@ Before implementing features or refactors, follow **`AI_AGENT_GUIDE.md`** at the
 6. New screens → `navigation/types.ts` + `RootNavigator.tsx` + entry points.
 7. Forms → shared validation patterns (`lib/addressValidation.ts` for addresses).
 8. When the change is finished, update the matching markdown in that same turn (`.cursor/rules/nidavellir-docs-on-finish.mdc`). Live-switch and payment behavior always include `PROJECT_INSIGHTS.md` and `AI_AGENT_GUIDE.md`.
+9. Do not push directly to `Nidavellir` or `uat`. Those branches change only through a pull request.
 
 ## Live flip reminder
 
