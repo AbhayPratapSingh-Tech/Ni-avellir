@@ -30,7 +30,7 @@ Nidavellir is intended to become a real premium gaming merchandise marketplace, 
 - Secure mobile token storage: `react-native-keychain`.
 - Media: Cloudinary.
 - Push notifications: **planned** FCM (Android) + APNs (iOS) via backend; **today** in-app Notifications inbox only (`/api/v1/notifications`). See `TODO.md`.
-- CI: GitHub Actions (`.github/workflows/ci.yml`) on every pull request and on push to `Nidavellir` — lint, typecheck, workspace tests, production build. Fastlane native release builds are still planned.
+- CI: GitHub Actions (`.github/workflows/ci.yml`) on every pull request and on push to `Nidavellir` or `uat` — lint, typecheck, workspace tests, production build. Fastlane native release builds are still planned.
 - Monorepo tooling: Turborepo.
 - Documentation: Swagger/OpenAPI plus repository markdown docs.
 
@@ -121,7 +121,7 @@ Patterns that solid commerce / API projects get right. Knowing *why* these exist
 ### CI quality gates
 
 - **Problem:** A pull request can merge broken TypeScript, lint, or a production compile if those checks only run on one laptop.
-- **Approach:** One GitHub Actions job (`ubuntu-latest`) runs `npm ci`, lint, typecheck, workspace tests, and `npm run build` on every pull request and on every push to `Nidavellir`. Node comes from `.nvmrc`. ESLint uses `@typescript-eslint/parser` so `.ts` / `.tsx` parse. The job does not build an Android APK or iOS app.
+- **Approach:** One GitHub Actions job (`ubuntu-latest`) runs `npm ci`, lint, typecheck, workspace tests, and `npm run build` on every pull request and on every push to `Nidavellir` or `uat`. Node comes from `.nvmrc`. ESLint uses `@typescript-eslint/parser` so `.ts` / `.tsx` parse. The job does not build an Android APK or iOS app. Direct pushes to those two branches are refused by the agent; GitHub enforcement is a ruleset the repo owner still has to turn on.
 - **Where:** `.github/workflows/ci.yml`, root `package.json` `lint` script, `.eslintrc.cjs`.
 - **Live check:** Actions run **CI / check** goes green on the pull request and again on the merge push. Workspace `test` scripts still exit 0 with no Jest suite — that gate is the workflow, not proof of cart or payment behavior. Require the `check` status in branch protection so a pending or red run blocks merge.
 
@@ -207,7 +207,7 @@ Mobile defaults to **`api`** via `apps/mobile/src/config/appConfig.ts` (set `'mo
 5j. **Register + checkout UX:** `POST /auth/register` must not 500 when Resend rejects the verify email — return `emailVerification: { sent: false, reason: 'send_failed' }`. PDP Buy now: await cart add, **no** success toast; Payment step: summary above methods, scroll product cards only if **>3**; Razorpay cancel → “You have cancelled the Payment”.
 5k. **Atomic inventory:** `reserveStock` at order create; `releaseStock` on unpaid cancel/expire only; never decrement again on Razorpay paid (`finalizePaidOrder`). Catalog `stock` drops while payment is pending.
 5l. **Privacy / Contact / Support (Sheets v1):** in-app Privacy Policy; Contact → tab `Contact Nidavellir`; Raise a query → 3-tab Support workbook (`Support Tickets` core + `Support Commerce` + `Support Account App` extras keyed by `CaseNumber`). URLs in `appConfig` (`contactFormWebhookUrl`, `supportFormWebhookUrl`). Mobile keeps query cards / Pending→Resolved in AsyncStorage; Mark Resolved POSTs `action: resolve`. Comments column = typed text only. Apps Script: `apps/api/docs/support-nidavellir-apps-script.js` (Deploy Me + Anyone; POST returns 302 echo — RN uses `redirect: 'manual'`).
-5m. **CI quality gates:** `.github/workflows/ci.yml` on every PR and on push to `Nidavellir` (`npm ci`, lint, typecheck, `npm run test --workspaces`, `npm run build`). Node `.nvmrc` 20.20.2. Jest is not in that job yet — workspace `test` scripts print and exit 0. Native release builds stay out of this workflow.
+5m. **CI quality gates:** `.github/workflows/ci.yml` on every PR and on push to `Nidavellir` or `uat` (`npm ci`, lint, typecheck, `npm run test --workspaces`, `npm run build`). Node `.nvmrc` 20.20.2. Jest is not in that job yet — workspace `test` scripts print and exit 0. Native release builds stay out of this workflow. Do not push `Nidavellir` or `uat` directly.
 5n. **Abuse limits + indexes:** OTP/reset/verify-email sends **5/minute/IP** plus a 60s per-phone/email cooldown. A blocked call returns `429` with `error.type` (example `otp_limit_per_minute_reached`). AI chat is not limited. Orders `{ userId, createdAt }`; products `{ stock, reviewCount }`. Name search stays a regex scan. Local only: `npm run explain:queries --workspace apps/api` (refuses Atlas).
 6. Rune XP is **1 per ₹10** of goods (subtotal after coupon, not shipping), minimum 10, maximum 500, plus 25 for a bundle. The amount is stored once on the order and as a unique `RuneXpEntry`. Profile sums that ledger. Account → **Rune rewards** spends it: 100 XP → ₹50 coupon, 250 XP → one free-shipping credit, 1000 XP → 7 days of early Drop Zone (today’s four picks plus the rest of the eligible pool). Cancel before ship refunds a paid order and reverses that XP. A return request does not. Product `sku` / `runeXp` fields remain display-only (`npm run seed:sku --workspace apps/api`). `npm run seed` refuses Atlas unless `SEED_ALLOW_ATLAS=yes`.
 
