@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { appConfig } from '../../config/appConfig';
 
-const GUEST_SESSION_KEY = 'nidavellir_guest_session';
+function guestSessionKey() {
+  return `nidavellir_guest_session.${appConfig.appEnvironment}`;
+}
 
 let cachedGuestSession: string | null = null;
 
@@ -10,18 +13,18 @@ function randomGuestId() {
 
 export async function getGuestSessionId(): Promise<string> {
   if (cachedGuestSession) return cachedGuestSession;
-  const stored = await AsyncStorage.getItem(GUEST_SESSION_KEY);
+  const stored = await AsyncStorage.getItem(guestSessionKey());
   if (stored) {
     cachedGuestSession = stored;
     return stored;
   }
   const next = randomGuestId();
-  await AsyncStorage.setItem(GUEST_SESSION_KEY, next);
+  await AsyncStorage.setItem(guestSessionKey(), next);
   cachedGuestSession = next;
   return next;
 }
 
 export async function clearGuestSessionId(): Promise<void> {
   cachedGuestSession = null;
-  await AsyncStorage.removeItem(GUEST_SESSION_KEY);
+  await AsyncStorage.removeItem(guestSessionKey());
 }

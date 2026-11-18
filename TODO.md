@@ -164,7 +164,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] **Mongo backups** — Atlas M0 has no automated backups; scheduled `mongodump` + restore drill; document recovery for users/orders/catalog. (= **E3** backup drills)
 - [ ] **Offline / timeout / duplicate-checkout** — regression tests for flaky network, app kill mid-pay, retry UX. (= **E4** offline + money-path UX)
 - [x] **Seed safety guard** — **Done.** `npm run seed` and `npm run seed:ops` refuse a URI containing `mongodb.net`, `mongodb+srv`, or `atlas` before any delete. Deliberate wipe: `SEED_ALLOW_ATLAS=yes`. `seed:sku` does not delete the catalog.
-- [ ] **Secrets hygiene / env separation** — distinct dev / staging / prod keys; never real Razorpay Live from a test build.
+- [ ] **Secrets hygiene / env separation** — **Partial.** UAT is a second Render service (`nidavellir-api-uat`, branch `uat`, database `nidavellir_uat`) with its own JWT secrets and its own Razorpay Test webhook secret (`/api/v1/payments/razorpay/webhook`). The phone switches with `appEnvironment` in `appConfig.ts`. **Still open:** never put Razorpay Live keys (`rzp_live_...`) on UAT or a test build.
 - [ ] **Server-authoritative discount** — **Partial:** Rune reward coupons are priced and claimed on the server. **Open:** public coupons still trust the client `discount` (= **E1** pricing gap + **E2** coupons).
 - [ ] **Order status transition guard** — central allowed-transition map (= **E1** state machine).
 - [x] **Rune XP ledger collection** — **Done** (see E1). Unique earn/reverse/redeem refs. Full refund before ship reverses XP. Catalogue is the Phase 12 upgrade.
@@ -224,6 +224,12 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] **Community blog**.
 
 ### Upgrade shipped features
+
+These two are the same on UAT and production. The phone has one address UI; `appEnvironment` only changes the API host.
+
+- [ ] **Save buttons ignore extra taps** — Account → Addresses **Save address** has no in-flight lock (`AddressesScreen.save`). Each tap calls `POST /addresses` and adds another card. Checkout **Save address** already disables while `savingAddress` is true, but that button is hidden until an address exists. Give every create/save control the same lock: ignore taps until the request finishes, and show a busy label. Cover address save and edit, and any other button that creates a row (profile save, contact, and raise-a-query already disable). One tap, one card.
+- [ ] **First checkout address uses the Addresses form** — With no saved address, Checkout shows an inline **Shipping address** block and hides **Save address** (`hasSavedAddresses` gates that row). Continue carries the fields into payment. The card is written later in `finishOrder` via `upsertAddress`, not through the Addresses form. The first add on checkout should be the same Add address form as Account → Addresses: same fields, validation, **Save address**, one card, then the saved-address list. Adding a later address on checkout already opens a form.
+
 - [ ] **AI Merch Assistant (upgrade)** — budget / franchise / “setup under ₹X” intents; product cards with live price/stock/PDP links; confirm before cart mutations; tool-level authz (never leak other users’ data); rate / cost / timeout limits + safe fallbacks.
 - [ ] **Visual search (upgrade)** — optional budget/category/franchise/availability filters; related matches when no exact hit; never invent SKUs; track view/purchase conversion.
 - [ ] **For you (upgrade)** — stronger signals / feedback loop (optional); keep guests → bestsellers fallback.
@@ -280,142 +286,31 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - **Caveat:** Razorpay capture and inventory are not one Mongo transaction — design for independent failure (already partly handled via reserve → pay → reconcile/expire).
 - **Docs / branch:** after PR #22, prefer branch from **`Nidavellir`**, keep `TODO.md` / `PROJECT_PROGRESS.md` updated when shipping.
 
+## UAT and production
 
+UAT is live. It is the same API as production, on its own host and database. `apps/api/src/app.ts` mounts every route on both. The `uat` branch already contains every commit on `Nidavellir`, plus newer work. Production stays behind until a pull request into `Nidavellir`.
 
-<!-- environment setup  -->
-
-
-
-You already have one live API. UAT is a second copy of that API with its own database and keys. The shop code does not switch environments by itself.
-
-Today the phone talks to `https://ni-avellir.onrender.com/api/v1` from `appConfig.ts`. Render deploys branch `Nidavellir`. The API reads variables from the Render dashboard. Locally it reads `apps/api/.env.development` only. The files `.env.staging.example` and `.env.production.example` are templates. Nothing loads them automatically.
-
-Keep the current Render service as **Production**. Add a second one for **UAT**. Do not point both at the same Atlas database. `npm run seed` deletes products, and there is no guard yet that blocks a wipe of the live shop.
-
-**1. Staging database**
-
-In Atlas, create a separate database, for example `nidavellir_staging`. Give it its own user and connection string. Leave the current database for production.
-
-**2. Staging API on Render**
-
-New Web Service, same GitHub repo.
-
-- Name: something like `nidavellir-api-staging`
-- Branch: `todo` if UAT should show work before it is merged, or `Nidavellir` if UAT should match production code
-- Build: `NPM_CONFIG_PRODUCTION=false npm install && npm run build:api`
-- Start: `npm run start:api`
-- Health check: `/health`
-
-You will get a new URL, such as `https://nidavellir-api-staging.onrender.com`. The current `ni-avellir.onrender.com` stays production.
-
-**3. Staging env vars**
-
-Copy the production values, then change these:
-
-| Variable | UAT | Production (what you have now) |
+| | Production | UAT |
 |---|---|---|
-| `NODE_ENV` | `staging` | `production` |
-| `MONGODB_URI` | staging database only | current Atlas database |
-| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | new random secrets | leave the existing ones |
-| `API_BASE_URL` | the new staging host | `https://ni-avellir.onrender.com` |
-| `RAZORPAY_KEY_ID` / `SECRET` | Razorpay **Test** keys (`rzp_test_...`) | Test keys until you charge real money |
-| `RAZORPAY_WEBHOOK_SECRET` | secret from a **second** webhook | secret from the current webhook |
-| `SMS_DEMO_MODE` | `true` | `false` only when you want real SMS |
-| `EMAIL_DEMO_MODE` | `true` is fine | `false` with the real Resend key |
+| Render service | `nidavellir-api` | `nidavellir-api-uat` |
+| Host | `https://ni-avellir.onrender.com` | `https://nidavellir-api-uat.onrender.com` |
+| Git branch | `Nidavellir` | `uat` |
+| Database | the live Atlas database | `nidavellir_uat` |
+| Phone | `appEnvironment: 'production'` | `appEnvironment: 'uat'` |
 
-Use different JWT secrets so a staging login token cannot call production.
+Change only `appEnvironment` in `apps/mobile/src/config/appConfig.ts`, then reload the app. Store builds stay `production`. Account shows Production, UAT, or Local. `local` is the laptop API (`10.0.2.2` on Android, `localhost` on iOS).
 
-In Razorpay Test mode, add a webhook whose URL is `https://<staging-host>/api/v1/payments/razorpay/webhook`. Do not reuse the production webhook secret. Do not put Razorpay **Live** keys (`rzp_live_...`) on UAT, or on a test build of the app.
+Shopper UI is one codebase for both hosts. A fix to login, profile, addresses, or checkout ships to UAT and production together. Do not fork those screens per environment. `SMS_DEMO_MODE=true` stays on UAT only, so the development OTP is visible there and hidden on the live service.
 
-**4. Put catalog data on staging only**
+Copy these from the production Render service onto `nidavellir-api-uat` when they are set there. Do not commit the values.
 
-From your laptop, with the staging URI, not the production one:
+- `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_DEMO_MODE`
+- `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` (Test keys, `rzp_test_...`)
+- `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`, `OPENAI_VISION_MODEL`, `AI_ENABLED`
+- `CORS_ORIGINS`, `SMS_DEMO_MODE` or the SMS provider keys, `PENDING_PAYMENT_EXPIRE_MINUTES`, `PAYMENT_RECONCILE_INTERVAL_MS`
 
-```bash
-MONGODB_URI='mongodb+srv://...nidavellir_staging' npm run seed --workspace apps/api
-```
+These stay different: `MONGODB_URI` (database `nidavellir_uat`), `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `API_BASE_URL`, `NODE_ENV=staging`, and `RAZORPAY_WEBHOOK_SECRET`. The UAT webhook URL is `https://nidavellir-api-uat.onrender.com/api/v1/payments/razorpay/webhook`. Do not reuse the production webhook secret.
 
-Check `https://<staging-host>/health`, then `https://<staging-host>/api/v1/products?limit=1`.
+Seed only the UAT database, and only on purpose: `SEED_ALLOW_ATLAS=yes` plus a URI whose database name is `nidavellir_uat`. That fills products, coupons, serviceability, and stores. Users and orders stay empty.
 
-**5. Point a test build of the app at UAT**
-
-In `apps/mobile/src/config/appConfig.ts`, for a UAT build only:
-
-- `dataSource: 'api'`
-- `allowMockFallback: false`
-- `apiBaseUrl: 'https://<staging-host>/api/v1'`
-
-The store build keeps `https://ni-avellir.onrender.com/api/v1`. There is one config file today, so change that URL for the build you are making, then change it back before a production build. Separate staging and production app configs are still an open TODO.
-
-**What not to share**
-
-- One Atlas database for both
-- One JWT secret for both
-- Razorpay Live keys on UAT
-- `npm run seed` against the production URIYou already have one live API. UAT is a second copy of that API with its own database and keys. The shop code does not switch environments by itself.
-
-Today the phone talks to `https://ni-avellir.onrender.com/api/v1` from `appConfig.ts`. Render deploys branch `Nidavellir`. The API reads variables from the Render dashboard. Locally it reads `apps/api/.env.development` only. The files `.env.staging.example` and `.env.production.example` are templates. Nothing loads them automatically.
-
-Keep the current Render service as **Production**. Add a second one for **UAT**. Do not point both at the same Atlas database. `npm run seed` deletes products, and there is no guard yet that blocks a wipe of the live shop.
-
-**1. Staging database**
-
-In Atlas, create a separate database, for example `nidavellir_staging`. Give it its own user and connection string. Leave the current database for production.
-
-**2. Staging API on Render**
-
-New Web Service, same GitHub repo.
-
-- Name: something like `nidavellir-api-staging`
-- Branch: `todo` if UAT should show work before it is merged, or `Nidavellir` if UAT should match production code
-- Build: `NPM_CONFIG_PRODUCTION=false npm install && npm run build:api`
-- Start: `npm run start:api`
-- Health check: `/health`
-
-You will get a new URL, such as `https://nidavellir-api-staging.onrender.com`. The current `ni-avellir.onrender.com` stays production.
-
-**3. Staging env vars**
-
-Copy the production values, then change these:
-
-| Variable | UAT | Production (what you have now) |
-|---|---|---|
-| `NODE_ENV` | `staging` | `production` |
-| `MONGODB_URI` | staging database only | current Atlas database |
-| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | new random secrets | leave the existing ones |
-| `API_BASE_URL` | the new staging host | `https://ni-avellir.onrender.com` |
-| `RAZORPAY_KEY_ID` / `SECRET` | Razorpay **Test** keys (`rzp_test_...`) | Test keys until you charge real money |
-| `RAZORPAY_WEBHOOK_SECRET` | secret from a **second** webhook | secret from the current webhook |
-| `SMS_DEMO_MODE` | `true` | `false` only when you want real SMS |
-| `EMAIL_DEMO_MODE` | `true` is fine | `false` with the real Resend key |
-
-Use different JWT secrets so a staging login token cannot call production.
-
-In Razorpay Test mode, add a webhook whose URL is `https://<staging-host>/api/v1/payments/razorpay/webhook`. Do not reuse the production webhook secret. Do not put Razorpay **Live** keys (`rzp_live_...`) on UAT, or on a test build of the app.
-
-**4. Put catalog data on staging only**
-
-From your laptop, with the staging URI, not the production one:
-
-```bash
-MONGODB_URI='mongodb+srv://...nidavellir_staging' npm run seed --workspace apps/api
-```
-
-Check `https://<staging-host>/health`, then `https://<staging-host>/api/v1/products?limit=1`.
-
-**5. Point a test build of the app at UAT**
-
-In `apps/mobile/src/config/appConfig.ts`, for a UAT build only:
-
-- `dataSource: 'api'`
-- `allowMockFallback: false`
-- `apiBaseUrl: 'https://<staging-host>/api/v1'`
-
-The store build keeps `https://ni-avellir.onrender.com/api/v1`. There is one config file today, so change that URL for the build you are making, then change it back before a production build. Separate staging and production app configs are still an open TODO.
-
-**What not to share**
-
-- One Atlas database for both
-- One JWT secret for both
-- Razorpay Live keys on UAT
-- `npm run seed` against the production URI
+Public routes to compare (status codes, not the JSON bodies): `/health`, `/api/v1/products?limit=1`, `/api/v1/products/categories`, `/api/v1/products/franchises`, `/api/v1/products/featured`, `/api/v1/stores`, `/api/v1/coupons`.

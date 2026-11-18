@@ -2,7 +2,7 @@
 
 ## Status
 
-The Niðavellir marketplace is **demo-ready on a live hosted API**. Mobile defaults to `dataSource: 'api'` against **Render Free** (`https://ni-avellir.onrender.com/api/v1`) + MongoDB Atlas. Razorpay Test Mode + webhooks are wired. Mock mode remains available for offline college demos. Render deploys from branch **`Nidavellir`**.
+The Niðavellir marketplace is **demo-ready on a live hosted API**. Mobile defaults to `dataSource: 'api'` and `appEnvironment: 'production'` against **Render Free** (`https://ni-avellir.onrender.com/api/v1`) + MongoDB Atlas. Set `appEnvironment` to `'uat'` to use `https://nidavellir-api-uat.onrender.com` (database `nidavellir_uat`). Razorpay Test Mode + webhooks are wired. Mock mode remains available for offline college demos. Production Render deploys from branch **`Nidavellir`**. UAT deploys from branch **`uat`**.
 
 The shop opens behind onboarding + login/signup. Commerce screens use a light esports theme.
 
@@ -15,7 +15,8 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 - Auth JWT, OTP (demo/SMS), Keychain hydrate, server cart + coupons, addresses, wishlist, reviews, notifications, serviceability, orders, cancel/return/exchange.
 - Razorpay: intents, native SDK confirm, webhook idempotency, demo-complete blocked when real keys set.
 - **Render Free** deploy (`render.yaml` + dashboard branch **`Nidavellir`**, `build:api` / `start:api`) — health OK at `/health`. Verified `GET /products?tag=anime` returns catalog (~35 tagged SKUs).
-- Mobile `apiBaseUrl` → Render; silent `/health` keep-alive on bootstrap + every 20 min (`wakeApiServer.ts`).
+- Mobile `appEnvironment` picks production, UAT, or local. The committed default is `production`. `apiBaseUrl` follows it. Silent `/health` keep-alive on bootstrap + every 20 min (`wakeApiServer.ts`). Account shows the active name. Sign-in and the guest cart are stored per environment.
+- **UAT API** — Render service `nidavellir-api-uat`, branch `uat`, host `https://nidavellir-api-uat.onrender.com`, Atlas database `nidavellir_uat`. Same routes as production. Resend, Razorpay Test keys, and `OPENAI_*` are copied from production. JWT, database URI, `API_BASE_URL`, and the Razorpay webhook secret stay separate.
 - Postman/cURL docs: `API_DETAILS.live.example.md` + `generate-api-details-local.py --live`.
 - **Anime bundles** — `bundleTag` / `isBundleMain`, `GET /products/bundles`, PDP complete-the-bundle, Home banner slider.
 - **Anime Home facet** — `tag=anime` PLP (not a product-type category).
@@ -108,7 +109,7 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 
 Core app + hosted API on **`Nidavellir`** (PR #22 merged `todo`) are **demo-ready**: vault, All Reviews, visual search, For you, Anime tag, idempotent checkout, payment reconcile/30m expiry, resilient register, Buy now + Payment summary UX. CI runs lint, typecheck, tests, and production build on every pull request (PR #26).
 
-Remaining backlog: **`TODO.md` Engineering portfolio roadmap (E1–E5) + Phases 10–13** (plan before implementing):
+Remaining backlog: **`TODO.md` Engineering portfolio roadmap (E1–E5) + Phases 10–13** (plan before implementing). Open from UAT testing, same on both hosts: address **Save** must ignore extra taps (one card per tap), and the first checkout address must use the Addresses form.
 
 - **E1–E5** — production-craft scorecard (~6 done / ~7 partial / ~12 open). Next bet: server discount + order state machine + concurrency tests (CI is in place; the test step is still a no-op). See `TODO.md`.
 - **10** (partial) — still open: Jest/Supertest, authz audit, monitoring, backups, … (CI gates shipped; money-path craft: idempotency / reconcile / atomic inventory — see `PROJECT_INSIGHTS.md` Craft patterns)

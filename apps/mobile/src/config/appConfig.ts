@@ -1,19 +1,42 @@
+import { Platform } from 'react-native';
+
 /**
  * Central app configuration — single switchboard for mock vs live API.
  *
+ * ENVIRONMENT SWITCH:
+ *   Change `appEnvironment` only, then reload the app (a save does not recreate the API client).
+ *   - `production` — store builds. https://ni-avellir.onrender.com
+ *   - `uat`        — https://nidavellir-api-uat.onrender.com (branch `uat`, database `nidavellir_uat`)
+ *   - `local`      — laptop API (Android 10.0.2.2, iOS localhost)
+ *
  * LIVE SWITCH (when backend + Mongo are ready):
  *   1. Set `dataSource` to `'api'`
- *   2. Set `apiBaseUrl` to staging/production HTTPS `/api/v1`
+ *   2. Set `appEnvironment` to `'production'` or `'uat'`
  *   3. Set `allowMockFallback` to `false` so failed API calls surface errors
  *      instead of silently using demo catalog / fake orders
  *   4. Restart Metro + rebuild if native modules changed
  *
  * See `AI_AGENT_GUIDE.md` and `PROJECT_INSIGHTS.md`.
  */
-export type DataSourceMode = 'mock' | 'api';
 
-/** Render Free API (production/staging test). Swap to `localApiBaseUrl` for laptop API. */
-const liveApiBaseUrl = 'https://ni-avellir.onrender.com/api/v1';
+export type DataSourceMode = 'mock' | 'api';
+export type AppEnvironment = 'production' | 'uat' | 'local';
+
+/** Change environment here. Store builds stay `production`. */
+const appEnvironment: AppEnvironment = 'production';
+
+const apiBaseUrls: Record<AppEnvironment, string> = {
+  production: 'https://ni-avellir.onrender.com/api/v1',
+  uat: 'https://nidavellir-api-uat.onrender.com/api/v1',
+  local:
+    Platform.OS === 'android' ? 'http://10.0.2.2:4000/api/v1' : 'http://localhost:4000/api/v1',
+};
+
+export const ENVIRONMENT_LABEL: Record<AppEnvironment, string> = {
+  production: 'Production',
+  uat: 'UAT',
+  local: 'Local',
+};
 
 export const appConfig = {
   /**
@@ -31,8 +54,11 @@ export const appConfig = {
    */
   allowMockFallback: false,
 
-  /** Base URL of the API server (used only when dataSource === 'api'). */
-  apiBaseUrl: liveApiBaseUrl,
+  /** `production` (store), `uat`, or `local`. Change the const above, then reload the app. */
+  appEnvironment,
+
+  /** Base URL of the API server (used only when dataSource === 'api'). Derived from `appEnvironment`. */
+  apiBaseUrl: apiBaseUrls[appEnvironment],
 
   /**
    * Render Free cold-start mitigation (api mode only).

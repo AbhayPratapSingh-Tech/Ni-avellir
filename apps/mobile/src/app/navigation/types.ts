@@ -23,7 +23,7 @@ export type AuthStackParamList = {
     phone: string;
     password?: string;
     purpose?: 'login' | 'verify_email';
-    /** Shown on-screen when API email demo mode is active (no real mail sent). */
+    /** Shown on-screen when SMS or email demo mode returns the code. */
     devVerifyCode?: string;
   };
   AuthSuccess: {

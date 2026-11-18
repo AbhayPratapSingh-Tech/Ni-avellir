@@ -8,7 +8,7 @@ import { Screen } from '../../components/ui/Screen';
 import { BrandMark } from '../../components/ui/BrandMark';
 import { AvatarLightbox } from '../../components/ui/AvatarLightbox';
 import { openLogin, signOutAndClearSession, updateProfile } from '../auth/authSlice';
-import { appConfig } from '../../config/appConfig';
+import { appConfig, ENVIRONMENT_LABEL } from '../../config/appConfig';
 import { authRepository, syncLoggedInStores } from '../../services/data/authRepository';
 import { AppIcon, type AppIconName } from '../../components/ui/AppIcon';
 import { useToast } from '../../components/ui/Toast';
@@ -104,6 +104,7 @@ export function ProfileScreen() {
         <View style={styles.brandBanner}>
           <BrandMark height={48} />
           <Text style={styles.brandSub}>Forge Account</Text>
+          <Text style={styles.envLabel}>{ENVIRONMENT_LABEL[appConfig.appEnvironment]}</Text>
         </View>
 
         <View style={styles.header}>
@@ -470,6 +471,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginTop: 4,
+    textTransform: 'uppercase',
+  },
+  envLabel: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    marginTop: 2,
     textTransform: 'uppercase',
   },
 });

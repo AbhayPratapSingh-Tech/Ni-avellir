@@ -4,6 +4,23 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Android debug build memory
+
+- Gradle heap is 4096m, and Jetifier skips `react-android` and `hermes-android`, so `npm run android` does not die with Java heap space while converting those AARs.
+
+### Profile photo menu stays inside the dialog
+
+- Choose avatar, Camera, and Photo library are rows inside the white card. Right-aligned uppercase labels were drawing below the card on Android.
+
+### Login OTP stays on the verify screen
+
+- With `SMS_DEMO_MODE=true`, the code from **Send OTP** is passed into the verify screen and shown as the development code. The verify screen no longer asks for a second code immediately, which was hitting the 60-second resend limit and hiding the first code.
+
+### UAT and production switch
+
+- The phone chooses `production`, `uat`, or `local` with `appEnvironment` in `appConfig.ts`. The committed default is `production`. `apiBaseUrl` follows that word. Reload the app after changing it. Account shows Production, UAT, or Local. Store builds stay `production`. Sign-in and the guest cart are stored separately for each environment, so a production login is not sent to UAT. A hosted request that gets no HTTP response says “Cannot reach the shop right now. Try again in a moment.” Local still says to start `npm run dev:api`.
+- UAT is Render service `nidavellir-api-uat` on branch `uat` (`https://nidavellir-api-uat.onrender.com`, Atlas database `nidavellir_uat`). It mounts the same routes as production. Resend, Razorpay Test keys, and `OPENAI_*` are copied from production. The UAT Razorpay Test webhook is `https://nidavellir-api-uat.onrender.com/api/v1/payments/razorpay/webhook` with its own secret. Database URI, JWT secrets, API host, and that webhook secret stay different from production.
+
 ### UAT branch is protected like production
 
 - Do not push `uat` or `Nidavellir` directly. Land changes with a pull request from a working branch. CI also runs when a commit reaches `uat` (`.github/workflows/ci.yml`). The agent rule is `.cursor/rules/nidavellir-protected-branches.mdc`. GitHub will still accept a direct push until the repo owner (`AbhayPratapSingh-Tech`) turns on a ruleset for both branch names; the login on this machine is not an admin of the repo.
@@ -24,7 +41,7 @@ All notable changes to this project will be documented here.
 
 ### CI quality gates
 
-- GitHub Actions workflow `.github/workflows/ci.yml` runs on every pull request and on push to `Nidavellir`: `npm ci`, lint, typecheck, workspace tests, and production build (`ubuntu-latest`, Node from `.nvmrc`).
+- GitHub Actions workflow `.github/workflows/ci.yml` runs on every pull request and on push to `Nidavellir` or `uat`: `npm ci`, lint, typecheck, workspace tests, and production build (`ubuntu-latest`, Node from `.nvmrc`).
 - Root `lint` script. ESLint parses TypeScript/JSX via `@typescript-eslint/parser` (value+type aliases such as `ProductType` stay allowed; React Native `__DEV__` is a known global).
 - Workspace `test` scripts are still placeholders that exit 0. Jest/Supertest/RNTL remain open. Native APK/IPA builds are not part of this job.
 - Catalogued under Craft patterns in `PROJECT_INSIGHTS.md`.
