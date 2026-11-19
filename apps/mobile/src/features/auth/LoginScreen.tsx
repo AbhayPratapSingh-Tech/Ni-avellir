@@ -70,10 +70,12 @@ export function LoginScreen() {
       setLoading(true);
       try {
         const result = await authRepository.sendOtp(mobile, 'login');
-        if (result.demoCode) {
-          toast.show(`Dev OTP: ${result.demoCode}`);
-        }
-        navigation.navigate('Otp', { name: `User ${mobile.slice(-4)}`, email: '', phone: mobile });
+        navigation.navigate('Otp', {
+          name: `User ${mobile.slice(-4)}`,
+          email: '',
+          phone: mobile,
+          devVerifyCode: result.demoCode,
+        });
       } catch (error) {
         toast.show(authRepository.getApiErrorMessage(error));
       } finally {

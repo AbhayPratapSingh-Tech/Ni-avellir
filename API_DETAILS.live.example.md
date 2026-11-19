@@ -8,7 +8,17 @@ API:     https://ni-avellir.onrender.com/api/v1
 Health:  https://ni-avellir.onrender.com/health
 ```
 
-Mobile app points here via `apps/mobile/src/config/appConfig.ts` (`apiBaseUrl`).
+Mobile app points here via `apps/mobile/src/config/appConfig.ts` when `appEnvironment` is `production`.
+
+UAT (same routes, separate database `nidavellir_uat`):
+
+```text
+https://nidavellir-api-uat.onrender.com
+API:     https://nidavellir-api-uat.onrender.com/api/v1
+Health:  https://nidavellir-api-uat.onrender.com/health
+```
+
+Set `appEnvironment` to `uat` and reload the app. Compare status codes, not response bodies, for `/health`, `/api/v1/products?limit=1`, `/api/v1/products/categories`, `/api/v1/products/franchises`, `/api/v1/products/featured`, `/api/v1/stores`, and `/api/v1/coupons`.
 
 **Cold start:** Render Free may sleep after ~15 minutes idle. First request can take 30–90s. The app pings `/api/v1/health` on bootstrap + every 20 minutes while foregrounded (`wakeApiServer.ts`).
 

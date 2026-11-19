@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { colors } from '../../theme/tokens';
 
 /** Space above the card so `top: -20` on the close control stays visible. */
@@ -23,9 +23,15 @@ export function CenteredModalClose({ onPress }: Props) {
 }
 
 /** Wrapper that leaves room for the floating close on a centered card. */
-export function CenteredModalShell({ children }: { children: ReactNode }) {
+export function CenteredModalShell({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
   return (
-    <View style={styles.shell} pointerEvents="box-none">
+    <View style={[styles.shell, style]} pointerEvents="box-none">
       {children}
     </View>
   );

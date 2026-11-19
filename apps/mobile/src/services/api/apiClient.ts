@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { appConfig } from '../../config/appConfig';
-import { getAccessToken, getRefreshToken, setSessionTokens } from './sessionTokens';
+import { clearSessionTokens, getAccessToken, getRefreshToken, setSessionTokens } from './sessionTokens';
 import { getGuestSessionId } from '../session/guestSession';
 
 export const apiClient = axios.create({
@@ -29,8 +29,14 @@ let refreshPromise: Promise<void> | null = null;
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const original = error.config;
-    if (error?.response?.status === 401 && !original._retry && getRefreshToken()) {
+    const original = error.config as { url?: string; _retry?: boolean } | undefined;
+    const url = String(original?.url ?? '');
+    if (error?.response?.status === 401 && url.includes('/auth/refresh')) {
+      await clearSessionTokens();
+      error.displayMessage = 'Please sign in again.';
+      return Promise.reject(error);
+    }
+    if (error?.response?.status === 401 && original && !original._retry && getRefreshToken()) {
       original._retry = true;
       if (!refreshPromise) {
         refreshPromise = apiClient
@@ -41,17 +47,28 @@ apiClient.interceptors.response.use(
               refreshToken: data.data.refreshToken,
             });
           })
+          .catch(async (refreshError) => {
+            await clearSessionTokens();
+            throw refreshError;
+          })
           .finally(() => {
             refreshPromise = null;
           });
       }
-      await refreshPromise;
+      try {
+        await refreshPromise;
+      } catch {
+        error.displayMessage = 'Please sign in again.';
+        return Promise.reject(error);
+      }
       return apiClient(original);
     }
     let message = error?.response?.data?.error?.message ?? error?.message ?? 'Network error';
     if (!error?.response && error?.message === 'Network Error') {
       message =
-        'Cannot reach the API server. Start it with `npm run dev:api` (port 4000) and ensure MongoDB is connected.';
+        appConfig.appEnvironment === 'local'
+          ? 'Cannot reach the API server. Start it with `npm run dev:api` (port 4000) and ensure MongoDB is connected.'
+          : 'Cannot reach the shop right now. Try again in a moment.';
     }
     error.displayMessage = message;
     return Promise.reject(error);
