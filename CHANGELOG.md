@@ -4,6 +4,10 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### UAT catalog is anime-only
+
+- `nidavellir_uat` products are spread across many top anime (not one series). Each product keeps its category and uses that series’ own cover. Prices, stock, and product ids are unchanged. The live database was not modified. `npm run theme:uat-catalog --workspace apps/api` is safe to repeat; `npm run seed` against UAT replaces this set with the shared demo catalog.
+
 ### Android debug build memory
 
 - Gradle heap is 4096m, and Jetifier skips `react-android` and `hermes-android`, so `npm run android` does not die with Java heap space while converting those AARs.

@@ -311,6 +311,6 @@ Copy these from the production Render service onto `nidavellir-api-uat` when the
 
 These stay different: `MONGODB_URI` (database `nidavellir_uat`), `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `API_BASE_URL`, `NODE_ENV=staging`, and `RAZORPAY_WEBHOOK_SECRET`. The UAT webhook URL is `https://nidavellir-api-uat.onrender.com/api/v1/payments/razorpay/webhook`. Do not reuse the production webhook secret.
 
-Seed only the UAT database, and only on purpose: `SEED_ALLOW_ATLAS=yes` plus a URI whose database name is `nidavellir_uat`. That fills products, coupons, serviceability, and stores. Users and orders stay empty.
+Seed only the UAT database, and only on purpose: `SEED_ALLOW_ATLAS=yes` plus a URI whose database name is `nidavellir_uat`. That fills products, coupons, serviceability, and stores. Users and orders stay empty. A seed replaces the anime UAT catalog with the shared demo products. To make UAT anime-only again without touching production, run `npm run theme:uat-catalog --workspace apps/api` (it updates `nidavellir_uat` in place and exits if the database name is anything else).
 
 Public routes to compare (status codes, not the JSON bodies): `/health`, `/api/v1/products?limit=1`, `/api/v1/products/categories`, `/api/v1/products/franchises`, `/api/v1/products/featured`, `/api/v1/stores`, `/api/v1/coupons`.
