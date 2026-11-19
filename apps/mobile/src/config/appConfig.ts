@@ -23,7 +23,7 @@ export type DataSourceMode = 'mock' | 'api';
 export type AppEnvironment = 'production' | 'uat' | 'local';
 
 /** Change environment here. Store builds stay `production`. */
-const appEnvironment: AppEnvironment = 'uat';
+const appEnvironment: AppEnvironment = 'production';
 
 const apiBaseUrls: Record<AppEnvironment, string> = {
   production: 'https://ni-avellir.onrender.com/api/v1',
