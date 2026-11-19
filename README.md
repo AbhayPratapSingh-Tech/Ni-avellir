@@ -1,12 +1,29 @@
-# Niðavellir
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/mobile/assets/brand/wordmark/nidavellir-stacked-transparent-for-dark-600w.png">
+    <img alt="Niðavellir" width="360" src="apps/mobile/assets/brand/wordmark/nidavellir-stacked-transparent-for-light-600w.png">
+  </picture>
+</p>
 
-Premium gaming merchandise marketplace — a full-stack mobile commerce app.
+<p align="center">Premium gaming merchandise, mobile shop plus live API.</p>
 
-**Status: Live API on Render + mobile wired.** Default `dataSource: 'api'` and `appEnvironment: 'production'` → `https://ni-avellir.onrender.com/api/v1`. Set `appEnvironment` to `'uat'` for `https://nidavellir-api-uat.onrender.com` (database `nidavellir_uat`). Production git branch **`Nidavellir`**. UAT branch **`uat`**. Resend verify email live; register still succeeds if verify-mail send fails. Character Vault, All Reviews, visual search, For you, Anime facet, idempotent checkout + reconcile shipped. GitHub Actions CI (lint, typecheck, tests, production build) runs on every pull request. OTP, password-reset, and verify-email sends are 5 per minute per IP (typed 429 when blocked); AI chat is not rate limited. Local API via `npm run dev:api` and `appEnvironment: 'local'`. Mock via `appConfig.dataSource: 'mock'`.
+<p align="center">
+  <img alt="React Native bare CLI" src="https://img.shields.io/badge/React_Native-bare%20CLI-20232A?style=flat-square">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white">
+  <a href="https://ni-avellir.onrender.com/health"><img alt="Live API" src="https://img.shields.io/badge/API-live%20on%20Render-FF7A1A?style=flat-square"></a>
+  <img alt="MongoDB" src="https://img.shields.io/badge/MongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white">
+</p>
 
-## What's Included
+## Project Breakdown
 
-- **Mobile app** (bare React Native CLI, no Expo): Onboarding, Login, Signup, OTP, Forgot/Reset/Change password, Devices & sessions (device/OS/IP), Email verify, Forge (Home + YouTube banner + Drop Zone + For you + Character Vault teaser), Categories, Search (+ visual search camera), Products (incl. Anime `tag` PLP), Product Detail (+ reviews, All Reviews, write-review modal, bundles, SVG confidence icons, Buy now → Checkout), Cart (+ coupons), Checkout (+ serviceability, Payment summary, Razorpay / COD), Order Confirmation (Rune XP), Orders, Order Details (cancel/return/exchange), Addresses, Wishlist, Notifications, Account, Edit Profile, Ask Niðavellir, Store locator.
+Niðavellir is a premium gaming merchandise marketplace: a bare React Native mobile app and a Node.js API on MongoDB. The default build talks to the live Render API.
+
+## What's included
+
+| Shop | Checkout | Account |
+|------|----------|---------|
+| Forge (Home, YouTube banner, Drop Zone, For you, Character Vault teaser)<br>Categories<br>Search and visual search camera<br>Products, including Anime `tag` PLP<br>Product detail (reviews, All Reviews, write-review modal, bundles, SVG confidence icons, Buy now → Checkout)<br>Wishlist<br>Store locator | Cart and coupons<br>Checkout (serviceability, Payment summary, Razorpay / COD)<br>Order confirmation (Rune XP)<br>Orders<br>Order details (cancel, return, exchange)<br>Addresses | Onboarding, Login, Signup, OTP<br>Forgot, Reset, and Change password<br>Devices and sessions (device, OS, IP)<br>Email verify<br>Notifications<br>Account and Edit Profile<br>Ask Niðavellir |
+
 - **Backend API** (Node.js + Express + MongoDB Atlas): auth/JWT (register resilient to verify-email send failure), products + bundles + visual-search + for-you + `tag` filter, server cart, addresses, wishlist, coupons, reviews, notifications, serviceability, orders (`Idempotency-Key`), Razorpay Test + COD + reconcile/expiry, webhooks, Resend, AI chat, loyalty, health, seed. Production on **Render Free** (`ni-avellir.onrender.com`, branch `Nidavellir`). UAT on `nidavellir-api-uat.onrender.com` (branch `uat`, database `nidavellir_uat`) with the same routes.
 - **Shared package** (`@nidavellir/shared`): contracts, types, constants, Zod validation, mock catalog, bundle display hints.
 - **Loyalty:** Rune XP is 1 per ₹10 of goods (minimum 10, maximum 500, +25 for a bundle). Account → Rune rewards spends it (₹50 off, free shipping, early Drop Zone). A refund before ship takes those points back.
@@ -68,6 +85,13 @@ Mobile: `dataSource: 'api'`, `allowMockFallback: false`, `appEnvironment: 'produ
 See also `API_DETAILS.example.md`, `DEVELOPER_GUIDE.md`, `AI_AGENT_GUIDE.md`.
 
 > After `npm install`, root `postinstall` builds `@nidavellir/shared`, and mobile `ensure-mobile-node-modules.js` restores RN symlinks for Android Gradle / Metro.
+
+<details>
+<summary><strong>Environments and what’s live</strong></summary>
+
+**Status: Live API on Render + mobile wired.** Default `dataSource: 'api'` and `appEnvironment: 'production'` → `https://ni-avellir.onrender.com/api/v1`. Set `appEnvironment` to `'uat'` for `https://nidavellir-api-uat.onrender.com` (database `nidavellir_uat`). Production git branch **`Nidavellir`**. UAT branch **`uat`**. Resend verify email live; register still succeeds if verify-mail send fails. Character Vault, All Reviews, visual search, For you, Anime facet, idempotent checkout + reconcile shipped. GitHub Actions CI (lint, typecheck, tests, production build) runs on every pull request. OTP, password-reset, and verify-email sends are 5 per minute per IP (typed 429 when blocked); AI chat is not rate limited. Local API via `npm run dev:api` and `appEnvironment: 'local'`. Mock via `appConfig.dataSource: 'mock'`.
+
+</details>
 
 ## Documentation (read these)
 
