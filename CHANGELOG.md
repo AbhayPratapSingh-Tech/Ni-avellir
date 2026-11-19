@@ -4,9 +4,48 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### UAT catalog is anime-only
+
+- `nidavellir_uat` products are spread across many top anime (not one series). Each product keeps its category and uses that series’ own cover. Prices, stock, and product ids are unchanged. The live database was not modified. `npm run theme:uat-catalog --workspace apps/api` is safe to repeat; `npm run seed` against UAT replaces this set with the shared demo catalog.
+
+### Android debug build memory
+
+- Gradle heap is 4096m, and Jetifier skips `react-android` and `hermes-android`, so `npm run android` does not die with Java heap space while converting those AARs.
+
+### Profile photo menu stays inside the dialog
+
+- Choose avatar, Camera, and Photo library are rows inside the white card. Right-aligned uppercase labels were drawing below the card on Android.
+
+### Login OTP stays on the verify screen
+
+- With `SMS_DEMO_MODE=true`, the code from **Send OTP** is passed into the verify screen and shown as the development code. The verify screen no longer asks for a second code immediately, which was hitting the 60-second resend limit and hiding the first code.
+
+### UAT and production switch
+
+- The phone chooses `production`, `uat`, or `local` with `appEnvironment` in `appConfig.ts`. The committed default is `production`. `apiBaseUrl` follows that word. Reload the app after changing it. Account shows Production, UAT, or Local. Store builds stay `production`. Sign-in and the guest cart are stored separately for each environment, so a production login is not sent to UAT. A hosted request that gets no HTTP response says “Cannot reach the shop right now. Try again in a moment.” Local still says to start `npm run dev:api`.
+- UAT is Render service `nidavellir-api-uat` on branch `uat` (`https://nidavellir-api-uat.onrender.com`, Atlas database `nidavellir_uat`). It mounts the same routes as production. Resend, Razorpay Test keys, and `OPENAI_*` are copied from production. The UAT Razorpay Test webhook is `https://nidavellir-api-uat.onrender.com/api/v1/payments/razorpay/webhook` with its own secret. Database URI, JWT secrets, API host, and that webhook secret stay different from production.
+
+### UAT branch is protected like production
+
+- Do not push `uat` or `Nidavellir` directly. Land changes with a pull request from a working branch. CI also runs when a commit reaches `uat` (`.github/workflows/ci.yml`). The agent rule is `.cursor/rules/nidavellir-protected-branches.mdc`. GitHub will still accept a direct push until the repo owner (`AbhayPratapSingh-Tech`) turns on a ruleset for both branch names; the login on this machine is not an admin of the repo.
+
+### Docs stay current when a task finishes
+
+- A finished feature, fix, or task that changes behavior, an API, payments, Rune XP, navigation, or a TODO row updates the matching markdown in that same turn (`CHANGELOG.md`, `PROJECT_INSIGHTS.md`, `AI_AGENT_GUIDE.md`, `TODO.md`, `PROJECT_PROGRESS.md`, `README.md`, `DEVELOPER_GUIDE.md` as applicable). Questions, commit lines, typos, renames, and reverted experiments do not. Rule: `.cursor/rules/nidavellir-docs-on-finish.mdc`.
+
+### Rune rewards and refund reversal
+
+- Account → **Rune rewards**. 100 XP buys a one-use ₹50 coupon (orders of ₹499+), 250 XP buys one free-shipping credit, 1000 XP shows the rest of the Drop Zone pool for 7 days. Each spend is one `REDEEM` ledger row. The same idempotency key does not spend twice. Checkout ignores a larger client discount on that coupon, and the code cannot be used again.
+- Cancelling a paid order before it ships refunds Razorpay (demo payments do not call Razorpay), restores stock, and removes that order’s Rune XP once. Cash on delivery is cancelled before dispatch and the XP is removed. Asking for a return does not refund or reverse XP.
+
+### Seed guard and Rune XP ledger
+
+- `npm run seed` and `npm run seed:ops` refuse an Atlas URI before deleting rows. Override only with `SEED_ALLOW_ATLAS=yes`.
+- Rune XP is 1 per ₹10 of merchandise (minimum 10, maximum 500, +25 for a bundle). Each order inserts one unique `ORDER_EARN` ledger row. Profile sums the ledger.
+
 ### CI quality gates
 
-- GitHub Actions workflow `.github/workflows/ci.yml` runs on every pull request and on push to `Nidavellir`: `npm ci`, lint, typecheck, workspace tests, and production build (`ubuntu-latest`, Node from `.nvmrc`).
+- GitHub Actions workflow `.github/workflows/ci.yml` runs on every pull request and on push to `Nidavellir` or `uat`: `npm ci`, lint, typecheck, workspace tests, and production build (`ubuntu-latest`, Node from `.nvmrc`).
 - Root `lint` script. ESLint parses TypeScript/JSX via `@typescript-eslint/parser` (value+type aliases such as `ProductType` stay allowed; React Native `__DEV__` is a known global).
 - Workspace `test` scripts are still placeholders that exit 0. Jest/Supertest/RNTL remain open. Native APK/IPA builds are not part of this job.
 - Catalogued under Craft patterns in `PROJECT_INSIGHTS.md`.

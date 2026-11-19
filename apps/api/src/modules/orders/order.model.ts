@@ -34,6 +34,12 @@ export interface OrderDocument {
   status: string;
   estimatedDelivery: string;
   cancelReason?: string;
+  refund?: {
+    status: 'pending' | 'processed';
+    providerRefundId?: string;
+    amount?: number;
+    processedAt?: Date;
+  };
   /** Client Idempotency-Key for POST /orders (unique sparse). */
   idempotencyKey?: string;
   /** XP already awarded for this order (0 = none; >0 = awarded once). */
@@ -89,6 +95,12 @@ const orderSchema = new Schema<OrderDocument>(
     status: { type: String, default: 'confirmed' },
     estimatedDelivery: { type: String, required: true },
     cancelReason: { type: String },
+    refund: {
+      status: { type: String, enum: ['pending', 'processed'] },
+      providerRefundId: { type: String },
+      amount: { type: Number, min: 0 },
+      processedAt: { type: Date },
+    },
     idempotencyKey: { type: String, trim: true },
     runeXpAwarded: { type: Number, min: 0, default: 0 },
     returnRequest: {

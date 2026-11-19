@@ -1,4 +1,5 @@
 import { ALSO_LIKE_TAG, DROP_ZONE_TAG, pickDropZoneProducts } from '@nidavellir/shared';
+import { User } from '../auth/user.model.js';
 import { Types } from 'mongoose';
 import { Order } from '../orders/order.model.js';
 import { Wishlist } from '../wishlist/wishlist.model.js';
@@ -23,6 +24,11 @@ export type ListProductsQuery = {
   limit?: number;
 };
 
+async function userHasEarlyDrop(userId: string) {
+  const user = await User.findById(userId).select('dropZoneEarlyUntil').lean();
+  return Boolean(user?.dropZoneEarlyUntil && new Date(user.dropZoneEarlyUntil).getTime() > Date.now());
+}
+
 function isMongoObjectId(value: string) {
   return Types.ObjectId.isValid(value) && String(new Types.ObjectId(value)) === value;
 }
@@ -30,7 +36,7 @@ function isMongoObjectId(value: string) {
 const PAGE_SIZE_MAX = 50;
 
 export class ProductService {
-  async list(query: ListProductsQuery = {}) {
+  async list(query: ListProductsQuery = {}, userId?: string) {
     const page = Math.max(1, query.page ?? 1);
     const limit = Math.min(Math.max(1, query.limit ?? 20), PAGE_SIZE_MAX);
 
@@ -64,7 +70,16 @@ export class ProductService {
 
     if (query.collection === 'drop-zone') {
       const pool = await Product.find({ tags: DROP_ZONE_TAG }).lean();
-      const items = pickDropZoneProducts(pool);
+      const today = pickDropZoneProducts(pool);
+      let items = today;
+      if (userId && (await userHasEarlyDrop(userId))) {
+        const seen = new Set(today.map((product) => String(product._id)));
+        const inStock = pool.filter((product) => (product.stock ?? 0) > 0);
+        const rest = (inStock.length ? inStock : pool).filter(
+          (product) => !seen.has(String(product._id)),
+        );
+        items = [...today, ...rest];
+      }
       return {
         items: items.slice((page - 1) * limit, page * limit),
         pagination: {

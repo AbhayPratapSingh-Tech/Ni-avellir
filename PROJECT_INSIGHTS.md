@@ -30,7 +30,7 @@ Nidavellir is intended to become a real premium gaming merchandise marketplace, 
 - Secure mobile token storage: `react-native-keychain`.
 - Media: Cloudinary.
 - Push notifications: **planned** FCM (Android) + APNs (iOS) via backend; **today** in-app Notifications inbox only (`/api/v1/notifications`). See `TODO.md`.
-- CI: GitHub Actions (`.github/workflows/ci.yml`) on every pull request and on push to `Nidavellir` — lint, typecheck, workspace tests, production build. Fastlane native release builds are still planned.
+- CI: GitHub Actions (`.github/workflows/ci.yml`) on every pull request and on push to `Nidavellir` or `uat` — lint, typecheck, workspace tests, production build. Fastlane native release builds are still planned.
 - Monorepo tooling: Turborepo.
 - Documentation: Swagger/OpenAPI plus repository markdown docs.
 
@@ -121,7 +121,7 @@ Patterns that solid commerce / API projects get right. Knowing *why* these exist
 ### CI quality gates
 
 - **Problem:** A pull request can merge broken TypeScript, lint, or a production compile if those checks only run on one laptop.
-- **Approach:** One GitHub Actions job (`ubuntu-latest`) runs `npm ci`, lint, typecheck, workspace tests, and `npm run build` on every pull request and on every push to `Nidavellir`. Node comes from `.nvmrc`. ESLint uses `@typescript-eslint/parser` so `.ts` / `.tsx` parse. The job does not build an Android APK or iOS app.
+- **Approach:** One GitHub Actions job (`ubuntu-latest`) runs `npm ci`, lint, typecheck, workspace tests, and `npm run build` on every pull request and on every push to `Nidavellir` or `uat`. Node comes from `.nvmrc`. ESLint uses `@typescript-eslint/parser` so `.ts` / `.tsx` parse. The job does not build an Android APK or iOS app. Direct pushes to those two branches are refused by the agent; GitHub enforcement is a ruleset the repo owner still has to turn on.
 - **Where:** `.github/workflows/ci.yml`, root `package.json` `lint` script, `.eslintrc.cjs`.
 - **Live check:** Actions run **CI / check** goes green on the pull request and again on the merge push. Workspace `test` scripts still exit 0 with no Jest suite — that gate is the workflow, not proof of cart or payment behavior. Require the `check` status in branch protection so a pending or red run blocks merge.
 
@@ -137,6 +137,19 @@ Patterns that solid commerce / API projects get right. Knowing *why* these exist
 - **Approach:** Compound `{ userId: 1, createdAt: -1 }` on orders, and `{ stock: 1, reviewCount: -1 }` on products. Leave name search as a collection scan until a real search engine exists. `npm run explain:queries --workspace apps/api` prints `executionStats` for order history, category list, name search, and best sellers. It refuses an Atlas URI.
 - **Targets:** order history and category list should show an index seek (not a collection scan) once those collections grow. Name search may scan. This is not a GitHub Actions gate — CI has no Mongo.
 - **Where:** `order.model.ts`, `product.model.ts`, `apps/api/src/scripts/explain-queries.ts`.
+
+### Seed wipe guard
+
+- **Problem:** `npm run seed` deletes the catalog, coupons, and stores before inserting demo rows. A development env file can point at Atlas, so a habit command can wipe the live shop.
+- **Approach:** Refuse a URI that looks like Atlas before connecting. `SEED_ALLOW_ATLAS=yes` is the only override, and it is not set in the env examples. `seed:ops` uses the same check. `seed:sku` does not delete rows.
+- **Where:** `apps/api/src/scripts/seed-guard.ts`, `seed.ts`, `seed-ops.ts`.
+
+### Rune XP ledger
+
+- **Problem:** A flat 100 XP ignored the order size, and a mutable counter plus a profile recompute from orders could not record a reversal without being overwritten.
+- **Approach:** 1 XP per ₹10 of goods (minimum 10, maximum 500, +25 for a bundle). Insert one `ORDER_EARN` row keyed by `order:{id}:ORDER_EARN`, then increment the cached balance. A second award hits the unique key and does not increment again. Profile sums the ledger and backfills older paid orders. A full refund before the parcel ships inserts one `ORDER_REVERSE` and restores stock. Spending XP inserts one `REDEEM` row (`redeem:{userId}:{reward}:{key}`) and then grants the perk. A repeat key does not spend again. If the perk cannot be saved, that row is voided and the balance comes back.
+- **Where:** `apps/api/src/modules/orders/rune-xp.ts`, `rune-xp-ledger.model.ts`, `modules/loyalty/*`. Awarded from COD create and Razorpay paid finalize. Refund from `POST /orders/:id/cancel` (and `refund.processed`). Catalogue: `GET /loyalty`, `POST /loyalty/redeem`.
+- **Checked:** temporary database, not Atlas. ₹1,499 cash order awards 149 and a second award does not. 100 XP mints one ₹50 coupon; the same key does not spend again; 250 XP is refused at a balance of 49. A ₹600 order ignores a client discount of 999, charges ₹50 off and free shipping (total ₹578), and a second use of that code is rejected without holding stock. Cash cancel restores stock and removes 149 once. A paid cancel refunds in demo mode, restores stock, and removes 54 once. Drop Zone is 4 products normally and 8 with early access.
 
 ### Visual search evaluation
 
@@ -180,7 +193,7 @@ Mobile defaults to **`api`** via `apps/mobile/src/config/appConfig.ts` (set `'mo
 
 1. `dataSource: 'api'`
 2. `allowMockFallback: false` (strict — no silent demo catalog/order fakes for critical paths)
-3. `apiBaseUrl` → live Render `https://ni-avellir.onrender.com/api/v1` (local laptop API was `http://10.0.2.2:4000/api/v1` on Android / `localhost` on iOS)
+3. `appEnvironment` → `'production'` (`https://ni-avellir.onrender.com/api/v1`), `'uat'` (`https://nidavellir-api-uat.onrender.com/api/v1`), or `'local'` (`http://10.0.2.2:4000/api/v1` on Android / `localhost` on iOS). The committed default is `production`. `apiBaseUrl` follows that word. Reload the app after changing it. Store builds stay `production`. Account shows the active name. Keychain sign-in and the guest-cart id are stored per environment. With `SMS_DEMO_MODE=true` (UAT only), the verify screen shows the development OTP. Leave that flag off on the live service. A hosted call with no HTTP response says “Cannot reach the shop right now.”
 4. Follow the agent checklist in **`AI_AGENT_GUIDE.md`**
 5. Render Free: app fires `GET /api/v1/health` on bootstrap **without blocking** the splash, then pings every 20 minutes while foregrounded (`wakeApiServer.ts`) so cold starts are less likely mid-session — not a paid always-on substitute. Home also re-pings `/health` when focused if the last success is older than ~60s. Empty Home shelves on first open usually mean a cold Render wake — not a missing seed. Product shelves use a short in-memory TTL cache (`productRepository`) so revisit paints instantly while a background refresh runs. Deals API uses a Mongo aggregation (no full-collection scan).
 5b. **Drop Zone:** Home countdown bar opens PLP `collection=drop-zone`. Catalog tag `drop-zone-eligible` marks a fixed eligible pool (seed once). API/mock pick today’s SKUs via Asia/Kolkata date hash (`packages/shared/src/dropZone.ts`) — do **not** re-seed daily. Cart tab omits stack back chevron to avoid unhandled `GO_BACK` after PLP/PDP.
@@ -189,14 +202,14 @@ Mobile defaults to **`api`** via `apps/mobile/src/config/appConfig.ts` (set `'mo
 5e. **Visual search (v1):** Search/Home camera → `POST /api/v1/products/visual-search` (multer memory, 10/minute/IP). The vision call uses `OPENAI_VISION_MODEL`, or `OPENAI_MODEL` when that is unset, then keywords hit the existing catalog. Photos are not stored. Live Render: chat `OPENAI_MODEL` is `llama-3.3-70b-versatile` (text only); `OPENAI_VISION_MODEL` is set (`meta-llama/llama-4-scout-17b-16e-instruct`) so camera search does not reuse the chat model. No key, or a text-only model, returns an empty list and `vision_unavailable`. Flag `features.visualSearch`. Rebuild native after Info.plist string updates. Local scorecard: `npm run eval:visual-search --workspace apps/api` (refuses Atlas; hit rate is not a CI gate). The eight Kengan fixtures are on the live catalog; a photo hit rate still needs a vision key on local Mongo.
 5f. **For you (v1):** Home rail + PLP via `GET /api/v1/products/for-you?recentIds=` (optional JWT adds wishlist + recent order lines). Score franchise/category/tags; pad with bestsellers. Flag `features.personalizedHome`. Other Home shelves unchanged.
 5g. **Anime facet:** Home / Categories / drawer use `GET /products?tag=anime` (seed tags). Do **not** treat anime as a `ProductCategory` enum value — that would pull items out of apparel/collectibles/desk-gear. Live smoke: `curl '…/products?tag=anime&limit=3'` → `pagination.total` ~35.
-5h. **Render deploy:** Blueprint + dashboard branch **`Nidavellir`**. Keep them aligned or auto-sync builds the wrong git ref.
+5h. **Render deploy:** Blueprint + dashboard branch **`Nidavellir`** for production (`nidavellir-api`). UAT is a separate dashboard service `nidavellir-api-uat` on branch `uat` (`https://nidavellir-api-uat.onrender.com`, database `nidavellir_uat`). Do not add UAT to `render.yaml`. Both servers mount the same routes. Copy Resend, Razorpay Test keys, and `OPENAI_*` onto UAT. Keep the database URI, JWT secrets, `API_BASE_URL`, `NODE_ENV`, and the Razorpay webhook secret different. The UAT webhook path is `/api/v1/payments/razorpay/webhook`. Seed UAT only with `SEED_ALLOW_ATLAS=yes` and database name `nidavellir_uat`. That seed deletes products. The current UAT catalog is anime-only (same four categories; `npm run theme:uat-catalog --workspace apps/api` rewrites names and art in place and refuses any other database). Do not run that theme script, or a seed, against the live database.
 5i. **Idempotent checkout + reconcile:** `Idempotency-Key` on `POST /orders`; intent reuse; atomic paid + `runeXpAwarded`. In-process reconciler + Order Details: Razorpay capture → paid; unpaid after `PENDING_PAYMENT_EXPIRE_MINUTES` (30) → `payment_expired`. Webhook `payment.failed` ≠ order cancel — expiry cleans abandoned orders.
 5j. **Register + checkout UX:** `POST /auth/register` must not 500 when Resend rejects the verify email — return `emailVerification: { sent: false, reason: 'send_failed' }`. PDP Buy now: await cart add, **no** success toast; Payment step: summary above methods, scroll product cards only if **>3**; Razorpay cancel → “You have cancelled the Payment”.
 5k. **Atomic inventory:** `reserveStock` at order create; `releaseStock` on unpaid cancel/expire only; never decrement again on Razorpay paid (`finalizePaidOrder`). Catalog `stock` drops while payment is pending.
 5l. **Privacy / Contact / Support (Sheets v1):** in-app Privacy Policy; Contact → tab `Contact Nidavellir`; Raise a query → 3-tab Support workbook (`Support Tickets` core + `Support Commerce` + `Support Account App` extras keyed by `CaseNumber`). URLs in `appConfig` (`contactFormWebhookUrl`, `supportFormWebhookUrl`). Mobile keeps query cards / Pending→Resolved in AsyncStorage; Mark Resolved POSTs `action: resolve`. Comments column = typed text only. Apps Script: `apps/api/docs/support-nidavellir-apps-script.js` (Deploy Me + Anyone; POST returns 302 echo — RN uses `redirect: 'manual'`).
-5m. **CI quality gates:** `.github/workflows/ci.yml` on every PR and on push to `Nidavellir` (`npm ci`, lint, typecheck, `npm run test --workspaces`, `npm run build`). Node `.nvmrc` 20.20.2. Jest is not in that job yet — workspace `test` scripts print and exit 0. Native release builds stay out of this workflow.
+5m. **CI quality gates:** `.github/workflows/ci.yml` on every PR and on push to `Nidavellir` or `uat` (`npm ci`, lint, typecheck, `npm run test --workspaces`, `npm run build`). Node `.nvmrc` 20.20.2. Jest is not in that job yet — workspace `test` scripts print and exit 0. Native release builds stay out of this workflow. Do not push `Nidavellir` or `uat` directly.
 5n. **Abuse limits + indexes:** OTP/reset/verify-email sends **5/minute/IP** plus a 60s per-phone/email cooldown. A blocked call returns `429` with `error.type` (example `otp_limit_per_minute_reached`). AI chat is not limited. Orders `{ userId, createdAt }`; products `{ stock, reviewCount }`. Name search stays a regex scan. Local only: `npm run explain:queries --workspace apps/api` (refuses Atlas).
-6. Rune XP is **flat per order** (100 / 500 bundle), not per-SKU sum. Product `sku` / `runeXp` fields remain for display / backfill (`npm run seed:sku --workspace apps/api`).
+6. Rune XP is **1 per ₹10** of goods (subtotal after coupon, not shipping), minimum 10, maximum 500, plus 25 for a bundle. The amount is stored once on the order and as a unique `RuneXpEntry`. Profile sums that ledger. Account → **Rune rewards** spends it: 100 XP → ₹50 coupon, 250 XP → one free-shipping credit, 1000 XP → 7 days of early Drop Zone (today’s four picks plus the rest of the eligible pool). Cancel before ship refunds a paid order and reverses that XP. A return request does not. Product `sku` / `runeXp` fields remain display-only (`npm run seed:sku --workspace apps/api`). `npm run seed` refuses Atlas unless `SEED_ALLOW_ATLAS=yes`.
 
 **Backend path**
 
@@ -290,7 +303,7 @@ Today the app branches on `intent.demoMode` in `CheckoutScreen`: demo sheet + `/
 
 ### Checklist when making the app live
 
-1. Set `appConfig.dataSource` to `'api'` and a real `apiBaseUrl` (staging/production host, HTTPS).
+1. Set `appConfig.dataSource` to `'api'` and `appEnvironment` to `'production'` or `'uat'`. `apiBaseUrl` is derived. Reload the app.
 2. Set **real** Razorpay keys in the API env (start with Test Mode `rzp_test_…`, then Live `rzp_live_…` for store builds). Never ship the **key secret** in the mobile app — only `intent.keyId` is public.
 3. Confirm `POST /payments/intents` returns `demoMode: false`. If it is still `true`, keys are wrong/placeholder — fix API env before expecting Checkout to work.
 4. Mobile must call **`/razorpay/confirm`** after native Checkout success — **not** `/razorpay/demo-complete`.

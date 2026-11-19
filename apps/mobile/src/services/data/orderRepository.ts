@@ -47,7 +47,10 @@ export const orderRepository = {
   async cancel(id: string, reason?: string) {
     const { data } = await apiClient.post(`/orders/${id}/cancel`, { reason });
     await this.syncToStore();
-    return mapOrder(data.data.order);
+    return {
+      order: mapOrder(data.data.order),
+      reversedXp: Number(data.data.reversedXp ?? 0),
+    };
   },
 
   async requestReturn(id: string, reason: string) {

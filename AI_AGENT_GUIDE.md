@@ -22,11 +22,12 @@ Related: `PROJECT_INSIGHTS.md` (incl. **Craft patterns**), `ARCHITECTURE.md`, `a
 
 File: `apps/mobile/src/config/appConfig.ts`
 
-| Setting | College demo | Live / staging |
+| Setting | College demo | Live / UAT |
 |---------|--------------|----------------|
 | `dataSource` | `'mock'` | `'api'` |
 | `allowMockFallback` | `true` | `false` |
-| `apiBaseUrl` | emulator host `:4000/api/v1` | `https://ni-avellir.onrender.com/api/v1` (Render) |
+| `appEnvironment` | n/a | `'production'` (store), `'uat'`, or `'local'` |
+| `apiBaseUrl` | derived | production `https://ni-avellir.onrender.com/api/v1`, UAT `https://nidavellir-api-uat.onrender.com/api/v1`, local Android `10.0.2.2:4000` / iOS `localhost:4000` |
 | `apiKeepAliveIntervalMs` | n/a | `20 * 60 * 1000` — silent `/health` while app is foregrounded |
 
 **Render Free cold starts:** `AppBootstrap` fires `pingApiHealth()` in parallel (non-blocking) and starts `startApiKeepAlive()` (`wakeApiServer.ts`). Spinner only waits for session hydrate + cart refresh.
@@ -51,7 +52,7 @@ npm run dev          # Metro
 npm run android      # or ios (+ pod install first time)
 ```
 
-Confirm API: `curl -sS -m 90 https://ni-avellir.onrender.com/health` (live) or `curl -s http://localhost:4000/health` (local)  
+Confirm API: `curl -sS -m 90 https://ni-avellir.onrender.com/health` (production), `curl -sS -m 90 https://nidavellir-api-uat.onrender.com/health` (UAT), or `curl -s http://localhost:4000/health` (local)  
 Postman: `API_DETAILS.live.example.md` · `python3 scripts/generate-api-details-local.py --live`  
 Local JWT/cURLs (gitignored): `python3 scripts/generate-api-details-local.py`
 
@@ -70,10 +71,10 @@ Do not invent alternate entrypoints. Root `dev` = mobile Metro. Root `dev:api` =
 Checklist when flipping live:
 
 1. API running + seeded products (serviceability + coupons via seed).
-2. Mobile `dataSource: 'api'`, `allowMockFallback: false`.
-3. Auth tokens via `sessionTokens` + Keychain hydrate in `AppBootstrap`.
+2. Mobile `dataSource: 'api'`, `allowMockFallback: false`, `appEnvironment: 'production'` or `'uat'`. Reload after changing it.
+3. Auth tokens via `sessionTokens` + Keychain hydrate in `AppBootstrap`. The Keychain entry is per `appEnvironment`, so a production login is not sent to UAT. A failed refresh clears that environment's tokens.
 4. Guest cart: `X-Guest-Session` header; `POST /cart/merge` after login.
-5. SMS: `SMS_PROVIDER` + MSG91/Twilio keys, or `SMS_DEMO_MODE=true` for dev.
+5. SMS: `SMS_PROVIDER` + MSG91/Twilio keys, or `SMS_DEMO_MODE=true` for dev and UAT. That flag returns `demoCode`; the verify screen shows it. Leave it off on production. The verify screen must not send a second OTP on open when it already has the code.
 6. Razorpay: real keys → `demoMode: false` → native Checkout → `/confirm`.
 7. Rebuild native app after native dependency changes; run `ensure-mobile-node-modules.js` + `pod install` when needed.
 8. AI assistant (optional): `AI_ENABLED` + `OPENAI_*` on API; mobile Home **AI** / Account **Ask Niðavellir**; voice needs mic permission + native rebuild. Live Render chat model is `llama-3.3-70b-versatile`. Camera search needs `OPENAI_VISION_MODEL` (`meta-llama/llama-4-scout-17b-16e-instruct`) because that chat model cannot see images.
@@ -84,12 +85,13 @@ Checklist when flipping live:
 13. **Visual search (v1):** `features.visualSearch` → Search/Home camera → `POST /api/v1/products/visual-search` (multipart `image`, not persisted, 10/minute/IP). Vision uses `OPENAI_VISION_MODEL` or, if unset, `OPENAI_MODEL`. Live Render sets both: text chat model plus a vision model. No key or a text-only model → empty + `vision_unavailable` (never invent SKUs). After a prompt or model change, run `npm run eval:visual-search --workspace apps/api` on seeded local Mongo (refuses Atlas). Native rebuild after Info.plist camera/library copy changes.
 14. **For you Home rail (v1):** `features.personalizedHome` → `GET /api/v1/products/for-you?recentIds=` (optional JWT + wishlist/orders). Guests/no signals → bestsellers. Does not replace Deals/Bestsellers/Also like.
 15. **Anime facet:** use `tag: 'anime'` / `?tag=anime` for Home/Categories/drawer — never `q=anime` alone (name search misses tag-only hits) and never a fifth product category enum.
-16. **Render:** `render.yaml` `branch: Nidavellir` must match the Render dashboard deploy branch. Default remote HEAD is **`Nidavellir`** (not `main`). Prefer new feature branches off `Nidavellir` after PR #22.
+16. **Render and branches:** `render.yaml` describes production only (`nidavellir-api`, branch `Nidavellir`). UAT is the separate dashboard service `nidavellir-api-uat` on branch `uat` (`https://nidavellir-api-uat.onrender.com`, Atlas database `nidavellir_uat`). Do not add UAT to the blueprint. The phone switches with `appEnvironment` in `appConfig.ts` (`production` / `uat` / `local`); reload the app after changing it. Store builds stay `production`. Both servers mount the same routes from `app.ts`. Copy Resend, Razorpay Test keys, and `OPENAI_*` onto UAT. Keep JWT secrets, `MONGODB_URI`, `API_BASE_URL`, `NODE_ENV`, and `RAZORPAY_WEBHOOK_SECRET` different. Do not push `Nidavellir` or `uat` directly. CI runs on every pull request and on push to `Nidavellir` and `uat`. UAT products are anime-themed in `nidavellir_uat` only (same four categories). `npm run theme:uat-catalog --workspace apps/api` rewrites that database in place and refuses any other database name. `npm run seed` on UAT puts the shared demo catalog back.
 17. **Checkout money paths:** send `Idempotency-Key` on `POST /orders`; never invent paid without Razorpay capture / verified confirm / webhook. Unpaid `pending_payment` expires after `PENDING_PAYMENT_EXPIRE_MINUTES` (30) via reconciler + Order Details.
 18. **Register:** never fail the HTTP response solely because verify-email Resend failed — return tokens + `emailVerification.sent: false`.
 19. **Buy now / Payment step:** Buy now adds to cart without success toast; Payment summary scrolls product cards only when count **>3**; Razorpay user-cancel → clear cancel message.
-20. **Atomic inventory:** reserve via `orders/inventory.ts` at `POST /orders`; release only when claiming `pending_payment` → cancelled (user cancel or `payment_expired`); never decrement stock again on `/confirm` / webhook paid.
-21. **Privacy / Contact / Support:** `PrivacyPolicy`, `Contact`, `Support` (query list), `RaiseQuery` (form), `SupportQueryDetail` (Mark Resolved) on Shop + Auth stacks. Local list via `supportQueryStore`; Sheets via Apps Script (`postToAppsScript` — treat 302 + GET echo as success). Contact tab: `Contact Nidavellir`. Support tabs: `Support Tickets` + `Support Commerce` + `Support Account App` (join on `CaseNumber`). URLs: `contactFormWebhookUrl` / `supportFormWebhookUrl`. Script reference: `apps/api/docs/support-nidavellir-apps-script.js`. Login/Signup Need Help → `RaiseQuery` `{ category: 'Account / Login' }`.
+20. **Atomic inventory:** reserve via `orders/inventory.ts` at `POST /orders`; release once when claiming `pending_payment` → cancelled (user cancel or `payment_expired`) or a full refund before ship (`paid` / `confirmed` / `packed` / `processing`). Never decrement stock again on `/confirm` / webhook paid. Do not refund or reverse XP on a return request.
+21. **Rune rewards:** `GET /api/v1/loyalty` and `POST /api/v1/loyalty/redeem` (JWT + `Idempotency-Key`). 100 / 250 / 1000 XP. Personal ₹50 coupons are claimed on `POST /orders` (server discount, `usageLimit` 1). A free-shipping credit zeroes shipping on the next charged order. Early Drop Zone adds the rest of the eligible pool on `GET /products?collection=drop-zone` when the bearer token is present.
+22. **Privacy / Contact / Support:** `PrivacyPolicy`, `Contact`, `Support` (query list), `RaiseQuery` (form), `SupportQueryDetail` (Mark Resolved) on Shop + Auth stacks. Local list via `supportQueryStore`; Sheets via Apps Script (`postToAppsScript` — treat 302 + GET echo as success). Contact tab: `Contact Nidavellir`. Support tabs: `Support Tickets` + `Support Commerce` + `Support Account App` (join on `CaseNumber`). URLs: `contactFormWebhookUrl` / `supportFormWebhookUrl`. Script reference: `apps/api/docs/support-nidavellir-apps-script.js`. Login/Signup Need Help → `RaiseQuery` `{ category: 'Account / Login' }`.
 
 ---
 
@@ -140,9 +142,14 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 
 ### F. Docs agents must keep current
 
-- [ ] Meaningful behavior → update `PROJECT_INSIGHTS.md` and/or this guide.
-- [ ] Phase / TODO changes → `PROJECT_PROGRESS.md`, `TODO.md`, `CHANGELOG.md` when the user expects tracking.
-- [ ] **Craft patterns** — if the change is a production-grade technique good projects usually implement (atomicity, idempotency, reconcile, critical money paths, side-effect resilience, CI quality gates, abuse limits, query indexes, visual search evaluation, etc.), add a short entry under **Craft patterns — skills worth knowing** in `PROJECT_INSIGHTS.md`. Describe problem → approach → where. Do not add git/branch/PR badges for these entries; keep them as standing craft notes.
+Do this in the same turn the work finishes. Do not wait to be asked. Rule: `.cursor/rules/nidavellir-docs-on-finish.mdc`.
+
+- [ ] Finished feature, fix, or task that changes behavior, an API, payments, Rune XP, navigation, or a TODO/phase row → update the matching docs below.
+- [ ] Meaningful behavior → `PROJECT_INSIGHTS.md` and/or this guide. Shopper-visible behavior also → `CHANGELOG.md` Unreleased, and `README.md` if the feature list changed.
+- [ ] Phase / TODO changes → `PROJECT_PROGRESS.md`, `TODO.md`, and `CHANGELOG.md`.
+- [ ] New screen or API module → `DEVELOPER_GUIDE.md` table.
+- [ ] **Craft patterns** — if the change is a production-grade technique good projects usually implement (atomicity, idempotency, reconcile, critical money paths, side-effect resilience, CI quality gates, abuse limits, query indexes, visual search evaluation, seed wipe guard, Rune XP ledger, etc.), add a short entry under **Craft patterns — skills worth knowing** in `PROJECT_INSIGHTS.md`. Describe problem → approach → where. Do not add git/branch/PR badges for these entries; keep them as standing craft notes.
+- [ ] Skip when the product did not change (question, commit lines, typo, rename, reverted experiment) or the user said not to touch the docs.
 
 ---
 
@@ -160,7 +167,7 @@ When you **add or change** a screen, feature, API, or payment path, complete the
 | Reviews / notifications | `reviews/*`, `notifications/*` |
 | Order emails (Resend / console) | `orders/order-email.ts`, `integrations/email/*` |
 | Branded email HTML (verify / reset / order) | `integrations/email/email.factory.ts` |
-| Rune XP award (100 / 500 bundle) | `modules/orders/rune-xp.ts` |
+| Rune XP (1/₹10, ledger, redeem, refund reverse) | `modules/orders/rune-xp.ts`, `rune-xp-ledger.model.ts`, `modules/loyalty/*` |
 | Device session label (mobile) | `services/session/deviceLabel.ts` |
 | SVG icons (PDP / Account) | `components/ui/AppIcon.tsx` |
 | Home YouTube banner | `components/commerce/VideoBanner.tsx` |

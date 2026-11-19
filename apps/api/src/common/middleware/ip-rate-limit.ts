@@ -56,6 +56,14 @@ export const checkoutIpLimit = ipLimit(
   'Checkout limit per minute reached. Try again in a minute.',
 );
 
+/** Rune XP redeem. */
+export const loyaltyIpLimit = ipLimit(
+  60 * 1000,
+  20,
+  'loyalty_limit_per_minute_reached',
+  'Loyalty limit per minute reached. Try again in a minute.',
+);
+
 /** Vision uploads. */
 export const visualSearchIpLimit = ipLimit(
   60 * 1000,

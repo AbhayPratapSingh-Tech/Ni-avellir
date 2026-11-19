@@ -28,7 +28,7 @@ npm run ios   # or: npm run android
 # Optional local API instead of Render:
 #   Put Atlas/local MONGODB_URI in apps/api/.env.development
 #   npm run dev:api && npm run seed --workspace apps/api
-#   set apiBaseUrl to http://localhost:4000/api/v1 (iOS) or 10.0.2.2 (Android)
+#   set appEnvironment to 'local' (iOS localhost, Android 10.0.2.2)
 ```
 
 **Know it works:** `curl -sS -m 90 https://ni-avellir.onrender.com/health` → `"status":"ok"`.  
@@ -94,6 +94,8 @@ Then run on a device/emulator:
 npm run android   # Android
 npm run ios       # iOS (after pod install above)
 ```
+
+Debug Android builds use a 4096m Gradle heap and `android.jetifier.ignorelist=react-android,hermes-android` in `apps/mobile/android/gradle.properties`. Jetifying those AARs runs out of memory at 2048m. Voice and TTS libraries are still jetified.
 
 ### Build Android release APK
 
@@ -245,7 +247,7 @@ Nidavellir/
 | **Email abstraction + branded HTML** | `integrations/email/email.factory.ts` |
 | **Resend provider** | `integrations/email/providers/resend.provider.ts` |
 | **Email smoke test** | `scripts/test-email.ts` (`npm run test:email --workspace apps/api`) |
-| **Rune XP (100 / 500 bundle)** | `modules/orders/rune-xp.ts` |
+| **Rune XP (1 per ₹10, ledger, redeem)** | `modules/orders/rune-xp.ts`, `modules/loyalty/*` |
 | **Error handler** | `common/middleware/error-handler.ts` |
 | **App errors** | `common/errors/app-error.ts` |
 | **Logger** | `common/logger/logger.ts` |
@@ -273,13 +275,17 @@ Nidavellir/
 Edit `apps/mobile/src/config/appConfig.ts`:
 
 ```ts
+const appEnvironment = 'production'; // 'uat' | 'local'
 export const appConfig = {
   dataSource: 'api', // 'mock' for offline college demo
   allowMockFallback: false,
-  apiBaseUrl: 'https://ni-avellir.onrender.com/api/v1',
+  appEnvironment,
+  apiBaseUrl, // derived: production, UAT, or local laptop
   ...
 };
 ```
+
+`production` is `https://ni-avellir.onrender.com/api/v1`. `uat` is `https://nidavellir-api-uat.onrender.com/api/v1` (database `nidavellir_uat`). `local` is `10.0.2.2` on Android and `localhost` on iOS. Reload the app after changing `appEnvironment`. Both Render services mount the same routes.
 
 ### Enable/disable innovative features
 
@@ -323,5 +329,5 @@ npx tsc --noEmit -p apps/api/tsconfig.json
 - Guest may browse + cart; checkout / wishlist need login.
 - The shop uses a **light esports** theme (mist background, ink type, cobalt accent), not a dark neon look. Onboarding slides stay dark/full-bleed.
 - Tabs: **Forge**, **Categories**, **Cart**, **Account**.
-- Talking points: live Resend verify email, Rune XP (100 / 500 bundle), anime bundles, Razorpay Test, Devices & sessions, Home video banner.
+- Talking points: live Resend verify email, Rune XP (1 per ₹10, redeemable), anime bundles, Razorpay Test, Devices & sessions, Home video banner.
 - Full commerce flow: Onboarding → Login → Home → Products → Product Detail → Cart → Checkout → Order Confirmation → Orders / Edit Profile.

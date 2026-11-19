@@ -24,7 +24,11 @@ export function createProductRouter(env?: Env) {
   const service = new ProductService();
   const controller = new ProductController(service, env);
 
-  router.get('/', asyncHandler(controller.list));
+  if (env) {
+    router.get('/', optionalAuth(env), asyncHandler(controller.list));
+  } else {
+    router.get('/', asyncHandler(controller.list));
+  }
   router.get('/bundles', asyncHandler(controller.listBundles));
   router.get('/featured', asyncHandler(controller.getFeatured));
   router.get('/limited-drops', asyncHandler(controller.getLimitedDrops));

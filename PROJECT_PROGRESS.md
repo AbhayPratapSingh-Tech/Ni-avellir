@@ -2,7 +2,7 @@
 
 ## Status
 
-The Niðavellir marketplace is **demo-ready on a live hosted API**. Mobile defaults to `dataSource: 'api'` against **Render Free** (`https://ni-avellir.onrender.com/api/v1`) + MongoDB Atlas. Razorpay Test Mode + webhooks are wired. Mock mode remains available for offline college demos. Render deploys from branch **`Nidavellir`**.
+The Niðavellir marketplace is **demo-ready on a live hosted API**. Mobile defaults to `dataSource: 'api'` and `appEnvironment: 'production'` against **Render Free** (`https://ni-avellir.onrender.com/api/v1`) + MongoDB Atlas. Set `appEnvironment` to `'uat'` to use `https://nidavellir-api-uat.onrender.com` (database `nidavellir_uat`). Razorpay Test Mode + webhooks are wired. Mock mode remains available for offline college demos. Production Render deploys from branch **`Nidavellir`**. UAT deploys from branch **`uat`**.
 
 The shop opens behind onboarding + login/signup. Commerce screens use a light esports theme.
 
@@ -15,14 +15,15 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 - Auth JWT, OTP (demo/SMS), Keychain hydrate, server cart + coupons, addresses, wishlist, reviews, notifications, serviceability, orders, cancel/return/exchange.
 - Razorpay: intents, native SDK confirm, webhook idempotency, demo-complete blocked when real keys set.
 - **Render Free** deploy (`render.yaml` + dashboard branch **`Nidavellir`**, `build:api` / `start:api`) — health OK at `/health`. Verified `GET /products?tag=anime` returns catalog (~35 tagged SKUs).
-- Mobile `apiBaseUrl` → Render; silent `/health` keep-alive on bootstrap + every 20 min (`wakeApiServer.ts`).
+- Mobile `appEnvironment` picks production, UAT, or local. The committed default is `production`. `apiBaseUrl` follows it. Silent `/health` keep-alive on bootstrap + every 20 min (`wakeApiServer.ts`). Account shows the active name. Sign-in and the guest cart are stored per environment.
+- **UAT API** — Render service `nidavellir-api-uat`, branch `uat`, host `https://nidavellir-api-uat.onrender.com`, Atlas database `nidavellir_uat`. Same routes as production. Resend, Razorpay Test keys, and `OPENAI_*` are copied from production. JWT, database URI, `API_BASE_URL`, and the Razorpay webhook secret stay separate.
 - Postman/cURL docs: `API_DETAILS.live.example.md` + `generate-api-details-local.py --live`.
 - **Anime bundles** — `bundleTag` / `isBundleMain`, `GET /products/bundles`, PDP complete-the-bundle, Home banner slider.
 - **Anime Home facet** — `tag=anime` PLP (not a product-type category).
 - **Checkout serviceability** — pincode ETA / shipping / COD gate on Checkout.
 - **Resend email (live on Render)** — verify / reset / order templates branded in `email.factory.ts`; `EMAIL_DEMO_MODE=false` + `RESEND_API_KEY`.
 - **Sessions** — `deviceLabel` / `os` / `ip` on refresh tokens; Devices & sessions UI.
-- **Rune XP** — flat **100**/order, **500** for bundle orders (2+ same `bundleTag`); confirmation shows award.
+- **Rune XP** — 1 per ₹10 of goods (min 10, max 500, +25 bundle), unique ledger row per order; confirmation shows award. Account → Rune rewards (₹50 off / free shipping / early Drop Zone). Cancel before ship refunds and reverses that XP. `npm run seed` refuses Atlas unless `SEED_ALLOW_ATLAS=yes`.
 - **UI polish** — SVG `AppIcon`, `CachedImage` error placeholder, Home YouTube `VideoBanner` autoplay retries, PDP confidence 2×2 + specs/reviews above carousels.
 - **Character Vault v1** — Home teaser under Drop Zone → `CharacterVault` (react-native-filament orbit). Roster: Goku/Vegeta + Kid Levi (idle clip 8). Visit CTA → PLP `{name}'s Vault`. Animator gated by `enableIdleAnimation`; Heimdall `openCharacterVault` (`goku` / `vegeta` / `kid-levi`); flag `features.characterVault`. Merged to **`Nidavellir`** (via `todo` / `reviews`; originally `char_valut`).
 - **All Reviews** — `ProductReviews` screen, review title + hosted avatar, `DELETE /reviews/:id` for the author, Render `tsc` param cast.
@@ -32,7 +33,7 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 - **Checkout UX** — Payment step summary (scroll products only if >3); Buy now silent cart add; Razorpay cancel message.
 - **Atomic inventory** — reserve at order create; release on unpaid cancel/expire; no double-decrement on paid.
 - **Privacy / Contact / Raise a query** — Privacy Policy; Contact sheet; Support 3-tab Sheets (Tickets / Commerce / Account App) + local query cards + Mark Resolved; Need Help from Login/Signup/Profile/Order Details/Returns/FAQ.
-- **CI quality gates** — GitHub Actions on every PR and on push to `Nidavellir`: lint, typecheck, workspace tests, production build (`.github/workflows/ci.yml`). Jest suite still a placeholder.
+- **CI quality gates** — GitHub Actions on every PR and on push to `Nidavellir` or `uat`: lint, typecheck, workspace tests, production build (`.github/workflows/ci.yml`). Do not push those branches directly. Jest suite still a placeholder.
 - **Abuse limits** — OTP/reset/verify-email send **5/min/IP** and a 60s per-phone/email cooldown. Login, auth, coupons, checkout, and visual search return `429` with `error.type`. AI chat is not limited. Razorpay webhook stays unlimited.
 - **Query indexes** — orders `{ userId, createdAt }`; products `{ stock, reviewCount }` for best sellers. Local `npm run explain:queries --workspace apps/api` (refuses Atlas). Name search stays a regex scan.
 - **Visual search evaluation** — local `npm run eval:visual-search --workspace apps/api` (refuses Atlas). Parse / no-key / fake-SKU checks fail closed. Photo hit rate is printed, not a CI gate. Baseline numbers need a seeded local Mongo.
@@ -108,9 +109,9 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 
 Core app + hosted API on **`Nidavellir`** (PR #22 merged `todo`) are **demo-ready**: vault, All Reviews, visual search, For you, Anime tag, idempotent checkout, payment reconcile/30m expiry, resilient register, Buy now + Payment summary UX. CI runs lint, typecheck, tests, and production build on every pull request (PR #26).
 
-Remaining backlog: **`TODO.md` Engineering portfolio roadmap (E1–E5) + Phases 10–13** (plan before implementing):
+Remaining backlog: **`TODO.md` Engineering portfolio roadmap (E1–E5) + Phases 10–13** (plan before implementing). Open from UAT testing, same on both hosts: address **Save** must ignore extra taps (one card per tap), and the first checkout address must use the Addresses form.
 
-- **E1–E5** — production-craft scorecard (~3 done / ~10 partial / ~12 open). Next bet: server discount + order state machine + XP ledger + concurrency tests (CI is in place; the test step is still a no-op). See `TODO.md`.
+- **E1–E5** — production-craft scorecard (~6 done / ~7 partial / ~12 open). Next bet: server discount + order state machine + concurrency tests (CI is in place; the test step is still a no-op). See `TODO.md`.
 - **10** (partial) — still open: Jest/Supertest, authz audit, monitoring, backups, … (CI gates shipped; money-path craft: idempotency / reconcile / atomic inventory — see `PROJECT_INSIGHTS.md` Craft patterns)
 - **11** Customer operations & store (tracking, invoices, admin, legal, FCM, Play/TestFlight)
 - **12** Discovery / retention + **upgrade shipped features**
@@ -130,7 +131,7 @@ Prefer new work from branch **`Nidavellir`**. Keep Render deploy branch = **`Nid
 - Phase 8 auth gate + shop UI polish: **Complete**.
 - Phase 9 catalog / PDP / Account polish: **Complete**.
 - Live API + Render hosting: **Complete** (Free tier; store deploy remaining).
-- Resend verify + branded templates + session labels + Rune XP 100/500: **Complete**.
+- Resend verify + branded templates + session labels: **Complete**. Rune XP (1 per ₹10, rewards, refund before ship): **Complete**.
 - Character Vault v1 (Filament lobby + Heimdall navigate): **Complete**.
 - PDP All Reviews + author delete + hosted review avatar: **Complete**.
 - Visual search + For you Home rail: **Complete**.
@@ -138,8 +139,8 @@ Prefer new work from branch **`Nidavellir`**. Keep Render deploy branch = **`Nid
 - Idempotent checkout + payment reconcile + register/Buy now/Payment summary UX: **Complete** (merged via PR #22).
 - Atomic inventory (reserve / release / no oversell): **Complete**.
 - Privacy Policy + Contact + Raise a query (3-tab Sheets + local status): **Complete**.
-- Engineering portfolio roadmap (E1–E5): **Partial** — atomic inventory + idempotent pay/webhooks + CI quality gates + abuse limits + query indexes **Complete**; server discount / state machine / XP ledger / Jest / outbox / RAG eval and visual-search photo baseline **Open** (see `TODO.md` scorecard).
+- Engineering portfolio roadmap (E1–E5): **Partial** — atomic inventory + idempotent pay/webhooks + CI quality gates + abuse limits + query indexes + XP ledger and rewards **Complete**; public-coupon server discount / state machine / Jest / outbox / RAG eval and visual-search photo baseline **Open** (see `TODO.md` scorecard).
 - Phase 10 reliability & security: **Partial** — money-path + inventory hardening **Complete**; privacy policy in-app **Complete**; CI gates **Complete** (PR #26); rate limits **Complete** (authz still open); Jest/account deletion/monitoring still open (see `TODO.md`).
 - Phase 11 customer ops & store: **Partial** — Sheets support intake **Complete**; tracking/invoices/admin/FCM/store builds still open (see `TODO.md`).
-- Phase 12 discovery / upgrades: Not started (see `TODO.md`).
+- Phase 12 discovery / upgrades: **Partial** — Rune rewards and refund-before-ship **Complete**; the rest of the phase is still open (see `TODO.md`).
 - Phase 13 premium UX & release polish: Not started (see `TODO.md`).

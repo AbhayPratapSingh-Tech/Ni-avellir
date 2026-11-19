@@ -353,9 +353,9 @@ export function EditProfileScreen() {
       >
         <View style={styles.photoMenuOverlay} pointerEvents="box-none">
           <Pressable style={styles.presetBackdrop} onPress={closePhotoMenu} />
-          <CenteredModalShell>
+          <CenteredModalShell style={styles.photoMenuShell}>
             <CenteredModalClose onPress={closePhotoMenu} />
-            <View style={styles.photoMenuCard}>
+            <View style={styles.photoMenuCard} collapsable={false}>
             <View style={styles.photoMenuHeader}>
               <View style={styles.photoMenuTitles}>
                 <Text style={styles.photoMenuTitle}>Profile photo</Text>
@@ -536,25 +536,23 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   photoMenuAction: {
-    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14,
   },
   photoMenuActionText: {
-    color: '#000000',
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-    textAlign: 'right',
-    textTransform: 'uppercase',
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
   },
   photoMenuCard: {
     backgroundColor: colors.surface,
-    borderRadius: 4,
+    borderRadius: 16,
     elevation: 8,
-    marginHorizontal: spacing.xl,
     maxWidth: 360,
-    paddingBottom: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -565,7 +563,14 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
   photoMenuHeader: {
-    marginBottom: spacing.md,
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  photoMenuShell: {
+    maxWidth: 400,
+    paddingHorizontal: spacing.lg,
+    width: '100%',
   },
   photoMenuOverlay: {
     alignItems: 'center',

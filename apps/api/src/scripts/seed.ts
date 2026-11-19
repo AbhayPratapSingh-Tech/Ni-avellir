@@ -7,6 +7,7 @@ import { Coupon } from '../modules/coupons/coupon.model.js';
 import { ServiceabilityRule } from '../modules/serviceability/serviceability.model.js';
 import { Store } from '../modules/stores/stores.model.js';
 import { logger } from '../common/logger/logger.js';
+import { assertSeedAllowed } from './seed-guard.js';
 
 function productIdToSlug(id: string): string {
   return id.startsWith('prod-') ? id.slice(5) : id;
@@ -45,6 +46,7 @@ const products = demoProducts.map(toSeedDoc);
 
 async function seed() {
   const { mongodbUri } = loadEnv();
+  assertSeedAllowed(mongodbUri);
   await mongoose.connect(mongodbUri);
   logger.info('Connected to MongoDB for seeding');
 

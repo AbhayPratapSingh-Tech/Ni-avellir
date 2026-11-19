@@ -16,8 +16,7 @@ import {
   persistAvatarImage,
 } from '../../integrations/media/avatar-upload.js';
 import { SmsService } from '../../integrations/sms/sms.service.js';
-import { Order } from '../orders/order.model.js';
-import { computeOrderRuneXp } from '../orders/rune-xp.js';
+import { syncUserRuneXp } from '../orders/rune-xp.js';
 import { OtpChallenge, type OtpPurpose } from './otp-challenge.model.js';
 import { RefreshToken } from './refresh-token.model.js';
 import { User } from './user.model.js';
@@ -316,34 +315,12 @@ export class AuthService {
     if (!user) {
       throw new AppError('User not found', 404);
     }
-    // Recompute XP from completed orders so Profile stays correct after deploys / older orders.
-    const reconciled = await this.reconcileRuneXp(userId);
+    const reconciled = await syncUserRuneXp(userId);
     if (reconciled !== Number(user.runeXp ?? 0)) {
       user.runeXp = reconciled;
       await user.save();
     }
     return this.sanitizeUser(user);
-  }
-
-  /** Flat XP per completed order (100) or bundle order (500) — matches awardOrderRuneXp. */
-  private async reconcileRuneXp(userId: string): Promise<number> {
-    const orders = await Order.find({
-      userId,
-      status: { $in: ['confirmed', 'paid', 'packed', 'shipped', 'delivered'] },
-    })
-      .select('items')
-      .lean();
-
-    let total = 0;
-    for (const order of orders) {
-      total += await computeOrderRuneXp(
-        order.items.map((item) => ({
-          productId: String(item.productId),
-          quantity: item.quantity,
-        })),
-      );
-    }
-    return total;
   }
 
   async updateProfile(

@@ -8,7 +8,7 @@ import { Screen } from '../../components/ui/Screen';
 import { BrandMark } from '../../components/ui/BrandMark';
 import { AvatarLightbox } from '../../components/ui/AvatarLightbox';
 import { openLogin, signOutAndClearSession, updateProfile } from '../auth/authSlice';
-import { appConfig } from '../../config/appConfig';
+import { appConfig, ENVIRONMENT_LABEL } from '../../config/appConfig';
 import { authRepository, syncLoggedInStores } from '../../services/data/authRepository';
 import { AppIcon, type AppIconName } from '../../components/ui/AppIcon';
 import { useToast } from '../../components/ui/Toast';
@@ -21,6 +21,7 @@ const MENU: Array<{ key: string; label: string; icon: AppIconName }> = [
   { key: 'assistant', label: 'Heimdall', icon: 'chat' },
   { key: 'edit', label: 'Edit profile', icon: 'edit' },
   { key: 'orders', label: 'My Orders', icon: 'package' },
+  { key: 'rewards', label: 'Rune rewards', icon: 'hammer' },
   { key: 'addresses', label: 'Addresses', icon: 'mapPin' },
   { key: 'notifications', label: 'Notifications', icon: 'bell' },
   { key: 'password', label: 'Change password', icon: 'key' },
@@ -103,6 +104,7 @@ export function ProfileScreen() {
         <View style={styles.brandBanner}>
           <BrandMark height={48} />
           <Text style={styles.brandSub}>Forge Account</Text>
+          <Text style={styles.envLabel}>{ENVIRONMENT_LABEL[appConfig.appEnvironment]}</Text>
         </View>
 
         <View style={styles.header}>
@@ -186,6 +188,13 @@ export function ProfileScreen() {
                 }
                 if (item.key === 'orders') {
                   navigation.navigate('Orders');
+                  return;
+                }
+                if (item.key === 'rewards') {
+                  if (!requireLogin({ user, dispatch, toast, reason: 'rewards', returnTab: 'Account' })) {
+                    return;
+                  }
+                  navigation.navigate('RuneRewards');
                   return;
                 }
                 if (item.key === 'addresses') {
@@ -462,6 +471,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginTop: 4,
+    textTransform: 'uppercase',
+  },
+  envLabel: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    marginTop: 2,
     textTransform: 'uppercase',
   },
 });

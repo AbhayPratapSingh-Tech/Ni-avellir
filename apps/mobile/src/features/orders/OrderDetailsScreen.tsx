@@ -43,6 +43,13 @@ function buildTimeline(status: string): TimelineStep[] {
     normalized.includes('ship');
   const pendingPayment = normalized.includes('pending');
 
+  if (normalized.includes('refund')) {
+    return [
+      { key: 'placed', label: 'Order placed', done: true, active: false },
+      { key: 'refunded', label: 'Refunded', done: true, active: true },
+    ];
+  }
+
   if (cancelled) {
     return [
       { key: 'placed', label: 'Order placed', done: true, active: false },
@@ -111,19 +118,39 @@ export function OrderDetailsScreen() {
   const canCancel =
     !statusLower.includes('cancel') &&
     !statusLower.includes('deliver') &&
-    !statusLower.includes('ship');
+    !statusLower.includes('ship') &&
+    !statusLower.includes('refund');
   const canReturnOrExchange =
-    statusLower.includes('deliver') || statusLower.includes('confirm') || statusLower.includes('paid');
+    !statusLower.includes('refund') &&
+    !statusLower.includes('cancel') &&
+    (statusLower.includes('deliver') || statusLower.includes('confirm') || statusLower.includes('paid'));
 
   const runAction = async (kind: 'cancel' | 'return' | 'exchange') => {
     const note = reason.trim() || (kind === 'cancel' ? 'Changed mind' : 'Issue with order');
     setBusy(true);
     try {
-      if (kind === 'cancel') await orderRepository.cancel(order.id, note);
+      let reversedXp = 0;
+      let nextStatus = order.status;
+      if (kind === 'cancel') {
+        const result = await orderRepository.cancel(order.id, note);
+        reversedXp = result.reversedXp;
+        nextStatus = result.order.status;
+      }
       if (kind === 'return') await orderRepository.requestReturn(order.id, note);
       if (kind === 'exchange') await orderRepository.requestExchange(order.id, note);
+      const refunded = nextStatus.toLowerCase().includes('refund');
       toast.show(
-        kind === 'cancel' ? 'Order cancelled' : kind === 'return' ? 'Return requested' : 'Exchange requested',
+        kind === 'return'
+          ? 'Return requested'
+          : kind === 'exchange'
+            ? 'Exchange requested'
+            : reversedXp > 0 && refunded
+              ? `Refund started. ${reversedXp} Rune XP removed.`
+              : reversedXp > 0
+                ? `Order cancelled. ${reversedXp} Rune XP removed.`
+                : refunded
+                  ? 'Refund started'
+                  : 'Order cancelled',
       );
       setReason('');
       await orderRepository.syncToStore();
@@ -137,7 +164,9 @@ export function OrderDetailsScreen() {
   const confirmAction = (kind: 'cancel' | 'return' | 'exchange') => {
     Alert.alert(
       kind === 'cancel' ? 'Cancel order?' : kind === 'return' ? 'Request return?' : 'Request exchange?',
-      'You can add an optional reason below before confirming.',
+      kind === 'cancel'
+        ? 'Card and UPI payments are refunded. Rune XP from this order is removed. Cash on delivery is cancelled before dispatch.'
+        : 'You can add an optional reason below before confirming.',
       [
         { text: 'Back', style: 'cancel' },
         { text: 'Confirm', style: kind === 'cancel' ? 'destructive' : 'default', onPress: () => void runAction(kind) },

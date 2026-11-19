@@ -1,0 +1,17 @@
+---
+description: No direct pushes to production or UAT branches
+alwaysApply: true
+---
+
+# Protected branches
+
+`Nidavellir` is production. `uat` is UAT. Do not push either branch directly, and do not force-push them.
+
+Ship the change on a working branch (such as `todo`), then open a pull request into `uat` or `Nidavellir`.
+
+```bash
+# ❌ git push origin uat
+# ❌ git push origin Nidavellir
+# ✅ git push -u origin todo
+# ✅ gh pr create --base uat
+```

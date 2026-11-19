@@ -17,6 +17,7 @@ const REASON_MESSAGE = {
   changePassword: 'Login to change your password',
   verifyEmail: 'Login to verify email',
   addresses: 'Login to manage addresses',
+  rewards: 'Login to spend Rune XP',
 } as const;
 
 /**

@@ -25,13 +25,13 @@ export function OtpScreen() {
   const verifyingRef = useRef(false);
 
   useEffect(() => {
-    if (appConfig.dataSource !== 'api' || purpose !== 'login' || !phone) return;
+    if (appConfig.dataSource !== 'api' || purpose !== 'login' || !phone || devVerifyCode) return;
     authRepository.sendOtp(phone, 'login').then((result) => {
       if (result.demoCode) setDevCode(result.demoCode);
     }).catch(() => {
       // Login flow may have already sent OTP
     });
-  }, [phone, purpose]);
+  }, [devVerifyCode, phone, purpose]);
 
   useEffect(() => {
     if (appConfig.dataSource !== 'api' || purpose !== 'verify_email' || !email.trim() || devVerifyCode) {
