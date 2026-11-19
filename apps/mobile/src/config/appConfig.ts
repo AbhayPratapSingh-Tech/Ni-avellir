@@ -55,7 +55,7 @@ export const appConfig = {
   allowMockFallback: false,
 
   /** `production` (store), `uat`, or `local`. Change the const above, then reload the app. */
-  appEnvironment,
+  appEnvironment: appEnvironment as AppEnvironment,
 
   /** Base URL of the API server (used only when dataSource === 'api'). Derived from `appEnvironment`. */
   apiBaseUrl: apiBaseUrls[appEnvironment],
