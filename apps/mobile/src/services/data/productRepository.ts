@@ -1,11 +1,12 @@
 import { appConfig } from '../../config/appConfig';
 import {
   ALSO_LIKE_TAG,
+  buildCatalogFilterOptions,
   demoMarketplaceOverview,
   demoProducts,
   pickDropZoneProducts,
 } from '@nidavellir/shared';
-import type { Product } from '@nidavellir/shared';
+import type { CatalogFilterOptions, Product } from '@nidavellir/shared';
 import { apiClient } from '../api/apiClient';
 import { normalizeProduct } from '../../lib/productMedia';
 
@@ -43,6 +44,10 @@ export interface ProductListQuery {
   tag?: string;
   collection?: 'bestsellers' | 'deals' | 'also-like' | 'restocking' | 'drop-zone' | 'for-you';
   bundleTag?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minRating?: number;
+  inStockOnly?: boolean;
   sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
   page?: number;
   limit?: number;
@@ -183,6 +188,25 @@ export interface SearchSuggestions {
 }
 
 function listFromMock(query: ProductListQuery = {}): ProductListResult {
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+
+  const minPrice =
+    query.minPrice !== undefined && Number.isFinite(query.minPrice) ? query.minPrice : undefined;
+  const maxPrice =
+    query.maxPrice !== undefined && Number.isFinite(query.maxPrice) ? query.maxPrice : undefined;
+  const minRating =
+    query.minRating !== undefined &&
+    Number.isFinite(query.minRating) &&
+    query.minRating >= 0 &&
+    query.minRating <= 5
+      ? query.minRating
+      : undefined;
+
+  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
+    return { items: [], page, limit, total: 0, pages: 0 };
+  }
+
   let items = demoProducts.map(normalizeProduct);
   if (query.category) {
     items = items.filter((p) => p.category === query.category);
@@ -214,6 +238,15 @@ function listFromMock(query: ProductListQuery = {}): ProductListResult {
         p.tags.some((tag) => tag.toLowerCase().includes(q)),
     );
   }
+  if (minPrice !== undefined) {
+    items = items.filter((p) => p.price >= minPrice);
+  }
+  if (maxPrice !== undefined) {
+    items = items.filter((p) => p.price <= maxPrice);
+  }
+  if (minRating !== undefined) {
+    items = items.filter((p) => p.rating >= minRating);
+  }
   if (query.collection === 'bestsellers') {
     items.sort((a, b) => b.reviewCount - a.reviewCount);
   }
@@ -232,13 +265,13 @@ function listFromMock(query: ProductListQuery = {}): ProductListResult {
   }
   if (query.collection === 'restocking') {
     items = items.filter((p) => p.stock === 0);
+  } else if (query.inStockOnly) {
+    items = items.filter((p) => p.stock > 0);
   }
   if (query.sort === 'price_asc') items.sort((a, b) => a.price - b.price);
   if (query.sort === 'price_desc') items.sort((a, b) => b.price - a.price);
   if (query.sort === 'rating') items.sort((a, b) => b.rating - a.rating);
 
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
   const total = items.length;
   const start = (page - 1) * limit;
   return {
@@ -292,6 +325,22 @@ function mapProducts(items: unknown[] = []): Product[] {
 
 function categoriesFromMock(): string[] {
   return [...new Set(demoProducts.map((p) => p.category))];
+}
+
+function franchisesFromMock(): string[] {
+  return [...new Set(demoProducts.map((p) => p.franchise).filter(Boolean))].sort();
+}
+
+function filtersFromMock(): CatalogFilterOptions {
+  const prices = demoProducts.map((p) => p.price);
+  const ratings = demoProducts.map((p) => p.rating);
+  return buildCatalogFilterOptions({
+    categories: categoriesFromMock(),
+    franchises: franchisesFromMock(),
+    priceMin: prices.length ? Math.min(...prices) : 0,
+    priceMax: prices.length ? Math.max(...prices) : 0,
+    ratingMax: ratings.length ? Math.max(...ratings) : 5,
+  });
 }
 
 function suggestionsFromMock(): SearchSuggestions {
@@ -642,6 +691,60 @@ export class ProductRepository {
       const { data } = await apiClient.get('/products/categories');
       return data.data.categories;
     }, categoriesFromMock);
+  }
+
+  async getFranchises(): Promise<string[]> {
+    return this.withFallback(async () => {
+      const { data } = await apiClient.get('/products/franchises');
+      const list = (data.data.franchises as string[]) ?? [];
+      return [...list].sort((a, b) => a.localeCompare(b));
+    }, franchisesFromMock);
+  }
+
+  /**
+   * Prefer GET /products/filters. If that route is missing (older deploy),
+   * assemble the same shape from categories / franchises / price sorts so the
+   * PLP slider still works before the API is redeployed.
+   */
+  async getFilterOptions(): Promise<CatalogFilterOptions> {
+    if (!this.useApi) {
+      return filtersFromMock();
+    }
+    try {
+      const { data } = await apiClient.get('/products/filters');
+      const filters = data.data.filters as CatalogFilterOptions;
+      if (filters && Number(filters.priceMax) > Number(filters.priceMin)) {
+        return filters;
+      }
+    } catch {
+      // Older API without /filters — fall through and assemble.
+    }
+
+    try {
+      const [categories, franchises, lowRes, highRes] = await Promise.all([
+        this.getCategories(),
+        this.getFranchises(),
+        apiClient.get('/products', { params: { limit: 1, sort: 'price_asc', page: 1 } }),
+        apiClient.get('/products', { params: { limit: 1, sort: 'price_desc', page: 1 } }),
+      ]);
+      const cheapest = mapProducts(lowRes.data?.data?.items ?? [])[0];
+      const priciest = mapProducts(highRes.data?.data?.items ?? [])[0];
+      const priceMin = cheapest?.price ?? 0;
+      const priceMax = priciest?.price ?? priceMin;
+      const ratingMax = Math.max(cheapest?.rating ?? 0, priciest?.rating ?? 0, 5);
+      return buildCatalogFilterOptions({
+        categories,
+        franchises,
+        priceMin,
+        priceMax,
+        ratingMax,
+      });
+    } catch (error) {
+      if ((appConfig.allowMockFallback as boolean) === true) {
+        return filtersFromMock();
+      }
+      throw error;
+    }
   }
 
   async getSearchSuggestions(): Promise<SearchSuggestions> {

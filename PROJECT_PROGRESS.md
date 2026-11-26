@@ -2,7 +2,7 @@
 
 ## Status
 
-The Niðavellir marketplace is **demo-ready on a live hosted API**. Mobile defaults to `dataSource: 'api'` and `appEnvironment: 'production'` against **Render Free** (`https://ni-avellir.onrender.com/api/v1`) + MongoDB Atlas. Set `appEnvironment` to `'uat'` to use `https://nidavellir-api-uat.onrender.com` (database `nidavellir_uat`). Razorpay Test Mode + webhooks are wired. Mock mode remains available for offline college demos. Production Render deploys from branch **`Nidavellir`**. UAT deploys from branch **`uat`**.
+The Niðavellir marketplace is **demo-ready on a live hosted API**. Mobile defaults to `dataSource: 'api'` and `appEnvironment: 'production'` against **Render Free** (`https://ni-avellir.onrender.com/api/v1`) + MongoDB Atlas. Set `appEnvironment` to `'uat'` to use `https://nidavellir-api-uat.onrender.com` (database `nidavellir_uat`). Razorpay Test Mode + webhooks are wired. Mock mode remains available for offline college demos. Production Render deploys from branch **`todo`**. UAT deploys from branch **`uat`**.
 
 The shop opens behind onboarding + login/signup. Commerce screens use a light esports theme.
 
@@ -71,7 +71,7 @@ See sections below / git history: architecture, monorepo, Express API, RN shop, 
 ### Phase 5: Commerce Screens
 - Home (Forge): brand mark, search, hero banners, live drop / daily sale window (09:00–16:00), video banner slot, circular category slider, deals grid, best-seller slider, **You may also like** 3×2 grid.
 - Categories tab and dedicated Search screen.
-- Product listing (PLP) with collection/category/franchise params and floating cart button.
+- Product listing (PLP) with collection/category/franchise params; Sort & filter modal (options from `GET /products/filters`) on the normal list.
 - Product detail (PDP): image pager, wishlist, share, price + MRP + % off, bank offers, sticky outline add-to-cart / buy now, similar/recent sliders, accordions, reviews teaser + **View all** → All Reviews, centered write-review modal (title, experience, stars), author can remove their review.
 - Cart: My Cart header, deliver-to address card, line items with offer/MRP/price, in/out-of-stock chips, qty + wishlist + delete, sticky Your Total / Hit the Anvil bar.
 - Checkout flow + order confirmation.
@@ -117,7 +117,7 @@ Remaining backlog: **`TODO.md` Engineering portfolio roadmap (E1–E5) + Phases 
 - **12** Discovery / retention + **upgrade shipped features**
 - **13** Premium UX & release polish
 
-Prefer new work from branch **`Nidavellir`**. Keep Render deploy branch = **`Nidavellir`**.
+Prefer shipping live API changes on branch **`todo`** (Render production). Keep `render.yaml` + dashboard branch aligned. UAT still needs a PR into **`uat`**.
 
 ## Approval Log
 
@@ -142,5 +142,5 @@ Prefer new work from branch **`Nidavellir`**. Keep Render deploy branch = **`Nid
 - Engineering portfolio roadmap (E1–E5): **Partial** — atomic inventory + idempotent pay/webhooks + CI quality gates + abuse limits + query indexes + XP ledger and rewards **Complete**; public-coupon server discount / state machine / Jest / outbox / RAG eval and visual-search photo baseline **Open** (see `TODO.md` scorecard).
 - Phase 10 reliability & security: **Partial** — money-path + inventory hardening **Complete**; privacy policy in-app **Complete**; CI gates **Complete** (PR #26); rate limits **Complete** (authz still open); Jest/account deletion/monitoring still open (see `TODO.md`).
 - Phase 11 customer ops & store: **Partial** — Sheets support intake **Complete**; tracking/invoices/admin/FCM/store builds still open (see `TODO.md`).
-- Phase 12 discovery / upgrades: **Partial** — Rune rewards and refund-before-ship **Complete**; the rest of the phase is still open (see `TODO.md`).
+- Phase 12 discovery / upgrades: **Partial** — Rune rewards and refund-before-ship **Complete**; **PLP filters upgrade 1** (price, franchise, rating, in-stock + Filters modal) **Complete** (size remains on Product variants); the rest of the phase is still open (see `TODO.md`).
 - Phase 13 premium UX & release polish: Not started (see `TODO.md`).

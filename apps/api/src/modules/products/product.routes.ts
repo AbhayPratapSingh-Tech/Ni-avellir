@@ -36,6 +36,7 @@ export function createProductRouter(env?: Env) {
   router.get('/best-sellers', asyncHandler(controller.getBestSellers));
   router.get('/categories', asyncHandler(controller.getCategories));
   router.get('/franchises', asyncHandler(controller.getFranchises));
+  router.get('/filters', asyncHandler(controller.getFilters));
   router.get('/suggestions', asyncHandler(controller.getSuggestions));
   // Before /:slug so these paths are not captured as slugs.
   if (env) {

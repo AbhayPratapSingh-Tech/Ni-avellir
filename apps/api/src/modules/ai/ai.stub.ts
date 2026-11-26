@@ -225,12 +225,18 @@ export async function runStubOrchestrator(params: {
     const maxPrice = parsePriceCap(lower);
     const category = detectCategory(lower);
     const search = extractSearchTerms(text);
+    const inStockOnly = /in stock/i.test(lower) ? true : undefined;
+    let minRating: number | undefined;
+    if (/4\s*star/i.test(lower)) minRating = 4;
+    else if (/3\s*star/i.test(lower)) minRating = 3;
     const result = await tools.run(
       'searchProducts',
       {
         search,
         category,
         maxPrice,
+        minRating,
+        inStockOnly,
         limit: 8,
       },
       ctx,

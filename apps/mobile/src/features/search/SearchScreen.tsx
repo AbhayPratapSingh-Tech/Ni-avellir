@@ -6,7 +6,6 @@ import type { Product } from '@nidavellir/shared';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { ProductCard } from '../../components/commerce/ProductCard';
 import { CatalogEmptyState } from '../../components/commerce/CatalogEmptyState';
-import { FloatingCartButton } from '../../components/commerce/FloatingCartButton';
 import { Screen } from '../../components/ui/Screen';
 import { MicButton } from '../../components/ui/MicButton';
 import { CameraSearchButton } from '../../components/ui/CameraSearchButton';
@@ -216,7 +215,6 @@ export function SearchScreen() {
           )}
         />
       )}
-      <FloatingCartButton />
     </Screen>
   );
 }

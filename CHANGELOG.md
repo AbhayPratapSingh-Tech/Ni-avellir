@@ -4,6 +4,14 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### PLP filters upgrade 1
+
+- Normal product list uses a **Filters** button that opens a premium bottom sheet (header badge, dual-range price slider, franchise See All, sticky Clear All / Show Results). Option lists come from `GET /products/filters` (catalog min/max, franchises, ratings, sorts). If that route is not deployed yet, the app assembles the same options from categories / franchises / price-sorted product queries so the slider still works. Applied query uses `minPrice` / `maxPrice` / `franchise` / `minRating` / `inStockOnly` on `GET /products` (and the mock catalog). Category chips stay visible with a franchise filter. Curated rails ignore the controls. Floating cart button removed from PLP and Search. Size is not a list filter yet.
+
+### Render production branch is `todo`
+
+- `render.yaml` and live docs track Render production (`nidavellir-api`) on branch **`todo`**. Pushing `todo` updates production only; UAT still deploys from **`uat`**.
+
 ### UAT catalog is anime-only
 
 - `nidavellir_uat` products are spread across many top anime (not one series). Each product keeps its category and uses that series’ own cover. Prices, stock, and product ids are unchanged. The live database was not modified. `npm run theme:uat-catalog --workspace apps/api` is safe to repeat; `npm run seed` against UAT replaces this set with the shared demo catalog.

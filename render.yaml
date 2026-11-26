@@ -2,7 +2,7 @@
 # Dashboard: set Start Command to `npm run start:api` if this service was created manually.
 # https://render.com/docs/blueprint-spec
 #
-# This file describes production only (`nidavellir-api`, branch Nidavellir).
+# This file describes production only (`nidavellir-api`, branch `todo`).
 # UAT is a separate dashboard service, `nidavellir-api-uat`, branch `uat`,
 # host https://nidavellir-api-uat.onrender.com, database `nidavellir_uat`.
 # Do not add that service here. Applying this blueprint must not recreate or edit it.
@@ -14,7 +14,7 @@ services:
     plan: free
     region: oregon
     # Production deploy branch (dashboard must match, or auto-sync will build the wrong branch).
-    branch: Nidavellir
+    branch: todo
     rootDir: .
     buildCommand: NPM_CONFIG_PRODUCTION=false npm install && npm run build:api
     startCommand: npm run start:api
