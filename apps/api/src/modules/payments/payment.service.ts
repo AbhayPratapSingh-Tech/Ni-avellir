@@ -310,6 +310,7 @@ export class PaymentService {
     await releaseStock(
       claimed.items.map((item) => ({
         productId: String(item.productId),
+        variantId: item.variantId,
         quantity: item.quantity,
       })),
     );

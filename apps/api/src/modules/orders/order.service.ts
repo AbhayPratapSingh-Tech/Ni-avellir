@@ -5,6 +5,7 @@ import { Coupon } from '../coupons/coupon.model.js';
 import { notificationService } from '../notifications/notification.service.js';
 import { Product } from '../products/product.model.js';
 import { serviceabilityService } from '../serviceability/serviceability.service.js';
+import { findVariant, productHasVariants } from '@nidavellir/shared';
 import { releaseStock, reserveStock } from './inventory.js';
 import { sendOrderStatusEmail } from './order-email.js';
 import { Order } from './order.model.js';
@@ -12,7 +13,7 @@ import { awardOrderRuneXp, reverseOrderRuneXp } from './rune-xp.js';
 
 export type CreateOrderInput = {
   customer: { name: string; email: string; phone: string };
-  items: Array<{ productId: string; quantity: number }>;
+  items: Array<{ productId: string; variantId?: string; quantity: number }>;
   shippingAddress: {
     fullName: string;
     phone: string;
@@ -45,7 +46,7 @@ export type OnlineRefundResult = {
 };
 
 async function undoCheckoutHolds(input: {
-  items: Array<{ productId: string; quantity: number }>;
+  items: Array<{ productId: string; variantId?: string; quantity: number }>;
   userId?: string;
   claimedCouponId?: string;
   consumedShippingCredit: boolean;
@@ -110,6 +111,7 @@ export async function applyFullRefund(input: {
   await releaseStock(
     claimed.items.map((item) => ({
       productId: String(item.productId),
+      variantId: item.variantId,
       quantity: item.quantity,
     })),
   );
@@ -140,6 +142,7 @@ type LeanOrderProduct = {
   price: number;
   stock: number;
   imageUrl: string;
+  variants?: Array<{ id: string; size?: string; color?: string; stock: number }>;
 };
 
 async function notifyCancelled(order: {
@@ -194,9 +197,21 @@ export class OrderService {
       if (!product) {
         throw new AppError(`Product not found: ${item.productId}`, 404);
       }
+      if (productHasVariants(product) && !item.variantId) {
+        throw new AppError(`Select a size for ${product.name}`, 422);
+      }
+      const variant = item.variantId ? findVariant(product, item.variantId) : undefined;
+      if (item.variantId && !variant) {
+        throw new AppError(`Variant not found for ${product.name}`, 422);
+      }
+      const sizeLabel = variant?.size ? ` — ${variant.size}` : '';
+      const colorLabel = variant?.color ? ` / ${variant.color}` : '';
       return {
         productId: String(product._id),
-        name: product.name,
+        variantId: item.variantId,
+        size: variant?.size,
+        color: variant?.color,
+        name: `${product.name}${sizeLabel}${colorLabel}`,
         price: product.price,
         quantity: item.quantity,
         imageUrl: product.imageUrl,
@@ -208,6 +223,7 @@ export class OrderService {
     await reserveStock(
       items.map((item) => ({
         productId: item.productId,
+        variantId: item.variantId,
         quantity: item.quantity,
         name: item.name,
       })),
@@ -216,6 +232,7 @@ export class OrderService {
     const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
     const stockLines = items.map((item) => ({
       productId: item.productId,
+      variantId: item.variantId,
       quantity: item.quantity,
     }));
     let discount = input.discount ?? 0;
@@ -412,6 +429,7 @@ export class OrderService {
       await releaseStock(
         claimed.items.map((item) => ({
           productId: String(item.productId),
+          variantId: item.variantId,
           quantity: item.quantity,
         })),
       );

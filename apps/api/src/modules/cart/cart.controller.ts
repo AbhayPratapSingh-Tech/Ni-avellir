@@ -17,7 +17,9 @@ export class CartController {
   }
 
   quote = async (request: CartRequest, response: Response) => {
-    const { items } = request.body as { items?: Array<{ productId: string; quantity: number }> };
+    const { items } = request.body as {
+      items?: Array<{ productId: string; variantId?: string; quantity: number }>;
+    };
     const pincode = request.query.pincode as string | undefined;
     const quote = await this.service.quote(items ?? [], pincode, request.userId);
     response.json({ data: { quote } });
@@ -31,23 +33,52 @@ export class CartController {
 
   addItem = async (request: CartRequest, response: Response) => {
     const { userId, guestSessionId, pincode } = this.ctx(request);
-    const { productId, quantity } = request.body as { productId: string; quantity?: number };
-    const result = await this.service.addItem(userId, guestSessionId, productId, quantity ?? 1, pincode);
+    const { productId, quantity, variantId } = request.body as {
+      productId: string;
+      quantity?: number;
+      variantId?: string;
+    };
+    const result = await this.service.addItem(
+      userId,
+      guestSessionId,
+      productId,
+      quantity ?? 1,
+      pincode,
+      variantId,
+    );
     response.json({ data: result });
   };
 
   updateItem = async (request: CartRequest, response: Response) => {
     const { userId, guestSessionId, pincode } = this.ctx(request);
-    const productId = request.params.productId as string;
-    const { quantity } = request.body as { quantity: number };
-    const result = await this.service.updateItem(userId, guestSessionId, productId, quantity, pincode);
+    const body = request.body as {
+      productId?: string;
+      variantId?: string;
+      quantity: number;
+    };
+    const productId = (body.productId ?? request.params.productId) as string;
+    const result = await this.service.updateItem(
+      userId,
+      guestSessionId,
+      productId,
+      body.quantity,
+      pincode,
+      body.variantId,
+    );
     response.json({ data: result });
   };
 
   removeItem = async (request: CartRequest, response: Response) => {
     const { userId, guestSessionId, pincode } = this.ctx(request);
-    const productId = request.params.productId as string;
-    const result = await this.service.removeItem(userId, guestSessionId, productId, pincode);
+    const body = request.body as { productId?: string; variantId?: string };
+    const productId = (body.productId ?? request.params.productId) as string;
+    const result = await this.service.removeItem(
+      userId,
+      guestSessionId,
+      productId,
+      pincode,
+      body.variantId,
+    );
     response.json({ data: result });
   };
 

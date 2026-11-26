@@ -84,9 +84,16 @@ Patterns that solid commerce / API projects get right. Knowing *why* these exist
 ### Atomic inventory (reserve / release)
 
 - **Problem:** Two checkouts racing the last unit can both “succeed” if stock is read then written separately (oversell).
-- **Approach:** Hold stock with a conditional update (`stock >= qty` then `$inc: -qty`) at order create; release only when an unpaid order is cancelled or expired; never decrement again on paid finalize.
+- **Approach:** Hold stock with a conditional update (`stock >= qty` then `$inc: -qty`) at order create; release only when an unpaid order is cancelled or expired; never decrement again on paid finalize. With size/color variants, the match is on `variants.id` + that variant’s stock, and top-level `product.stock` is decremented in the same update as the denormalized sum.
 - **Where:** `apps/api/src/modules/orders/inventory.ts`, order create + unpaid cancel / `payment_expired`.
-- **Live check:** concurrent last-unit → one `201` / one `422`; cancel restores catalog stock.
+- **Live check:** concurrent last-unit → one `201` / one `422`; cancel restores catalog stock; two sizes of one hoodie are independent units.
+
+### Product variants (size / color)
+
+- **Problem:** Apparel sold as a single stock pool cannot track size sell-outs; cart lines collapse wrong when two sizes share a product id.
+- **Approach:** Embed `variants[]` on the product; cart/order identity is `productId + variantId`; PDP requires a selection; UAT data is migrated in place (`migrate:product-variants`, DB `nidavellir_uat` only) before promoting to `Nidavellir`.
+- **Where:** `packages/shared/src/productVariants.ts`, product model, cart/orders, `ProductDetailScreen`, `apps/api/src/scripts/migrate-product-variants.ts`.
+- **Live check (UAT):** apparel PDP shows S–XL; ATC without size → 422 / blocked; migrate sample JSON shows per-size stock; production Atlas untouched until promote.
 
 ### Idempotent checkout
 

@@ -113,7 +113,7 @@ export function CartScreen() {
       {header}
       <FlatList
         data={items}
-        keyExtractor={(item) => item.product.id}
+        keyExtractor={(item) => `${item.product.id}::${item.variantId ?? ''}`}
         style={styles.listFlex}
         contentContainerStyle={styles.list}
         ListHeaderComponent={
@@ -202,6 +202,7 @@ export function CartScreen() {
               void setCartLineQuantity({
                 product: item.product,
                 quantity,
+                variantId: item.variantId,
                 dispatch,
                 toast,
                 pincode: defaultAddress?.postalCode,
@@ -233,7 +234,7 @@ export function CartScreen() {
                 }
                 // Move to wishlist: wish + remove cart line (optimistic UI).
                 dispatch(toggleItem(item.product));
-                dispatch(removeItem(item.product.id));
+                dispatch(removeItem({ productId: item.product.id, variantId: item.variantId }));
                 toast.show('Moved to wishlist');
                 if (appConfig.dataSource === 'api') {
                   try {
@@ -242,7 +243,11 @@ export function CartScreen() {
                     // ignore sync error
                   }
                   try {
-                    await cartRepository.removeItem(item.product.id, defaultAddress?.postalCode);
+                    await cartRepository.removeItem(
+                      item.product.id,
+                      defaultAddress?.postalCode,
+                      item.variantId,
+                    );
                   } catch (error) {
                     toast.show(getApiErrorMessage(error));
                     void cartRepository.refresh(defaultAddress?.postalCode);
@@ -255,6 +260,7 @@ export function CartScreen() {
               void setCartLineQuantity({
                 product: item.product,
                 quantity: 0,
+                variantId: item.variantId,
                 dispatch,
                 toast,
                 pincode: defaultAddress?.postalCode,
@@ -325,7 +331,12 @@ function CartLineCard({
   const { product, quantity } = item;
   const image = getProductImages(product)[0] || product.imageUrl;
   const off = discountPercent(product);
-  const inStock = product.stock > 0;
+  const variantStock =
+    item.variantId && product.variants?.length
+      ? product.variants.find((variant) => variant.id === item.variantId)?.stock ?? 0
+      : product.stock;
+  const inStock = variantStock > 0;
+  const variantLabel = [item.size, item.color].filter(Boolean).join(' · ');
 
   return (
     <View style={styles.card}>
@@ -340,6 +351,7 @@ function CartLineCard({
           <Text style={[styles.name, off > 0 && styles.nameWithBadge]} numberOfLines={2}>
             {product.name}
           </Text>
+          {variantLabel ? <Text style={styles.variantMeta}>{variantLabel}</Text> : null}
           <PriceOffer product={product} />
           <View style={[styles.stockChip, inStock ? styles.stockIn : styles.stockOut]}>
             <Text style={[styles.stockText, inStock ? styles.stockInText : styles.stockOutText]}>
@@ -573,6 +585,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginRight: 6,
     textDecorationLine: 'line-through',
+  },
+  variantMeta: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+    marginTop: 2,
   },
   name: {
     color: colors.text,

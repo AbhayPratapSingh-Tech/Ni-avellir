@@ -13,8 +13,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { Product } from '@nidavellir/shared';
-import { getBundleDisplayHint, resolveProductBundleTag } from '@nidavellir/shared';
+import type { Product, ProductVariant } from '@nidavellir/shared';
+import {
+  findVariant,
+  getBundleDisplayHint,
+  productAvailableStock,
+  productHasVariants,
+  requiresVariantSelection,
+  resolveProductBundleTag,
+} from '@nidavellir/shared';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { addProductToCart, setCartLineQuantity } from '../../lib/cartActions';
@@ -100,10 +107,22 @@ export function ProductDetailScreen() {
   const insets = useSafeAreaInsets();
   const { product: routeProduct } = route.params;
   const [product, setProduct] = useState(routeProduct);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>();
   const images = getProductImages(product);
+  const variants = product.variants ?? [];
+  const selectedVariant = findVariant(product, selectedVariantId);
+  const availableStock = productAvailableStock(product, selectedVariantId);
+  const needsVariant = requiresVariantSelection(product);
 
   const cartQty =
-    useAppSelector((state) => state.cart.items.find((item) => item.product.id === product.id)?.quantity) ?? 0;
+    useAppSelector(
+      (state) =>
+        state.cart.items.find(
+          (item) =>
+            item.product.id === product.id &&
+            (item.variantId ?? '') === (selectedVariantId ?? ''),
+        )?.quantity,
+    ) ?? 0;
   const wishlisted = useAppSelector((state) =>
     state.wishlist.items.some((item) => productMatchesCatalogId(item, product.id)),
   );
@@ -134,11 +153,34 @@ export function ProductDetailScreen() {
   useEffect(() => {
     const slug = (routeProduct as Product & { slug?: string }).slug ?? routeProduct.id;
     productRepository.getBySlug(slug).then((live) => {
-      if (live) setProduct(live);
+      if (live) {
+        setProduct(live);
+        const nextVariants = live.variants ?? [];
+        if (nextVariants.length) {
+          const preferred =
+            nextVariants.find((variant) => variant.stock > 0) ?? nextVariants[0];
+          setSelectedVariantId(preferred?.id);
+        } else {
+          setSelectedVariantId(undefined);
+        }
+      }
     }).catch(() => {
       // Keep route product — avoid wiping PDP if refresh 404s
     });
   }, [routeProduct]);
+
+  useEffect(() => {
+    if (!productHasVariants(product)) {
+      setSelectedVariantId(undefined);
+      return;
+    }
+    setSelectedVariantId((current) => {
+      if (current && findVariant(product, current)) return current;
+      const preferred =
+        (product.variants ?? []).find((variant) => variant.stock > 0) ?? product.variants?.[0];
+      return preferred?.id;
+    });
+  }, [product]);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,7 +239,17 @@ export function ProductDetailScreen() {
     try {
       let okCount = 0;
       for (const item of members) {
-        const ok = await addProductToCart({ product: item, quantity: 1, dispatch, toast });
+        const variant = (item.variants ?? []).find((row) => row.stock > 0);
+        if (requiresVariantSelection(item) && !variant) continue;
+        const ok = await addProductToCart({
+          product: item,
+          quantity: 1,
+          variantId: variant?.id,
+          size: variant?.size,
+          color: variant?.color,
+          dispatch,
+          toast,
+        });
         if (ok) okCount += 1;
       }
       if (okCount > 0) {
@@ -206,6 +258,44 @@ export function ProductDetailScreen() {
     } finally {
       setBundleBusy(false);
     }
+  };
+
+  const sizeOptions = useMemo(() => {
+    const sizes = new Map<string, ProductVariant>();
+    for (const variant of variants) {
+      if (!variant.size) continue;
+      const existing = sizes.get(variant.size);
+      if (!existing || variant.stock > existing.stock) sizes.set(variant.size, variant);
+    }
+    return [...sizes.values()];
+  }, [variants]);
+
+  const colorOptions = useMemo(() => {
+    const colorsMap = new Map<string, ProductVariant>();
+    for (const variant of variants) {
+      if (!variant.color) continue;
+      const key = variant.color;
+      const existing = colorsMap.get(key);
+      if (!existing || variant.stock > existing.stock) colorsMap.set(key, variant);
+    }
+    return [...colorsMap.values()];
+  }, [variants]);
+
+  const pickVariant = (partial: { size?: string; color?: string }) => {
+    const size = partial.size ?? selectedVariant?.size;
+    const color = partial.color ?? selectedVariant?.color;
+    const match =
+      variants.find(
+        (variant) =>
+          (size ? variant.size === size : true) &&
+          (color ? variant.color === color : true) &&
+          variant.stock > 0,
+      ) ??
+      variants.find(
+        (variant) =>
+          (size ? variant.size === size : true) && (color ? variant.color === color : true),
+      );
+    if (match) setSelectedVariantId(match.id);
   };
 
   const bundleTag = resolveProductBundleTag(product);
@@ -296,10 +386,81 @@ export function ProductDetailScreen() {
             </Text>
           </View>
           <PriceRow product={product} size="detail" />
-          {product.stock > 0 ? (
-            <Text style={styles.stock}>In stock · {product.stock} left</Text>
+          {sizeOptions.length > 0 ? (
+            <View style={styles.optionBlock}>
+              <Text style={styles.optionLabel}>Size</Text>
+              <View style={styles.optionRow}>
+                {sizeOptions.map((variant) => {
+                  const selected = selectedVariant?.size === variant.size;
+                  const soldOut = variant.stock <= 0;
+                  return (
+                    <Pressable
+                      key={variant.id}
+                      style={[
+                        styles.optionChip,
+                        selected && styles.optionChipOn,
+                        soldOut && styles.optionChipDisabled,
+                      ]}
+                      disabled={soldOut}
+                      onPress={() => pickVariant({ size: variant.size })}
+                    >
+                      <Text
+                        style={[
+                          styles.optionChipText,
+                          selected && styles.optionChipTextOn,
+                          soldOut && styles.optionChipTextDisabled,
+                        ]}
+                      >
+                        {variant.size}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
+          {colorOptions.length > 1 ? (
+            <View style={styles.optionBlock}>
+              <Text style={styles.optionLabel}>Color</Text>
+              <View style={styles.optionRow}>
+                {colorOptions.map((variant) => {
+                  const selected = selectedVariant?.color === variant.color;
+                  const soldOut = variant.stock <= 0;
+                  return (
+                    <Pressable
+                      key={`color-${variant.color}`}
+                      style={[
+                        styles.optionChip,
+                        selected && styles.optionChipOn,
+                        soldOut && styles.optionChipDisabled,
+                      ]}
+                      disabled={soldOut}
+                      onPress={() => pickVariant({ color: variant.color })}
+                    >
+                      <Text
+                        style={[
+                          styles.optionChipText,
+                          selected && styles.optionChipTextOn,
+                          soldOut && styles.optionChipTextDisabled,
+                        ]}
+                      >
+                        {variant.color}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
+          {availableStock > 0 ? (
+            <Text style={styles.stock}>
+              In stock · {availableStock} left
+              {selectedVariant?.size ? ` · ${selectedVariant.size}` : ''}
+            </Text>
           ) : (
-            <Text style={styles.outOfStock}>Sold out</Text>
+            <Text style={styles.outOfStock}>
+              {needsVariant && !selectedVariantId ? 'Select a size' : 'Sold out'}
+            </Text>
           )}
 
           <BundleCompleteSection
@@ -476,7 +637,13 @@ export function ProductDetailScreen() {
               style={styles.qtyBtn}
               onPress={() => {
                 const nextQty = cartQty - 1;
-                void setCartLineQuantity({ product, quantity: nextQty, dispatch, toast }).then((ok) => {
+                void setCartLineQuantity({
+                  product,
+                  quantity: nextQty,
+                  variantId: selectedVariantId,
+                  dispatch,
+                  toast,
+                }).then((ok) => {
                   if (ok) toast.show(nextQty === 0 ? 'Removed from cart' : 'Updated cart');
                 });
               }}
@@ -490,6 +657,7 @@ export function ProductDetailScreen() {
                 void setCartLineQuantity({
                   product,
                   quantity: cartQty + 1,
+                  variantId: selectedVariantId,
                   dispatch,
                   toast,
                 }).then((ok) => {
@@ -502,25 +670,45 @@ export function ProductDetailScreen() {
           </View>
         ) : (
           <Pressable
-            style={[styles.addBtn, product.stock === 0 && styles.addBtnDisabled]}
-            disabled={product.stock === 0}
+            style={[styles.addBtn, availableStock === 0 && styles.addBtnDisabled]}
+            disabled={availableStock === 0 || (needsVariant && !selectedVariantId)}
             onPress={() => {
-              void addProductToCart({ product, dispatch, toast }).then((ok) => {
+              void addProductToCart({
+                product,
+                variantId: selectedVariantId,
+                size: selectedVariant?.size,
+                color: selectedVariant?.color,
+                dispatch,
+                toast,
+              }).then((ok) => {
                 if (ok) toast.show('Struck the cart ⚡');
               });
             }}
           >
-            <Text style={styles.addBtnText}>{product.stock > 0 ? 'Add to cart' : 'Out of stock'}</Text>
+            <Text style={styles.addBtnText}>
+              {needsVariant && !selectedVariantId
+                ? 'Select a size'
+                : availableStock > 0
+                  ? 'Add to cart'
+                  : 'Out of stock'}
+            </Text>
           </Pressable>
         )}
         <Pressable
-          style={[styles.buyBtn, product.stock === 0 && styles.addBtnDisabled]}
-          disabled={product.stock === 0}
+          style={[styles.buyBtn, availableStock === 0 && styles.addBtnDisabled]}
+          disabled={availableStock === 0 || (needsVariant && !selectedVariantId)}
           onPress={() => {
             void (async () => {
               // Ensure line is in cart for Checkout / abandon → Cart, but no success toast on Buy now.
               if (cartQty === 0) {
-                const ok = await addProductToCart({ product, dispatch, toast });
+                const ok = await addProductToCart({
+                  product,
+                  variantId: selectedVariantId,
+                  size: selectedVariant?.size,
+                  color: selectedVariant?.color,
+                  dispatch,
+                  toast,
+                });
                 if (!ok) return;
               }
               if (!requireLogin({ user, dispatch, toast, reason: 'checkout' })) {
@@ -911,6 +1099,46 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     textAlign: 'right',
+  },
+  optionBlock: {
+    marginTop: spacing.md,
+  },
+  optionChip: {
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginBottom: 8,
+    marginRight: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  optionChipDisabled: {
+    opacity: 0.4,
+  },
+  optionChipOn: {
+    backgroundColor: colors.accent,
+  },
+  optionChipText: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  optionChipTextDisabled: {
+    color: colors.textMuted,
+  },
+  optionChipTextOn: {
+    color: colors.onAccent,
+  },
+  optionLabel: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   stock: {
     color: colors.text,

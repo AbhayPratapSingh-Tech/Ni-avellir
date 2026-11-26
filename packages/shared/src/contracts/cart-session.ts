@@ -1,5 +1,6 @@
 export type CartItemDto = {
   productId: string;
+  variantId?: string;
   quantity: number;
 };
 
@@ -24,7 +25,14 @@ export type CartQuoteDto = {
 export type CartSessionResponse = {
   cart: { items: CartItemDto[]; couponCode?: string };
   quote: CartQuoteDto & {
-    lines: Array<{ product: unknown; quantity: number; lineTotal: number }>;
+    lines: Array<{
+      product: unknown;
+      variantId?: string;
+      size?: string;
+      color?: string;
+      quantity: number;
+      lineTotal: number;
+    }>;
   };
 };
 

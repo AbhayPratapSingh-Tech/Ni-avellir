@@ -221,8 +221,21 @@ curl -sS -m 60 -X POST "$BASE/orders" -H "Authorization: Bearer $ACCESS" -H 'Con
     \"paymentMethod\":\"cash_on_delivery\",
     \"customer\":{\"name\":\"Postman Live\",\"email\":\"you@example.com\",\"phone\":\"9876543210\"},
     \"shippingAddress\":{\"fullName\":\"Postman Live\",\"phone\":\"9876543210\",\"line1\":\"12 Forge Lane\",\"city\":\"Delhi\",\"state\":\"DL\",\"postalCode\":\"110001\"},
-    \"items\":[{\"productId\":\"$PRODUCT_ID\",\"quantity\":1}]
+    \"items\":[{\"productId\":\"$PRODUCT_ID\",\"variantId\":\"$VARIANT_ID\",\"quantity\":1}]
   }"
+```
+
+Apparel needs `variantId` from `GET /products/:id` → `variants[]`. Omit only when `variants` is empty.
+
+Cart body keys:
+
+```bash
+curl -sS -m 60 -X POST "$BASE/cart/items" -H "Authorization: Bearer $ACCESS" -H 'Content-Type: application/json' \
+  -d "{\"productId\":\"$PRODUCT_ID\",\"variantId\":\"$VARIANT_ID\",\"quantity\":1}"
+curl -sS -m 60 -X PATCH "$BASE/cart/items" -H "Authorization: Bearer $ACCESS" -H 'Content-Type: application/json' \
+  -d "{\"productId\":\"$PRODUCT_ID\",\"variantId\":\"$VARIANT_ID\",\"quantity\":2}"
+curl -sS -m 60 -X DELETE "$BASE/cart/items" -H "Authorization: Bearer $ACCESS" -H 'Content-Type: application/json' \
+  -d "{\"productId\":\"$PRODUCT_ID\",\"variantId\":\"$VARIANT_ID\"}"
 ```
 
 ### Razorpay Test (native checkout path)
@@ -235,7 +248,7 @@ curl -sS -m 60 -X POST "$BASE/orders" -H "Authorization: Bearer $ACCESS" \
     \"paymentMethod\":\"razorpay_demo\",
     \"customer\":{\"name\":\"Postman Live\",\"email\":\"you@example.com\",\"phone\":\"9876543210\"},
     \"shippingAddress\":{\"fullName\":\"Postman Live\",\"phone\":\"9876543210\",\"line1\":\"12 Forge Lane\",\"city\":\"Delhi\",\"state\":\"DL\",\"postalCode\":\"110001\"},
-    \"items\":[{\"productId\":\"$PRODUCT_ID\",\"quantity\":1}]
+    \"items\":[{\"productId\":\"$PRODUCT_ID\",\"variantId\":\"$VARIANT_ID\",\"quantity\":1}]
   }"
 
 # 2) Create payment intent (reuses open intent for this order; demoMode false when Test keys set)

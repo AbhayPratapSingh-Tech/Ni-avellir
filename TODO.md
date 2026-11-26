@@ -204,7 +204,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] **Price-drop alerts** — threshold or any drop; preferences + dedupe.
 - [ ] **Product comparison** — 2–4 SKUs side-by-side (price, rating, specs, stock, discount).
 - [ ] **PLP filters upgrade** — price range, franchise, rating, in-stock, size (beyond current sort).
-- [ ] **Product variants** — size / color with per-variant stock (apparel without sizes is weak).
+- [x] **Product variants** — size / color with per-variant stock (apparel PDP chips; UAT migrate `nidavellir_uat`; pending promote to `Nidavellir` + production migrate).
 - [ ] **Search improvements** — recent + trending, typo tolerance / synonyms, autocomplete, zero-result analytics (Atlas Search if Mongo text is weak).
 - [ ] **Reorder** — one-tap from past Order Details.
 - [ ] **Deep links** — `nidavellir://product/:id` (+ web fallback) for share, push, marketing.

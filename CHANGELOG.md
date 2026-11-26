@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ## Unreleased
 
+### Product variants (UAT first)
+
+- Apparel (and apparel-like limited drops) expose size variants `S / M / L / XL` with per-variant stock. PDP chips pick a size before add-to-cart / Buy now; cart lines are `productId + variantId`; checkout and atomic inventory reserve/release the selected size. Non-apparel products keep product-level stock.
+- Cart `PATCH/DELETE /items` accept body `{ productId, variantId?, quantity? }` (legacy path `/:productId` still works without a variant).
+- Mock catalog + seed write `variants`. UAT in-place migrate: `npm run migrate:product-variants --workspace apps/api` (refuses any DB other than `nidavellir_uat` unless `MIGRATE_ALLOW_PRODUCTION=yes` after a later `Nidavellir` promote). Prefer migrate over seed on UAT so themed anime names/art stay.
+- Ship on branch `variants` → PR into `uat` first; production Atlas stays untouched until UAT sign-off.
+
 ### UAT catalog is anime-only
 
 - `nidavellir_uat` products are spread across many top anime (not one series). Each product keeps its category and uses that series’ own cover. Prices, stock, and product ids are unchanged. The live database was not modified. `npm run theme:uat-catalog --workspace apps/api` is safe to repeat; `npm run seed` against UAT replaces this set with the shared demo catalog.

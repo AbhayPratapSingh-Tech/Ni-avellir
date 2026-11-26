@@ -1,4 +1,5 @@
 import { DROP_ZONE_TAG } from './dropZone.js';
+import { withApparelVariants } from './productVariants.js';
 import type { MarketplaceOverview, Product, ProductCategory } from './types/index.js';
 
 /** Product-type image pools (Unsplash). Used so tees don’t show landscapes, etc. */
@@ -120,7 +121,14 @@ const GALLERY = [
 
 type ProductSeed = Omit<
   Product,
-  'compareAtPrice' | 'imageUrls' | 'specifications' | 'additionalDetails' | 'brand' | 'sku' | 'runeXp'
+  | 'compareAtPrice'
+  | 'imageUrls'
+  | 'specifications'
+  | 'additionalDetails'
+  | 'brand'
+  | 'sku'
+  | 'runeXp'
+  | 'variants'
 > & {
   brand?: string;
   compareAtPrice?: number;
@@ -130,6 +138,7 @@ type ProductSeed = Omit<
   isBundleMain?: boolean;
   specifications?: Record<string, string>;
   additionalDetails?: string;
+  variants?: Product['variants'];
   /** Real franchise art gallery. When set, skips Unsplash product-type pools. */
   imageUrls?: string[];
 };
@@ -2237,7 +2246,9 @@ const seeds: ProductSeed[] = [
   },
 ];
 
-export const demoProducts: Product[] = seeds.map((seed) => completeProduct(seed));
+export const demoProducts: Product[] = seeds
+  .map((seed) => completeProduct(seed))
+  .map((product) => withApparelVariants(product));
 
 export const demoMarketplaceOverview: MarketplaceOverview = {
   products: demoProducts,

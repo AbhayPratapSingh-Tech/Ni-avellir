@@ -163,7 +163,7 @@ export interface CartQuote {
 
 export interface CreateOrderInput {
   customer: { name: string; email: string; phone: string };
-  items: Array<{ productId: string; quantity: number }>;
+  items: Array<{ productId: string; variantId?: string; quantity: number }>;
   shippingAddress: {
     fullName: string;
     phone: string;
@@ -266,6 +266,10 @@ function mapApiProduct(raw: Record<string, unknown>): Product {
     runeXp: raw.runeXp !== undefined ? Number(raw.runeXp) : (undefined as unknown as number),
     bundleTag: raw.bundleTag ? String(raw.bundleTag) : undefined,
     isBundleMain: Boolean(raw.isBundleMain),
+    variants: Array.isArray(raw.variants)
+      ? (raw.variants as Product['variants'])
+      : undefined,
+    stock: Number(raw.stock ?? 0),
   };
   if (slug) {
     (mapped as Product & { slug?: string }).slug = slug;

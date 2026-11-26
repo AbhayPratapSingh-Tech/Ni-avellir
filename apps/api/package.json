@@ -10,6 +10,7 @@
     "lint": "eslint src --ext .ts",
     "seed": "tsx src/scripts/seed.ts",
     "theme:uat-catalog": "tsx src/scripts/theme-uat-catalog.ts",
+    "migrate:product-variants": "tsx src/scripts/migrate-product-variants.ts",
     "seed:ops": "tsx src/scripts/seed-ops.ts",
     "seed:sku": "tsx src/scripts/backfill-sku-xp.ts",
     "test:email": "tsx src/scripts/test-email.ts",

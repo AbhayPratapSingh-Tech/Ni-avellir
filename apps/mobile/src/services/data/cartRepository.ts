@@ -14,12 +14,16 @@ function mapLineProduct(raw: Record<string, unknown>): Product {
     id,
     brand: String(raw.brand ?? franchise),
     franchise,
+    variants: Array.isArray(raw.variants) ? (raw.variants as Product['variants']) : undefined,
   });
 }
 
 function applyCartResponse(data: CartSessionResponse) {
   const items: CartItem[] = data.quote.lines.map((line) => ({
     product: mapLineProduct(line.product as Record<string, unknown>),
+    variantId: line.variantId,
+    size: line.size,
+    color: line.color,
     quantity: line.quantity,
     lineTotal: line.lineTotal,
   }));
@@ -47,21 +51,32 @@ export const cartRepository = {
     applyCartResponse(data.data);
   },
 
-  async addItem(productId: string, quantity = 1, pincode?: string) {
+  async addItem(productId: string, quantity = 1, pincode?: string, variantId?: string) {
     if (appConfig.dataSource !== 'api') return;
-    const { data } = await apiClient.post('/cart/items', { productId, quantity }, { params: { pincode } });
+    const { data } = await apiClient.post(
+      '/cart/items',
+      { productId, quantity, ...(variantId ? { variantId } : {}) },
+      { params: { pincode } },
+    );
     applyCartResponse(data.data);
   },
 
-  async updateItem(productId: string, quantity: number, pincode?: string) {
+  async updateItem(productId: string, quantity: number, pincode?: string, variantId?: string) {
     if (appConfig.dataSource !== 'api') return;
-    const { data } = await apiClient.patch(`/cart/items/${productId}`, { quantity }, { params: { pincode } });
+    const { data } = await apiClient.patch(
+      '/cart/items',
+      { productId, quantity, ...(variantId ? { variantId } : {}) },
+      { params: { pincode } },
+    );
     applyCartResponse(data.data);
   },
 
-  async removeItem(productId: string, pincode?: string) {
+  async removeItem(productId: string, pincode?: string, variantId?: string) {
     if (appConfig.dataSource !== 'api') return;
-    const { data } = await apiClient.delete(`/cart/items/${productId}`, { params: { pincode } });
+    const { data } = await apiClient.delete('/cart/items', {
+      params: { pincode },
+      data: { productId, ...(variantId ? { variantId } : {}) },
+    });
     applyCartResponse(data.data);
   },
 

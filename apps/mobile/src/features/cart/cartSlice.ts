@@ -1,8 +1,11 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { Product } from '@nidavellir/shared';
+import { cartLineKey, type Product } from '@nidavellir/shared';
 
 export interface CartItem {
   product: Product;
+  variantId?: string;
+  size?: string;
+  color?: string;
   quantity: number;
   lineTotal: number;
 }
@@ -44,34 +47,64 @@ function recomputeTotals(state: CartState) {
   state.total = state.subtotal + state.shipping + state.tax;
 }
 
+function matchesLine(item: CartItem, productId: string, variantId?: string) {
+  return cartLineKey(item.product.id, item.variantId) === cartLineKey(productId, variantId);
+}
+
 const cartSlice = createSlice({
   name: 'cart',
   initialState,
   reducers: {
-    addItem(state, action: PayloadAction<{ product: Product; quantity?: number }>) {
-      const { product, quantity = 1 } = action.payload;
-      const existing = state.items.find((item) => item.product.id === product.id);
+    addItem(
+      state,
+      action: PayloadAction<{
+        product: Product;
+        quantity?: number;
+        variantId?: string;
+        size?: string;
+        color?: string;
+      }>,
+    ) {
+      const { product, quantity = 1, variantId, size, color } = action.payload;
+      const existing = state.items.find((item) => matchesLine(item, product.id, variantId));
       if (existing) {
         existing.quantity += quantity;
         existing.lineTotal = existing.product.price * existing.quantity;
       } else {
         state.items.push({
           product,
+          variantId,
+          size,
+          color,
           quantity,
           lineTotal: product.price * quantity,
         });
       }
       recomputeTotals(state);
     },
-    removeItem(state, action: PayloadAction<string>) {
-      state.items = state.items.filter((item) => item.product.id !== action.payload);
+    removeItem(state, action: PayloadAction<{ productId: string; variantId?: string } | string>) {
+      const payload = action.payload;
+      if (typeof payload === 'string') {
+        state.items = state.items.filter((item) => item.product.id !== payload);
+      } else {
+        state.items = state.items.filter(
+          (item) => !matchesLine(item, payload.productId, payload.variantId),
+        );
+      }
       recomputeTotals(state);
     },
-    updateQuantity(state, action: PayloadAction<{ productId: string; quantity: number }>) {
-      const item = state.items.find((i) => i.product.id === action.payload.productId);
+    updateQuantity(
+      state,
+      action: PayloadAction<{ productId: string; variantId?: string; quantity: number }>,
+    ) {
+      const item = state.items.find((i) =>
+        matchesLine(i, action.payload.productId, action.payload.variantId),
+      );
       if (!item) return;
       if (action.payload.quantity <= 0) {
-        state.items = state.items.filter((i) => i.product.id !== action.payload.productId);
+        state.items = state.items.filter(
+          (i) => !matchesLine(i, action.payload.productId, action.payload.variantId),
+        );
       } else {
         item.quantity = action.payload.quantity;
         item.lineTotal = item.product.price * item.quantity;

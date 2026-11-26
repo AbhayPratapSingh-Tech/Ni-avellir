@@ -620,6 +620,7 @@ export function CheckoutScreen() {
     try {
       const itemInputs = cart.items.map((item) => ({
         productId: item.product.id,
+        ...(item.variantId ? { variantId: item.variantId } : {}),
         quantity: item.quantity,
       }));
       const email =

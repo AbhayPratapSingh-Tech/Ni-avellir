@@ -18,6 +18,9 @@ export function createCartRouter(_env: Env) {
   router.post('/quote', asyncHandler(controller.quote));
   router.get('/', asyncHandler(controller.getCart));
   router.post('/items', asyncHandler(controller.addItem));
+  router.patch('/items', asyncHandler(controller.updateItem));
+  router.delete('/items', asyncHandler(controller.removeItem));
+  // Legacy path-only keys (no variant). Prefer body-keyed /items above.
   router.patch('/items/:productId', asyncHandler(controller.updateItem));
   router.delete('/items/:productId', asyncHandler(controller.removeItem));
   router.delete('/', asyncHandler(controller.clearCart));

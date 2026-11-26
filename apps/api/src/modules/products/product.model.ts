@@ -1,6 +1,14 @@
 import { Schema, model, type Model } from 'mongoose';
 import type { ProductCategory, CurrencyCode } from '@nidavellir/shared/types';
 
+export interface ProductVariantDocument {
+  id: string;
+  size?: string;
+  color?: string;
+  sku?: string;
+  stock: number;
+}
+
 export interface ProductDocument {
   name: string;
   slug: string;
@@ -13,6 +21,7 @@ export interface ProductDocument {
   rating: number;
   reviewCount: number;
   stock: number;
+  variants: ProductVariantDocument[];
   tags: string[];
   /** Merch bundle code e.g. DEMON_PR */
   bundleTag?: string;
@@ -26,6 +35,17 @@ export interface ProductDocument {
   createdAt: Date;
   updatedAt: Date;
 }
+
+const productVariantSchema = new Schema<ProductVariantDocument>(
+  {
+    id: { type: String, required: true, trim: true },
+    size: { type: String, trim: true },
+    color: { type: String, trim: true },
+    sku: { type: String, trim: true, lowercase: true },
+    stock: { type: Number, default: 0, min: 0 },
+  },
+  { _id: false },
+);
 
 const productSchema = new Schema<ProductDocument>(
   {
@@ -45,6 +65,7 @@ const productSchema = new Schema<ProductDocument>(
     rating: { type: Number, default: 0, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0 },
     stock: { type: Number, default: 0, min: 0 },
+    variants: { type: [productVariantSchema], default: [] },
     sku: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
     runeXp: { type: Number, default: 10, min: 0 },
     tags: { type: [String], default: [], index: true },
@@ -60,6 +81,7 @@ const productSchema = new Schema<ProductDocument>(
 
 // Best sellers filter stock > 0 and sort reviewCount. No prior index covered that, so it scanned.
 productSchema.index({ stock: 1, reviewCount: -1 });
+productSchema.index({ 'variants.id': 1 });
 
 export const Product: Model<ProductDocument> = model<ProductDocument>(
   'Product',

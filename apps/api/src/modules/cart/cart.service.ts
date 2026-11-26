@@ -1,3 +1,10 @@
+import {
+  cartLineKey,
+  findVariant,
+  productAvailableStock,
+  productHasVariants,
+  requiresVariantSelection,
+} from '@nidavellir/shared';
 import { Types } from 'mongoose';
 import { AppError } from '../../common/errors/app-error.js';
 import { User } from '../auth/user.model.js';
@@ -9,6 +16,7 @@ import { Cart, type CartItem } from './cart.model.js';
 
 export type CartLineInput = {
   productId: string;
+  variantId?: string;
   quantity: number;
 };
 
@@ -25,11 +33,19 @@ type LeanProduct = {
   isLimitedDrop: boolean;
   rating: number;
   reviewCount: number;
+  variants?: Array<{ id: string; size?: string; color?: string; sku?: string; stock: number }>;
 };
 
 export type CartSession = {
   items: CartItem[];
-  lines: Array<{ product: unknown; quantity: number; lineTotal: number }>;
+  lines: Array<{
+    product: unknown;
+    variantId?: string;
+    size?: string;
+    color?: string;
+    quantity: number;
+    lineTotal: number;
+  }>;
   subtotal: number;
   discount: number;
   shipping: number;
@@ -49,6 +65,13 @@ const TAX_RATE = 0.05;
 
 function isMongoObjectId(value: string): boolean {
   return Types.ObjectId.isValid(value) && String(new Types.ObjectId(value)) === value;
+}
+
+function sameLine(a: CartItem, productId: string, variantId?: string) {
+  return (
+    a.productId === productId &&
+    (a.variantId ?? '') === (variantId ?? '')
+  );
 }
 
 export class CartService {
@@ -91,6 +114,18 @@ export class CartService {
     return map.get(ref) ?? null;
   }
 
+  private assertLineVariant(product: LeanProduct, variantId?: string) {
+    if (requiresVariantSelection(product) && !variantId) {
+      throw new AppError(`Select a size for ${product.name}`, 422);
+    }
+    if (variantId && productHasVariants(product) && !findVariant(product, variantId)) {
+      throw new AppError(`Variant not found for ${product.name}`, 422);
+    }
+    if (variantId && !productHasVariants(product)) {
+      throw new AppError(`Unknown variant for ${product.name}`, 422);
+    }
+  }
+
   private async computeQuote(
     items: CartLineInput[],
     couponCode?: string,
@@ -117,10 +152,20 @@ export class CartService {
     const lines = items.map((item) => {
       const product = productMap.get(String(item.productId));
       if (!product) throw new AppError(`Product not found: ${item.productId}`, 404);
-      if (product.stock < item.quantity) {
+      this.assertLineVariant(product, item.variantId);
+      const available = productAvailableStock(product, item.variantId);
+      if (available < item.quantity) {
         throw new AppError(`Insufficient stock for ${product.name}`, 422);
       }
-      return { product, quantity: item.quantity, lineTotal: product.price * item.quantity };
+      const variant = findVariant(product, item.variantId);
+      return {
+        product,
+        variantId: item.variantId,
+        size: variant?.size,
+        color: variant?.color,
+        quantity: item.quantity,
+        lineTotal: product.price * item.quantity,
+      };
     });
 
     const itemCount = lines.reduce((sum, l) => sum + l.quantity, 0);
@@ -198,20 +243,27 @@ export class CartService {
         changed = true;
         continue;
       }
-      const canonicalId = String(product._id);
-      if (item.productId !== canonicalId) {
+      if (requiresVariantSelection(product) && !item.variantId) {
         changed = true;
-        const existing = next.find((row) => row.productId === canonicalId);
-        if (existing) existing.quantity += item.quantity;
-        else next.push({ productId: canonicalId, quantity: item.quantity });
+        continue;
+      }
+      if (item.variantId && !findVariant(product, item.variantId)) {
+        changed = true;
+        continue;
+      }
+      const canonicalId = String(product._id);
+      const variantId = item.variantId;
+      if (item.productId !== canonicalId) changed = true;
+      const existing = next.find((row) => sameLine(row, canonicalId, variantId));
+      if (existing) {
+        changed = true;
+        existing.quantity += item.quantity;
       } else {
-        const existing = next.find((row) => row.productId === canonicalId);
-        if (existing) {
-          changed = true;
-          existing.quantity += item.quantity;
-        } else {
-          next.push(item);
-        }
+        next.push({
+          productId: canonicalId,
+          ...(variantId ? { variantId } : {}),
+          quantity: item.quantity,
+        });
       }
     }
     if (changed) {
@@ -234,16 +286,24 @@ export class CartService {
     productId: string,
     quantity = 1,
     pincode?: string,
+    variantId?: string,
   ) {
     const product = await this.resolveProduct(productId);
     if (!product) {
       throw new AppError('Product not found', 404);
     }
+    this.assertLineVariant(product, variantId);
     const canonicalId = String(product._id);
     const cart = await this.sanitizeCartItems(await this.findOrCreateCart(userId, guestSessionId));
-    const existing = cart.items.find((i) => i.productId === canonicalId);
+    const existing = cart.items.find((i) => sameLine(i, canonicalId, variantId));
     if (existing) existing.quantity += quantity;
-    else cart.items.push({ productId: canonicalId, quantity });
+    else {
+      cart.items.push({
+        productId: canonicalId,
+        ...(variantId ? { variantId } : {}),
+        quantity,
+      });
+    }
     cart.updatedAt = new Date();
     await cart.save();
     return this.getCart(userId, guestSessionId, pincode);
@@ -255,21 +315,38 @@ export class CartService {
     productId: string,
     quantity: number,
     pincode?: string,
+    variantId?: string,
   ) {
     const product = await this.resolveProduct(productId);
     if (!product && quantity > 0) {
       throw new AppError('Product not found', 404);
     }
+    if (product && quantity > 0) {
+      this.assertLineVariant(product, variantId);
+    }
     const canonicalId = product ? String(product._id) : productId;
     const cart = await this.sanitizeCartItems(await this.findOrCreateCart(userId, guestSessionId));
     if (quantity <= 0) {
-      cart.items = cart.items.filter((i) => i.productId !== canonicalId && i.productId !== productId);
+      cart.items = cart.items.filter(
+        (i) =>
+          !sameLine(i, canonicalId, variantId) &&
+          !sameLine(i, productId, variantId),
+      );
     } else {
-      const item = cart.items.find((i) => i.productId === canonicalId || i.productId === productId);
+      const item = cart.items.find(
+        (i) => sameLine(i, canonicalId, variantId) || sameLine(i, productId, variantId),
+      );
       if (item) {
         item.productId = canonicalId;
+        item.variantId = variantId;
         item.quantity = quantity;
-      } else cart.items.push({ productId: canonicalId, quantity });
+      } else {
+        cart.items.push({
+          productId: canonicalId,
+          ...(variantId ? { variantId } : {}),
+          quantity,
+        });
+      }
     }
     await cart.save();
     return this.getCart(userId, guestSessionId, pincode);
@@ -280,11 +357,16 @@ export class CartService {
     guestSessionId: string | undefined,
     productId: string,
     pincode?: string,
+    variantId?: string,
   ) {
     const product = await this.resolveProduct(productId);
     const canonicalId = product ? String(product._id) : productId;
     const cart = await this.findOrCreateCart(userId, guestSessionId);
-    cart.items = cart.items.filter((i) => i.productId !== canonicalId && i.productId !== productId);
+    cart.items = cart.items.filter(
+      (i) =>
+        !sameLine(i, canonicalId, variantId) &&
+        !sameLine(i, productId, variantId),
+    );
     await cart.save();
     return this.getCart(userId, guestSessionId, pincode);
   }
@@ -327,10 +409,18 @@ export class CartService {
       for (const item of guestCart.items) {
         const product = productMap.get(String(item.productId));
         if (!product) continue;
+        if (requiresVariantSelection(product) && !item.variantId) continue;
+        if (item.variantId && !findVariant(product, item.variantId)) continue;
         const canonicalId = String(product._id);
-        const existing = userCart.items.find((i) => i.productId === canonicalId);
+        const existing = userCart.items.find((i) => sameLine(i, canonicalId, item.variantId));
         if (existing) existing.quantity += item.quantity;
-        else userCart.items.push({ productId: canonicalId, quantity: item.quantity });
+        else {
+          userCart.items.push({
+            productId: canonicalId,
+            ...(item.variantId ? { variantId: item.variantId } : {}),
+            quantity: item.quantity,
+          });
+        }
       }
       await userCart.save();
       await Cart.deleteOne({ _id: guestCart._id });
@@ -338,3 +428,5 @@ export class CartService {
     return this.getCart(userId, undefined, pincode);
   }
 }
+
+export { cartLineKey };

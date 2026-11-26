@@ -2,6 +2,7 @@ import { Schema, model, type Model, type Types } from 'mongoose';
 
 export interface CartItem {
   productId: string;
+  variantId?: string;
   quantity: number;
 }
 
@@ -21,6 +22,7 @@ const cartSchema = new Schema<CartDocument>(
     items: [
       {
         productId: { type: String, required: true },
+        variantId: { type: String },
         quantity: { type: Number, required: true, min: 1 },
       },
     ],

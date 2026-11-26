@@ -10,6 +10,9 @@ export interface OrderDocument {
   };
   items: Array<{
     productId: string;
+    variantId?: string;
+    size?: string;
+    color?: string;
     name: string;
     price: number;
     quantity: number;
@@ -70,6 +73,9 @@ const orderSchema = new Schema<OrderDocument>(
     items: [
       {
         productId: { type: String, required: true },
+        variantId: { type: String },
+        size: { type: String },
+        color: { type: String },
         name: { type: String, required: true },
         price: { type: Number, required: true },
         quantity: { type: Number, required: true },

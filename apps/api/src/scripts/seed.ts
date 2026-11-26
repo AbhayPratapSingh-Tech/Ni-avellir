@@ -30,6 +30,7 @@ function toSeedDoc(product: Product) {
     rating: product.rating,
     reviewCount: product.reviewCount,
     stock: product.stock,
+    variants: product.variants ?? [],
     tags: product.tags,
     bundleTag: product.bundleTag,
     isBundleMain: Boolean(product.isBundleMain),

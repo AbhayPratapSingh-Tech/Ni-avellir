@@ -199,7 +199,9 @@ Nidavellir/
 | **Square / slider / price / gallery pieces** | `components/commerce/` |
 | **Product list (PLP)** | `features/products/ProductsScreen.tsx` |
 | **Product detail (PDP) + review teaser** | `features/products/ProductDetailScreen.tsx` |
-| **Cart (address card, stock chips, Hit the Anvil)** | `features/cart/CartScreen.tsx` |
+| **Cart (address card, stock chips, Hit the Anvil)** | `features/cart/CartScreen.tsx` (variant size/color on line; qty keyed by `variantId`) |
+| **PDP size / color variants** | `features/products/ProductDetailScreen.tsx` + `@nidavellir/shared` `productVariants` helpers |
+| **Variant migrate (UAT)** | `npm run migrate:product-variants --workspace apps/api` (`nidavellir_uat` only) |
 | **Coupon offers modal (empty Apply)** | `features/cart/CouponOffersModal.tsx` — `GET /coupons` filtered by public or `userIds` (Mongo id / phone) |
 | **Cart state (Redux slice)** | `features/cart/cartSlice.ts` |
 | **Checkout flow** | `features/checkout/CheckoutScreen.tsx` |

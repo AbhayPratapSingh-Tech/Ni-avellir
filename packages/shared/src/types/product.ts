@@ -17,6 +17,7 @@ export type ProductSummary = {
   tags: string[];
   inStock: boolean;
   stockCount: number;
+  variants?: Array<{ id: string; size?: string; color?: string; sku?: string; stock: number }>;
   isFeatured: boolean;
 };
 

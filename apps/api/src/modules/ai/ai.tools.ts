@@ -7,6 +7,7 @@ import type {
 import { AppError } from '../../common/errors/app-error.js';
 import { CartService } from '../cart/cart.service.js';
 import { OrderService } from '../orders/order.service.js';
+import { Product } from '../products/product.model.js';
 import { ProductService } from '../products/product.service.js';
 import { WishlistService } from '../wishlist/wishlist.service.js';
 import { searchKnowledgeBase } from './ai.knowledge.js';
@@ -132,12 +133,15 @@ export const aiToolDefinitions = [
     type: 'function' as const,
     function: {
       name: 'addToCart',
-      description: 'Add a product to cart by product id.',
+      description:
+        'Add a product to cart by product id. For apparel with sizes, pass variantId (or size S/M/L/XL).',
       parameters: {
         type: 'object',
         properties: {
           productId: { type: 'string' },
           quantity: { type: 'number' },
+          variantId: { type: 'string' },
+          size: { type: 'string', description: 'Apparel size such as S, M, L, or XL' },
         },
         required: ['productId'],
       },
@@ -147,10 +151,13 @@ export const aiToolDefinitions = [
     type: 'function' as const,
     function: {
       name: 'removeFromCart',
-      description: 'Remove a product from cart.',
+      description: 'Remove a product (and optional variant) from cart.',
       parameters: {
         type: 'object',
-        properties: { productId: { type: 'string' } },
+        properties: {
+          productId: { type: 'string' },
+          variantId: { type: 'string' },
+        },
         required: ['productId'],
       },
     },
@@ -159,12 +166,13 @@ export const aiToolDefinitions = [
     type: 'function' as const,
     function: {
       name: 'updateCartQuantity',
-      description: 'Set cart line quantity for a product.',
+      description: 'Set cart line quantity for a product variant.',
       parameters: {
         type: 'object',
         properties: {
           productId: { type: 'string' },
           quantity: { type: 'number' },
+          variantId: { type: 'string' },
         },
         required: ['productId', 'quantity'],
       },
@@ -334,29 +342,68 @@ export class AiTools {
         case 'addToCart': {
           const productId = String(args.productId ?? '');
           const quantity = Math.max(1, Number(args.quantity ?? 1));
-          const session = await this.cart.addItem(
-            ctx.userId,
-            ctx.guestSessionId,
-            productId,
-            quantity,
-          );
-          const cart = mapCartQuote(session.quote as never);
-          return { kind: 'cart', cart, message: 'Added to your cart.' };
+          let variantId = args.variantId ? String(args.variantId) : undefined;
+          const size = args.size ? String(args.size).toUpperCase() : undefined;
+          if (!variantId && size) {
+            const product = await Product.findById(productId).lean();
+            const match = product?.variants?.find(
+              (variant) => String(variant.size ?? '').toUpperCase() === size,
+            );
+            variantId = match?.id;
+            if (product?.variants?.length && !variantId) {
+              return {
+                kind: 'text',
+                message: `Pick a size for that item (${product.variants
+                  .map((variant) => variant.size)
+                  .filter(Boolean)
+                  .join(', ')}).`,
+              };
+            }
+          }
+          try {
+            const session = await this.cart.addItem(
+              ctx.userId,
+              ctx.guestSessionId,
+              productId,
+              quantity,
+              undefined,
+              variantId,
+            );
+            const cart = mapCartQuote(session.quote as never);
+            return { kind: 'cart', cart, message: 'Added to your cart.' };
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : 'Could not add that item to the cart.';
+            if (/select a size/i.test(message)) {
+              return { kind: 'text', message: 'Pick a size before adding that apparel item.' };
+            }
+            throw error;
+          }
         }
         case 'removeFromCart': {
           const productId = String(args.productId ?? '');
-          const session = await this.cart.removeItem(ctx.userId, ctx.guestSessionId, productId);
+          const variantId = args.variantId ? String(args.variantId) : undefined;
+          const session = await this.cart.removeItem(
+            ctx.userId,
+            ctx.guestSessionId,
+            productId,
+            undefined,
+            variantId,
+          );
           const cart = mapCartQuote(session.quote as never);
           return { kind: 'cart', cart, message: 'Removed from your cart.' };
         }
         case 'updateCartQuantity': {
           const productId = String(args.productId ?? '');
           const quantity = Number(args.quantity ?? 1);
+          const variantId = args.variantId ? String(args.variantId) : undefined;
           const session = await this.cart.updateItem(
             ctx.userId,
             ctx.guestSessionId,
             productId,
             quantity,
+            undefined,
+            variantId,
           );
           const cart = mapCartQuote(session.quote as never);
           return { kind: 'cart', cart, message: 'Updated cart quantity.' };

@@ -136,6 +136,7 @@ Prefer new work from branch **`Nidavellir`**. Keep Render deploy branch = **`Nid
 - PDP All Reviews + author delete + hosted review avatar: **Complete**.
 - Visual search + For you Home rail: **Complete**.
 - Anime `tag` facet + Render on **`Nidavellir`**: **Complete**.
+- Product variants (size/color + per-variant stock): **Complete on UAT path** (branch `variants` → PR `uat`; migrate `nidavellir_uat`). Production/`Nidavellir` promote after UAT sign-off.
 - Idempotent checkout + payment reconcile + register/Buy now/Payment summary UX: **Complete** (merged via PR #22).
 - Atomic inventory (reserve / release / no oversell): **Complete**.
 - Privacy Policy + Contact + Raise a query (3-tab Sheets + local status): **Complete**.
