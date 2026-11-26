@@ -24,6 +24,7 @@ export class ProductController {
       limit?: number;
       minPrice?: number;
       maxPrice?: number;
+      minRating?: number;
     } = {
       category: request.query.category as string | undefined,
       search: request.query.search as string | undefined,
@@ -43,12 +44,18 @@ export class ProductController {
       limit: request.query.limit ? Number(request.query.limit) : undefined,
     };
 
-    if (request.query.minPrice !== undefined) {
-      query.minPrice = Number(request.query.minPrice);
-    }
-    if (request.query.maxPrice !== undefined) {
-      query.maxPrice = Number(request.query.maxPrice);
-    }
+    const parseOptionalFinite = (raw: unknown): number | undefined => {
+      if (raw === undefined) return undefined;
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : undefined;
+    };
+
+    const minPrice = parseOptionalFinite(request.query.minPrice);
+    const maxPrice = parseOptionalFinite(request.query.maxPrice);
+    const minRating = parseOptionalFinite(request.query.minRating);
+    if (minPrice !== undefined) query.minPrice = minPrice;
+    if (maxPrice !== undefined) query.maxPrice = maxPrice;
+    if (minRating !== undefined) query.minRating = minRating;
 
     const result = await this.service.list(query, request.userId);
     response.json({ data: result });
@@ -71,6 +78,11 @@ export class ProductController {
   getFranchises = async (_request: Request, response: Response) => {
     const franchises = await this.service.getFranchises();
     response.json({ data: { franchises } });
+  };
+
+  getFilters = async (_request: Request, response: Response) => {
+    const filters = await this.service.getFilters();
+    response.json({ data: { filters } });
   };
 
   getFeatured = async (_request: Request, response: Response) => {

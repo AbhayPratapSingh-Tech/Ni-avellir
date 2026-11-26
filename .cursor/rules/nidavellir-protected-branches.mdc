@@ -5,13 +5,13 @@ alwaysApply: true
 
 # Protected branches
 
-`Nidavellir` is production. `uat` is UAT. Do not push either branch directly, and do not force-push them.
+`Nidavellir` and `uat` stay protected git branches — do not push either directly, and do not force-push them.
 
-Ship the change on a working branch (such as `todo`), then open a pull request into `uat` or `Nidavellir`.
+Live Render **production** (`nidavellir-api`) currently deploys from **`todo`** (see `render.yaml`). UAT still deploys from **`uat`**. Pushing `todo` updates production API only; it does not update UAT.
 
 ```bash
 # ❌ git push origin uat
 # ❌ git push origin Nidavellir
-# ✅ git push -u origin todo
-# ✅ gh pr create --base uat
+# ✅ git push -u origin todo   # production Render when dashboard branch is todo
+# ✅ gh pr create --base uat   # UAT only
 ```
