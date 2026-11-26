@@ -198,6 +198,7 @@ Nidavellir/
 | **Product card** | `components/commerce/ProductCard.tsx` |
 | **Square / slider / price / gallery pieces** | `components/commerce/` |
 | **Product list (PLP)** | `features/products/ProductsScreen.tsx` |
+| **PLP sort & filter modal** | `features/products/ProductsFilterModal.tsx` + `PriceRangeSlider.tsx` + `GET /products/filters` |
 | **Product detail (PDP) + review teaser** | `features/products/ProductDetailScreen.tsx` |
 | **Cart (address card, stock chips, Hit the Anvil)** | `features/cart/CartScreen.tsx` |
 | **Coupon offers modal (empty Apply)** | `features/cart/CouponOffersModal.tsx` — `GET /coupons` filtered by public or `userIds` (Mongo id / phone) |

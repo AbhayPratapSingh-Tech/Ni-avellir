@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -10,31 +10,39 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { Product } from '@nidavellir/shared';
+import type { CatalogFilterOptions, Product } from '@nidavellir/shared';
 import { colors, spacing } from '../../theme/tokens';
 import { ProductCard } from '../../components/commerce/ProductCard';
 import { CatalogEmptyState } from '../../components/commerce/CatalogEmptyState';
-import { FloatingCartButton } from '../../components/commerce/FloatingCartButton';
 import { Screen } from '../../components/ui/Screen';
 import { productRepository } from '../../services/data/productRepository';
 import { useAppDispatch, useAppSelector } from '../../app/store';
 import { addProductToCart } from '../../lib/cartActions';
 import { useToast } from '../../components/ui/Toast';
 import type { RootStackParamList } from '../../app/navigation/types';
+import {
+  DEFAULT_PLP_SORT,
+  ProductsFilterModal,
+  type PlpFilterDraft,
+} from './ProductsFilterModal';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
-const SORTS = ['newest', 'rating', 'price_asc', 'price_desc'] as const;
-type SortValue = (typeof SORTS)[number];
-
-const SORT_LABELS: Record<SortValue, string> = {
-  newest: 'New',
-  rating: 'Top rated',
-  price_asc: 'Price ↑',
-  price_desc: 'Price ↓',
-};
-
 const PAGE_SIZE = 20;
+
+function makeDefaultDraft(
+  franchise?: string,
+  bounds?: { min: number; max: number },
+): PlpFilterDraft {
+  return {
+    sort: DEFAULT_PLP_SORT,
+    minPrice: bounds?.min ?? 0,
+    maxPrice: bounds?.max ?? 0,
+    franchise,
+    minRating: 0,
+    inStockOnly: false,
+  };
+}
 
 export function ProductsScreen() {
   const navigation = useNavigation<Navigation>();
@@ -52,11 +60,13 @@ export function ProductsScreen() {
   const recentItems = useAppSelector((state) => state.recent.items);
   const wishlistItems = useAppSelector((state) => state.wishlist.items);
   const [products, setProducts] = useState<Product[]>([]);
-  const [sort, setSort] = useState<SortValue>('newest');
-  const [sortOpen, setSortOpen] = useState(false);
+  const [filterOptions, setFilterOptions] = useState<CatalogFilterOptions | null>(null);
+  const [applied, setApplied] = useState<PlpFilterDraft>(() =>
+    makeDefaultDraft(params.franchise),
+  );
+  const [modalOpen, setModalOpen] = useState(false);
   const [category, setCategory] = useState<string | undefined>(params.category);
   const [tag, setTag] = useState<string | undefined>(params.tag);
-  const [franchise, setFranchise] = useState<string | undefined>(params.franchise);
   const [search, setSearch] = useState(params.q);
   const [collection, setCollection] = useState(params.collection);
   const [categories, setCategories] = useState<string[]>([]);
@@ -67,22 +77,113 @@ export function ProductsScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const loadingMoreRef = useRef(false);
 
+  const showFilters = !collection;
+
+  const catalogMin = filterOptions?.priceMin ?? 0;
+  const catalogMax = Math.max(catalogMin, filterOptions?.priceMax ?? 0);
+
+  const priceQuery = useMemo(() => {
+    if (!filterOptions || catalogMax <= 0) return {};
+    const narrowed =
+      applied.minPrice > catalogMin || applied.maxPrice < catalogMax;
+    if (!narrowed) return {};
+    return {
+      minPrice: applied.minPrice,
+      maxPrice: applied.maxPrice,
+    };
+  }, [applied.minPrice, applied.maxPrice, catalogMin, catalogMax, filterOptions]);
+
+  const filtersActive =
+    showFilters &&
+    (Boolean(priceQuery.minPrice !== undefined || priceQuery.maxPrice !== undefined) ||
+      applied.minRating > 0 ||
+      applied.inStockOnly ||
+      Boolean(applied.franchise) ||
+      applied.sort !== DEFAULT_PLP_SORT);
+
+  const sortLabel =
+    filterOptions?.sorts.find((s) => s.value === applied.sort)?.label ?? 'Newest';
+
   useEffect(() => {
     setSearch(params.q);
     setCollection(params.collection);
     setTag(params.tag);
     if (params.franchise) {
-      setFranchise(params.franchise);
-      setCategory(undefined);
+      setApplied((prev) => ({ ...prev, franchise: params.franchise }));
     } else {
-      setFranchise(undefined);
+      setApplied((prev) => ({ ...prev, franchise: undefined }));
+    }
+    if (params.category) {
       setCategory(params.category);
+    } else if (!params.franchise) {
+      setCategory(undefined);
     }
   }, [params.category, params.tag, params.franchise, params.q, params.collection]);
 
   useEffect(() => {
     productRepository.getCategories().then(setCategories);
   }, []);
+
+  useEffect(() => {
+    if (!showFilters) return;
+    let cancelled = false;
+    productRepository
+      .getFilterOptions()
+      .then((options) => {
+        if (cancelled) return;
+        setFilterOptions(options);
+        setCategories((prev) => (prev.length ? prev : options.categories));
+        const min = options.priceMin ?? 0;
+        const max = Math.max(min, options.priceMax ?? 0);
+        setApplied((prev) => {
+          const unset = prev.maxPrice === 0 && prev.minPrice === 0;
+          const wasFullRange =
+            unset ||
+            (filterOptions != null &&
+              prev.minPrice === filterOptions.priceMin &&
+              prev.maxPrice === filterOptions.priceMax);
+          return {
+            ...prev,
+            minPrice: wasFullRange ? min : Math.min(Math.max(prev.minPrice, min), max),
+            maxPrice: wasFullRange ? max : Math.min(Math.max(prev.maxPrice, min), max),
+            minRating: options.ratings.some((r) => r.value === prev.minRating)
+              ? prev.minRating
+              : 0,
+          };
+        });
+      })
+      .catch((error) => {
+        if (__DEV__) {
+          // eslint-disable-next-line no-console
+          console.warn('[PLP] getFilterOptions failed', error);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showFilters]);
+
+  const clearFilters = useCallback(() => {
+    const next = makeDefaultDraft(undefined, { min: catalogMin, max: catalogMax });
+    setApplied(next);
+    navigation.setParams({ franchise: undefined, title: 'Products' } as never);
+    setModalOpen(false);
+  }, [navigation, catalogMin, catalogMax]);
+
+  const applyFilters = useCallback(
+    (next: PlpFilterDraft) => {
+      setApplied(next);
+      if (next.franchise) {
+        navigation.setParams({
+          franchise: next.franchise,
+          title: `${next.franchise}'s Vault`,
+        } as never);
+      } else {
+        navigation.setParams({ franchise: undefined, title: 'Products' } as never);
+      }
+    },
+    [navigation],
+  );
 
   const loadPage = useCallback(
     async (pageToLoad: number, replace: boolean) => {
@@ -106,36 +207,29 @@ export function ProductsScreen() {
             limit: PAGE_SIZE,
             refresh: replace,
           });
-          console.log('[PLP] products page', {
-            page: 1,
-            pages: 1,
-            total: items.length,
-            itemCount: items.length,
-            collection: 'for-you',
-          });
           setPage(1);
           setPages(1);
           setTotal(items.length);
           setProducts(items);
         } else {
           const query = {
-            sort,
+            sort: applied.sort,
             category,
             tag,
-            franchise,
+            franchise: applied.franchise,
             search,
             collection,
             page: pageToLoad,
             limit: PAGE_SIZE,
+            ...(showFilters
+              ? {
+                  ...priceQuery,
+                  minRating: applied.minRating > 0 ? applied.minRating : undefined,
+                  inStockOnly: applied.inStockOnly || undefined,
+                }
+              : {}),
           };
           const result = await productRepository.list(query);
-          console.log('[PLP] products page', {
-            page: result.page,
-            pages: result.pages,
-            total: result.total,
-            itemCount: result.items.length,
-          });
-
           setPage(result.page);
           setPages(result.pages);
           setTotal(result.total);
@@ -151,7 +245,20 @@ export function ProductsScreen() {
         loadingMoreRef.current = false;
       }
     },
-    [sort, category, tag, franchise, search, collection, recentItems, wishlistItems],
+    [
+      applied.sort,
+      applied.franchise,
+      applied.minRating,
+      applied.inStockOnly,
+      category,
+      tag,
+      search,
+      collection,
+      recentItems,
+      wishlistItems,
+      showFilters,
+      priceQuery,
+    ],
   );
 
   useEffect(() => {
@@ -201,7 +308,7 @@ export function ProductsScreen() {
         </Pressable>
       </View>
 
-      {!collection && !franchise ? (
+      {!collection ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -228,57 +335,40 @@ export function ProductsScreen() {
         </ScrollView>
       ) : null}
 
-      {franchise ? (
-        <View style={styles.filterBanner}>
-          <Text style={styles.filterBannerText}>Brand filter on</Text>
-          <Pressable
-            onPress={() => {
-              setFranchise(undefined);
-              navigation.setParams({ franchise: undefined, title: 'Products' } as never);
-            }}
-          >
-            <Text style={styles.clearFilter}>Clear</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      <View style={styles.sortBlock}>
-        <Pressable style={styles.sortToggle} onPress={() => setSortOpen((o) => !o)}>
-          <Text style={styles.sortToggleLabel}>Sort</Text>
-          <Text style={styles.sortToggleValue}>{SORT_LABELS[sort]}</Text>
-          <Text style={styles.sortToggleChevron}>{sortOpen ? '˄' : '˅'}</Text>
+      {showFilters ? (
+        <Pressable
+          style={[styles.sortFilterBtn, filtersActive && styles.sortFilterBtnActive]}
+          onPress={() => setModalOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Sort and filter"
+        >
+          <View style={styles.sortFilterCopy}>
+            <Text style={styles.sortFilterLabel}>Filters</Text>
+            <Text style={styles.sortFilterValue} numberOfLines={1}>
+              {filtersActive
+                ? `${sortLabel}${applied.franchise ? ` · ${applied.franchise}` : ''}${
+                    applied.inStockOnly ? ' · In stock' : ''
+                  }`
+                : sortLabel}
+            </Text>
+          </View>
+          <Text style={styles.sortFilterChevron}>›</Text>
         </Pressable>
-
-        {sortOpen ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.sortDropdown}
-          >
-            {SORTS.map((value) => (
-              <Pressable
-                key={value}
-                style={[styles.sortChip, sort === value && styles.sortChipActive]}
-                onPress={() => {
-                  setSort(value);
-                  setSortOpen(false);
-                }}
-              >
-                <Text style={[styles.sortChipText, sort === value && styles.sortChipTextActive]}>
-                  {SORT_LABELS[value]}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        ) : null}
-      </View>
+      ) : null}
 
       {initialLoading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator color={colors.text} />
         </View>
       ) : empty || allOutOfStock ? (
-        <CatalogEmptyState variant={emptyVariant} />
+        <View style={styles.emptyWrap}>
+          {filtersActive && empty ? (
+            <Pressable style={styles.clearFiltersBtn} onPress={clearFilters}>
+              <Text style={styles.clearFiltersText}>Clear filters</Text>
+            </Pressable>
+          ) : null}
+          <CatalogEmptyState variant={emptyVariant} />
+        </View>
       ) : (
         <FlatList
           data={products}
@@ -313,7 +403,17 @@ export function ProductsScreen() {
           )}
         />
       )}
-      <FloatingCartButton />
+
+      {showFilters ? (
+        <ProductsFilterModal
+          visible={modalOpen}
+          options={filterOptions}
+          value={applied}
+          onClose={() => setModalOpen(false)}
+          onApply={applyFilters}
+          onClear={clearFilters}
+        />
+      ) : null}
     </Screen>
   );
 }
@@ -356,7 +456,17 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingVertical: 4,
   },
-  clearFilter: {
+  clearFiltersBtn: {
+    alignSelf: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+  },
+  clearFiltersText: {
     color: colors.text,
     fontSize: 13,
     fontWeight: '800',
@@ -366,26 +476,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  emptyWrap: {
+    flex: 1,
+  },
   endHint: {
     color: colors.textMuted,
     fontSize: 12,
     paddingVertical: spacing.md,
     textAlign: 'center',
-  },
-  filterBanner: {
-    alignItems: 'center',
-    backgroundColor: colors.accentSoft,
-    borderRadius: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-  },
-  filterBannerText: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '700',
   },
   footer: {
     paddingVertical: spacing.md,
@@ -395,50 +493,13 @@ const styles = StyleSheet.create({
     maxWidth: '50%',
   },
   list: {
-    paddingBottom: 96,
+    paddingBottom: spacing.xl,
   },
   loadingBox: {
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
     paddingVertical: spacing.xl,
-  },
-  sortBlock: {
-    marginBottom: spacing.sm,
-  },
-  sortToggle: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-  },
-  sortToggleLabel: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  sortToggleValue: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '800',
-    marginLeft: spacing.sm,
-    flex: 1,
-    textAlign: 'left',
-  },
-  sortToggleChevron: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-    marginLeft: spacing.sm,
-  },
-  sortDropdown: {
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
   },
   row: {
     gap: spacing.sm,
@@ -462,26 +523,42 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  sortChip: {
+  sortFilterBtn: {
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: 16,
     borderWidth: 1,
-    marginLeft: spacing.xs,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    flexDirection: 'row',
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
   },
-  sortChipActive: {
-    backgroundColor: colors.accentSoft,
+  sortFilterBtnActive: {
     borderColor: colors.accent,
+    backgroundColor: colors.accentSoft,
   },
-  sortChipText: {
+  sortFilterChevron: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 22,
+    fontWeight: '300',
+    marginLeft: spacing.sm,
   },
-  sortChipTextActive: {
-    color: colors.text,
+  sortFilterCopy: {
+    flex: 1,
+  },
+  sortFilterLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
     fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  sortFilterValue: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '800',
+    marginTop: 2,
   },
   toolbar: {
     alignItems: 'center',

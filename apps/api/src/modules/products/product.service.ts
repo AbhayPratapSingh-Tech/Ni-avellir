@@ -1,4 +1,9 @@
-import { ALSO_LIKE_TAG, DROP_ZONE_TAG, pickDropZoneProducts } from '@nidavellir/shared';
+import {
+  ALSO_LIKE_TAG,
+  DROP_ZONE_TAG,
+  buildCatalogFilterOptions,
+  pickDropZoneProducts,
+} from '@nidavellir/shared';
 import { User } from '../auth/user.model.js';
 import { Types } from 'mongoose';
 import { Order } from '../orders/order.model.js';
@@ -18,6 +23,8 @@ export type ListProductsQuery = {
   bundleTag?: string;
   minPrice?: number;
   maxPrice?: number;
+  /** Inclusive lower bound on product.rating (0–5). */
+  minRating?: number;
   inStockOnly?: boolean;
   sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
   page?: number;
@@ -91,6 +98,30 @@ export class ProductService {
       };
     }
 
+    const minPrice =
+      query.minPrice !== undefined && Number.isFinite(query.minPrice) ? query.minPrice : undefined;
+    const maxPrice =
+      query.maxPrice !== undefined && Number.isFinite(query.maxPrice) ? query.maxPrice : undefined;
+    const minRating =
+      query.minRating !== undefined &&
+      Number.isFinite(query.minRating) &&
+      query.minRating >= 0 &&
+      query.minRating <= 5
+        ? query.minRating
+        : undefined;
+
+    if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
+      return {
+        items: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          pages: 0,
+        },
+      };
+    }
+
     const filter: Record<string, unknown> = {};
 
     if (query.category) {
@@ -108,11 +139,14 @@ export class ProductService {
     if (query.collection === 'also-like') {
       filter.tags = ALSO_LIKE_TAG;
     }
-    if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+    if (minPrice !== undefined || maxPrice !== undefined) {
       const priceFilter: Record<string, number> = {};
-      if (query.minPrice !== undefined) priceFilter['$gte'] = query.minPrice;
-      if (query.maxPrice !== undefined) priceFilter['$lte'] = query.maxPrice;
+      if (minPrice !== undefined) priceFilter['$gte'] = minPrice;
+      if (maxPrice !== undefined) priceFilter['$lte'] = maxPrice;
       filter.price = priceFilter;
+    }
+    if (minRating !== undefined) {
+      filter.rating = { $gte: minRating };
     }
     if (query.collection === 'restocking') {
       filter.stock = 0;
@@ -201,6 +235,26 @@ export class ProductService {
   async getFranchises() {
     const franchises = await Product.distinct('franchise');
     return franchises;
+  }
+
+  /** Dynamic PLP sort + filter chips from the live catalog. */
+  async getFilters() {
+    const [categories, franchises, priceAgg, ratingAgg] = await Promise.all([
+      Product.distinct('category'),
+      Product.distinct('franchise'),
+      Product.aggregate<{ min: number; max: number }>([
+        { $group: { _id: null, min: { $min: '$price' }, max: { $max: '$price' } } },
+      ]),
+      Product.aggregate<{ max: number }>([{ $group: { _id: null, max: { $max: '$rating' } } }]),
+    ]);
+
+    return buildCatalogFilterOptions({
+      categories: categories.map(String),
+      franchises: franchises.map(String),
+      priceMin: priceAgg[0]?.min ?? 0,
+      priceMax: priceAgg[0]?.max ?? 0,
+      ratingMax: ratingAgg[0]?.max ?? 5,
+    });
   }
 
   async getFeatured() {

@@ -61,7 +61,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 
 > Upgrades for these shipped features are listed under **Upgrade shipped features** below — do not treat v1 as unfinished.
 >
-> **Branch sync (Oct 2026):** feature work merged **`todo` → `Nidavellir`** (PR #22). Prefer developing against **`Nidavellir`** (or a fresh branch off it). Keep Render dashboard deploy branch **`Nidavellir`** aligned with [`render.yaml`](render.yaml).
+> **Branch sync:** Live Render production (`nidavellir-api`) deploys from **`todo`** — keep the dashboard and [`render.yaml`](render.yaml) on that branch. UAT stays on **`uat`**. Do not push `Nidavellir` or `uat` directly.
 
 ---
 
@@ -203,7 +203,7 @@ See git history / `PROJECT_PROGRESS.md` for the college-demo stack (mock catalog
 - [ ] **Back-in-stock alerts** — wishlist / PDP subscribe; in-app notification now, push later; dedupe.
 - [ ] **Price-drop alerts** — threshold or any drop; preferences + dedupe.
 - [ ] **Product comparison** — 2–4 SKUs side-by-side (price, rating, specs, stock, discount).
-- [ ] **PLP filters upgrade** — price range, franchise, rating, in-stock, size (beyond current sort).
+- [x] **PLP filters upgrade 1** — price / franchise / rating / in-stock on the normal list via Filters modal + dual-range slider; options from `GET /products/filters` (mock + assemble fallback). Size stays on **Product variants**.
 - [ ] **Product variants** — size / color with per-variant stock (apparel without sizes is weak).
 - [ ] **Search improvements** — recent + trending, typo tolerance / synonyms, autocomplete, zero-result analytics (Atlas Search if Mongo text is weak).
 - [ ] **Reorder** — one-tap from past Order Details.

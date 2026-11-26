@@ -101,6 +101,8 @@ export const aiToolDefinitions = [
           franchise: { type: 'string' },
           minPrice: { type: 'number' },
           maxPrice: { type: 'number' },
+          minRating: { type: 'number' },
+          inStockOnly: { type: 'boolean' },
           limit: { type: 'number' },
         },
       },
@@ -293,8 +295,9 @@ export class AiTools {
             franchise: args.franchise ? String(args.franchise) : undefined,
             minPrice: args.minPrice !== undefined ? Number(args.minPrice) : undefined,
             maxPrice: args.maxPrice !== undefined ? Number(args.maxPrice) : undefined,
+            minRating: args.minRating !== undefined ? Number(args.minRating) : undefined,
             limit: args.limit !== undefined ? Number(args.limit) : 8,
-            inStockOnly: false,
+            inStockOnly: args.inStockOnly === true ? true : false,
           });
           const products = result.items.map((item) => toAiProduct(item as never));
           return {
